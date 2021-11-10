@@ -1,0 +1,15 @@
+image:
+  repository: microservice
+replicaCount: 1
+ingress:
+  enabled: false
+service:
+  type: ClusterIP
+config:
+  message: ""
+postgres:
+  host: ""
+  port: 0
+  database: ""
+  schema: ""
+  user: ""

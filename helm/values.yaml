@@ -1,0 +1,9 @@
+service1:
+  ingress:
+    enabled: true
+  postgres:
+    host: host.docker.internal
+    port: 5432
+    database: postgres
+    schema: public
+    user: postgres

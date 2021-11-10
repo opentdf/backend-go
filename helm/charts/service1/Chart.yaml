@@ -1,0 +1,6 @@
+apiVersion: v2
+name: service1
+description: a microservice
+type: application
+version: 0.1.0
+appVersion: "latest"
