@@ -30,7 +30,7 @@ Service providers for a protected data lifecycle
 
 - Install ctlptl
   - On macOS via Homebrew: `brew install tilt-dev/tap/ctlptl`
-  - Others see https://github.com/kubernetes/examples/blob/master/guidelines.md
+  - Others see https://github.com/tilt-dev/ctlptl
 
 ## Development
 
@@ -75,6 +75,60 @@ docker run \
     postgres
 ```
 
+### Start HSM
+
+#### SoftHSM pseudo-device
+
+https://github.com/psmiraglia/docker-softhsm  
+
+```shell
+# build
+docker build --file softhsm2.Dockerfile --tag softhsm2:2.5.0 .
+
+# run
+docker run -ti --rm softhsm2:2.5.0 sh -l
+
+softhsm2-util --init-token --slot 0 --label "development-token"
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login -t
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --keypairgen --key-type rsa:2048 --id 100 --label development
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --read-object --type pubkey --label development -o development-public.der
+
+openssl rsa -RSAPublicKey_in -in development-public.der -inform DER -outform PEM -out development-public.pem -RSAPublicKey_out
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --list-objects
+
+```
+
+#### SoftHSM C Module
+
+https://wiki.opendnssec.org/display/SoftHSMDOCS/SoftHSM+Documentation+v2
+
+```shell
+# macOS
+./configure --with-openssl=/usr/local/opt/openssl --disable-gost
+make
+sudo make install
+```
+
+#### SoftHSM Keys
+
+```shell
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so -l -T
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --slot 1232216204 --read-object -
+-type pubkey --id 0100 -o rsa01pub.key
+openssl rsa -RSAPublicKey_in -in rsa01pub.key -inform DER -outform PEM -out mykey-public.pem -RSAPublicKey_out
+```
+
+```shell
+# macOS
+# installs pkcs11-tool
+brew install pkcs11-helper
+```
+
 ### Start services
 
 ```shell
@@ -87,6 +141,8 @@ tilt up
 export POSTGRES_HOST=localhost
 export POSTGRES_DATABASE=postgres
 export POSTGRES_USER=postgres
+export POSTGRES_PASSWORD=mysecretpassword
+export PKCS11_MODULE_PATH=/usr/local/lib/softhsm/libsofthsm2.so
 ```
 
 ## References
@@ -139,3 +195,8 @@ apt-get install postgresql-client
 pg_isready --dbname=postgres --host=host.minikube.internal --port=5432 --username=postgres
 pg_isready --dbname=postgres --host=ex-postgresql --port=5432 --username=postgres
 ```
+
+## Resources
+
+KMIP  
+https://github.com/ThalesGroup/kmip-go
