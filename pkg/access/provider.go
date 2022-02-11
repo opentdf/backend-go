@@ -2,6 +2,8 @@ package access
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
 	"log"
@@ -10,11 +12,12 @@ import (
 )
 
 type Provider struct {
-	URI         url.URL           `json:"uri"`
-	PrivateKey  crypto.PrivateKey `json:"-"`
-	PublicKey   crypto.PublicKey  `json:"publicKey"`
-	Certificate x509.Certificate  `json:"certificate"`
-	Attributes  []Attribute       `json:"attributes"`
+	URI          url.URL           `json:"uri"`
+	PrivateKey   crypto.PrivateKey `json:"-"`
+	PublicKeyRsa rsa.PublicKey     `json:"publicKey"`
+	PublicKeyEc  ecdsa.PublicKey
+	Certificate  x509.Certificate `json:"certificate"`
+	Attributes   []Attribute      `json:"attributes"`
 }
 
 // NewProvider errors if untrusted
