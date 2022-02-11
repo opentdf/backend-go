@@ -104,8 +104,9 @@ pkcs11-tool --module $PKCS11_MODULE_PATH --login --keypairgen --key-type rsa:204
 # create EC keys
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --keypairgen --key-type EC:secp256r1 --id 200 --label development-ec
 
+export PKCS11_SLOT_INDEX=0
+pkcs11-tool --module $PKCS11_MODULE_PATH --slot-index $PKCS11_SLOT_INDEX --read-object --type pubkey --id 0100 -o rsa01pub.key
 
-pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --slot 1232216204 --read-object --type pubkey --id 0100 -o rsa01pub.key
 openssl rsa -RSAPublicKey_in -in rsa01pub.key -inform DER -outform PEM -out mykey-public.pem -RSAPublicKey_out
 ```
 
