@@ -7,17 +7,14 @@ import (
 	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/big"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -35,7 +32,7 @@ func main() {
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
 		URI:         *kasURI,
-		PrivateKey:  getPrivateKey(kasName),
+		PrivateKey:  getPrivateKey(),
 		Certificate: x509.Certificate{},
 		Attributes:  nil,
 	}
@@ -55,10 +52,11 @@ func main() {
 		Scopes: []string{oidc.ScopeOpenID, "profile", "email"},
 	}
 	log.Println(oauth2Config)
+
 	// PKCS#11
 	pin := os.Getenv("PKCS11_PIN")
-	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA")
-	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC")
+	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") //development-rsa-kas
+	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") //development-ec-kas
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
 		log.Fatalf("PKCS11_SLOT parse error: %v", err)
@@ -109,75 +107,82 @@ func main() {
 		log.Fatalf("error finding key: %v", err)
 	}
 	log.Println(keyHandle)
-	// RSA Public key
-	log.Println("Finding RSA public key.")
-	pubkeyHandle, err := findKey(ctx, session, pkcs11.CKO_PUBLIC_KEY, keyID, rsaLabel)
+
+
+
+
+	//RSA Cert
+	log.Println("Finding RSA cert.")
+	certHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
+	certTemplate := []*pkcs11.Attribute{
+        pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
+        pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
+        pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+        pkcs11.NewAttribute(pkcs11.CKA_VALUE, []byte("")),
+        pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
+    }
+	attrs, err := ctx.GetAttributeValue(session, certHandle, certTemplate)
 	if err != nil {
-		log.Fatalf("error finding key: %v", err)
-	}
-	log.Println(pubkeyHandle)
-	publicKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_RSA),
-		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
-		pkcs11.NewAttribute(pkcs11.CKA_PUBLIC_EXPONENT, []byte{1, 0, 1}),
-		pkcs11.NewAttribute(pkcs11.CKA_MODULUS_BITS, 2048),
-		pkcs11.NewAttribute(pkcs11.CKA_MODULUS, []byte("")),
-		pkcs11.NewAttribute(pkcs11.CKA_LABEL, rsaLabel),
-	}
-	attrs, err := ctx.GetAttributeValue(session, pubkeyHandle, publicKeyTemplate)
-	if err != nil {
-		return
+		log.Panic(err)
 	}
 	log.Println(attrs)
+
 	for i, a := range attrs {
 		log.Printf("attr %d, type %d, valuelen %d\n", i, a.Type, len(a.Value))
-		if a.Type == pkcs11.CKA_PUBLIC_EXPONENT {
-			exponent := big.NewInt(0)
-			exponent.SetBytes(a.Value)
-			kas.PublicKeyRsa.E = int(exponent.Int64())
-		}
-		if a.Type == pkcs11.CKA_MODULUS {
-			mod := big.NewInt(0)
-			mod.SetBytes(a.Value)
-			log.Printf("modulus %s\n\n", mod.String())
-			kas.PublicKeyRsa.N = mod
+		if a.Type == pkcs11.CKA_VALUE {
+			certRsa,err := x509.ParseCertificate(a.Value)
+			if err != nil {
+				log.Panic(err)
+			}
+			kas.Certificate = *certRsa
 		}
 	}
+
+
+	// RSA Public key
+	log.Println("Finding RSA public key from cert.")
+	rsaPublicKey := kas.Certificate.PublicKey.(*rsa.PublicKey)
+	kas.PublicKeyRsa = *rsaPublicKey
+	
+
+
+	//EC Cert
+	log.Println("Finding EC cert.")
+	ec_cert := x509.Certificate{}
+
+	certECHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
+	certECTemplate := []*pkcs11.Attribute{
+        pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
+        pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
+        pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+        pkcs11.NewAttribute(pkcs11.CKA_VALUE, []byte("")),
+        pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
+    }
+	ecCertAttrs, err := ctx.GetAttributeValue(session, certECHandle, certECTemplate)
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Println(ecCertAttrs)
+
+	for i, a := range ecCertAttrs {
+		log.Printf("attr %d, type %d, valuelen %d\n", i, a.Type, len(a.Value))
+		if a.Type == pkcs11.CKA_VALUE {
+			// exponent := big.NewInt(0)
+			// exponent.SetBytes(a.Value)
+			certEC,err := x509.ParseCertificate(a.Value)
+			if err != nil {
+				log.Panic(err)
+			}
+			ec_cert = *certEC
+		}
+	}
+
+
 	// EC Public Key
-	log.Println("Finding EC public key.")
-	ecPubkeyHandle, err := findKey(ctx, session, pkcs11.CKO_PUBLIC_KEY, keyID, ecLabel)
-	if err != nil {
-		log.Fatalf("error finding key: %v", err)
-	}
-	log.Println(ecPubkeyHandle)
-	ecPublicKeyTemplate := []*pkcs11.Attribute{
-		pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, nil),
-		pkcs11.NewAttribute(pkcs11.CKA_EC_POINT, nil),
-	}
-	pubKeyAttrValues, err := ctx.GetAttributeValue(session, ecPubkeyHandle, ecPublicKeyTemplate)
-	if err != nil {
-		return
-	}
-	log.Println(attrs)
-	// according to: http://docs.oasis-open.org/pkcs11/pkcs11-curr/v2.40/csprd02/pkcs11-curr-v2.40-csprd02.html#_Toc387327769
-	// DER-encoding of an ANSI X9.62 Parameters value
-	fmt.Println("CKA_EC_PARAMS:", pubKeyAttrValues[0].Value)
-	// DER-encoding of ANSI X9.62 ECPoint value Q
-	fmt.Println("CKA_EC_POINT:", pubKeyAttrValues[1].Value)
-	var ecp []byte
-	_, err1 := asn1.Unmarshal(pubKeyAttrValues[1].Value, &ecp)
-	if err1 != nil {
-		fmt.Printf("Failed to decode ASN.1 encoded CKA_EC_POINT (%s)", err1.Error())
-	}
-	fmt.Println("ecp:", ecp)
-	pubKey, err := getPublic(ecp)
-	if err != nil {
-		fmt.Printf("Failed to decode public key (%s)", err.Error())
-		return
-	}
-	fmt.Printf("Public key: %#v", pubKey)
-	kas.PublicKeyEc = *pubKey
+	log.Println("Finding EC public key from cert.")
+	log.Println(ec_cert.PublicKeyAlgorithm)
+	ec_public_key := ec_cert.PublicKey.(*ecdsa.PublicKey)
+	kas.PublicKeyEc = *ec_public_key
 
 	// Open up our database connection.
 	config, err := pgx.ParseConfig("postgres://host:5432/database?sslmode=disable")
@@ -210,7 +215,8 @@ func main() {
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 	}
-	http.HandleFunc("/kas_public_key", kas.PublicKeyHandler)
+	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
+	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
 	go func() {
 		log.Printf("listening on http://%s", server.Addr)
@@ -231,8 +237,9 @@ func main() {
 //	return hex.DecodeString(s)
 //}
 
-func getPrivateKey(name string) rsa.PrivateKey {
-	fileBytes := loadBytes(name + "-private.pem")
+func getPrivateKey() rsa.PrivateKey {
+	privkey := os.Getenv("PRIVATE_KEY_RSA_PATH")
+	fileBytes := loadBytes(privkey)
 	block, _ := pem.Decode(fileBytes)
 	if block == nil {
 		log.Panic("empty block")
@@ -249,8 +256,9 @@ func loadBytes(name string) []byte {
 	if pk != "" {
 		return []byte(pk)
 	}
-	path := filepath.Join("testdata", name) // relative path
-	fileBytes, err := ioutil.ReadFile(path)
+	//path := filepath.Join("..","..",name) // relative path
+	log.Println(name)
+	fileBytes, err := ioutil.ReadFile(name)
 	if err != nil {
 		log.Panic(err)
 	}

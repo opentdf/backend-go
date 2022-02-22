@@ -5,12 +5,30 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"encoding/json"
 	"log"
 	"net/http"
 )
 
-// PublicKeyHandler decrypts and encrypts the symmetric data key
-func (p *Provider) PublicKeyHandler(w http.ResponseWriter, r *http.Request) {
+func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {	
+	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
+	if err != nil {
+		log.Fatalf("error RSA public key from PKCS11: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	log.Println(certificatePem)
+
+	jData, err := json.Marshal(certificatePem)
+	if err != nil {
+		log.Fatalf("error json certificate Marshal: %v", err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(jData)
+}
+
+
+// PublicKeyHandlerV2 decrypts and encrypts the symmetric data key
+func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 	algorithm := r.URL.Query().Get("algorithm")
 	// ?algorithm=ec:secp256r1
 	if algorithm == "ec:secp256r1" {
@@ -59,4 +77,17 @@ func exportEcPublicKeyAsPemStr(pubkey *ecdsa.PublicKey) (string, error) {
 	)
 
 	return string(pubkeyPem), nil
+}
+
+func exportCertificateAsPemStr(cert *x509.Certificate) (string, error) {
+	certBytes := cert.Raw
+
+	certPem := pem.EncodeToMemory(
+		&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: certBytes,
+		},
+	)
+
+	return string(certPem), nil
 }

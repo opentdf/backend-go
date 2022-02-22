@@ -99,15 +99,18 @@ brew install opensc
 softhsm2-util --init-token --slot 0 --label "development-token"
 # verify login
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
-# create RSA keys
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --keypairgen --key-type rsa:2048 --id 100 --label development-rsa
-# create EC keys
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --keypairgen --key-type EC:secp256r1 --id 200 --label development-ec
-
-export PKCS11_SLOT_INDEX=0
-pkcs11-tool --module $PKCS11_MODULE_PATH --slot-index $PKCS11_SLOT_INDEX --read-object --type pubkey --id 0100 -o rsa01pub.key
-
-openssl rsa -RSAPublicKey_in -in rsa01pub.key -inform DER -outform PEM -out mykey-public.pem -RSAPublicKey_out
+#crease RSA key and cert
+openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pem -out kas-cert.pem -days 365
+#crease EC key and cert
+openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
+#import RSA key to PKCS
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --id 100 --label development-rsa-kas
+#import RSA cert to PKCS
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-cert.pem --type cert --id 100 --label development-rsa-kas
+#import EC key to PKCS
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --id 200 --label development-ec-kas
+#import EC cert to PKCS
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --id 200 --label development-ec-kas
 ```
 
 ### Start services
@@ -126,7 +129,9 @@ export POSTGRES_PASSWORD=mysecretpassword
 export PKCS11_MODULE_PATH=/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
 export PKCS11_SLOT_INDEX=0
 export PKCS11_PIN=12345
-export PKCS11_LABEL=development-rsa
+export PKCS11_LABEL_PUBKEY_RSA=development-rsa-kas
+export PKCS11_LABEL_PUBKEY_EC=development-ec-kas
+export PRIVATE_KEY_RSA_PATH=../../kas-private.pem
 ```
 
 ## References
