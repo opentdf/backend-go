@@ -25,7 +25,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const kasName = "access-provider-000"
 const hostname = "localhost"
 
 func main() {
@@ -37,9 +36,11 @@ func main() {
 		Attributes:  nil,
 	}
 	// OIDC
-	provider, err := oidc.NewProvider(context.Background(), "https://accounts.google.com")
+	oidcIssuer := os.Getenv("OIDC_ISSUER")
+	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {
 		// handle error
+		log.Panic(err)
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
 	oauth2Config := oauth2.Config{
@@ -56,7 +57,7 @@ func main() {
 	// PKCS#11
 	pin := os.Getenv("PKCS11_PIN")
 	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") //development-rsa-kas
-	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") //development-ec-kas
+	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC")   //development-ec-kas
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
 		log.Fatalf("PKCS11_SLOT parse error: %v", err)
@@ -108,19 +109,16 @@ func main() {
 	}
 	log.Println(keyHandle)
 
-
-
-
 	//RSA Cert
-	log.Println("Finding RSA cert.")
+	log.Printf("Finding RSA certificate: %s", rsaLabel)
 	certHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
 	certTemplate := []*pkcs11.Attribute{
-        pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
-        pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
-        pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
-        pkcs11.NewAttribute(pkcs11.CKA_VALUE, []byte("")),
-        pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
-    }
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
+		pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE, []byte("")),
+		pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
+	}
 	attrs, err := ctx.GetAttributeValue(session, certHandle, certTemplate)
 	if err != nil {
 		log.Panic(err)
@@ -130,7 +128,7 @@ func main() {
 	for i, a := range attrs {
 		log.Printf("attr %d, type %d, valuelen %d\n", i, a.Type, len(a.Value))
 		if a.Type == pkcs11.CKA_VALUE {
-			certRsa,err := x509.ParseCertificate(a.Value)
+			certRsa, err := x509.ParseCertificate(a.Value)
 			if err != nil {
 				log.Panic(err)
 			}
@@ -138,13 +136,10 @@ func main() {
 		}
 	}
 
-
 	// RSA Public key
 	log.Println("Finding RSA public key from cert.")
 	rsaPublicKey := kas.Certificate.PublicKey.(*rsa.PublicKey)
 	kas.PublicKeyRsa = *rsaPublicKey
-	
-
 
 	//EC Cert
 	log.Println("Finding EC cert.")
@@ -152,12 +147,12 @@ func main() {
 
 	certECHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	certECTemplate := []*pkcs11.Attribute{
-        pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
-        pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
-        pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
-        pkcs11.NewAttribute(pkcs11.CKA_VALUE, []byte("")),
-        pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
-    }
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
+		pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE, []byte("")),
+		pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
+	}
 	ecCertAttrs, err := ctx.GetAttributeValue(session, certECHandle, certECTemplate)
 	if err != nil {
 		log.Panic(err)
@@ -169,14 +164,13 @@ func main() {
 		if a.Type == pkcs11.CKA_VALUE {
 			// exponent := big.NewInt(0)
 			// exponent.SetBytes(a.Value)
-			certEC,err := x509.ParseCertificate(a.Value)
+			certEC, err := x509.ParseCertificate(a.Value)
 			if err != nil {
 				log.Panic(err)
 			}
 			ec_cert = *certEC
 		}
 	}
-
 
 	// EC Public Key
 	log.Println("Finding EC public key from cert.")
@@ -237,26 +231,21 @@ func main() {
 //	return hex.DecodeString(s)
 //}
 
-func getPrivateKey() rsa.PrivateKey {
+func getPrivateKey() interface{} {
 	privkey := os.Getenv("PRIVATE_KEY_RSA_PATH")
 	fileBytes := loadBytes(privkey)
 	block, _ := pem.Decode(fileBytes)
 	if block == nil {
 		log.Panic("empty block")
 	}
-	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
 		log.Panic(err)
 	}
-	return *privateKey
+	return privateKey
 }
 
 func loadBytes(name string) []byte {
-	pk := os.Getenv("PRIVATE_KEY")
-	if pk != "" {
-		return []byte(pk)
-	}
-	//path := filepath.Join("..","..",name) // relative path
 	log.Println(name)
 	fileBytes, err := ioutil.ReadFile(name)
 	if err != nil {
