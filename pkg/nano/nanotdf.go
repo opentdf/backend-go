@@ -3,7 +3,7 @@ package nano
 
 import (
 	"bytes"
-	"log"
+
 	"github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
 )
 
@@ -50,7 +50,6 @@ func NewNanotdf() *Nanotdf {
 }
 
 func (this *Nanotdf) Read(io *kaitai.Stream, parent interface{}, root *Nanotdf) (err error) {
-	log.Println("read 1")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -59,14 +58,12 @@ func (this *Nanotdf) Read(io *kaitai.Stream, parent interface{}, root *Nanotdf) 
 	err = tmp1.Read(this._io, this, this._root)
 	if err != nil {
 		return err
-		log.Println("here 3")
 	}
 	this.Header = tmp1
 	this.Length = this.Length + this.Header.Length
 	tmp2 := NewNanotdf_Payload()
 	err = tmp2.Read(this._io, this, this._root)
 	if err != nil {
-		log.Println("here 2")
 		return err
 	}
 	this.Payload = tmp2
@@ -75,7 +72,6 @@ func (this *Nanotdf) Read(io *kaitai.Stream, parent interface{}, root *Nanotdf) 
 		tmp3 := NewNanotdf_NtdfSignature()
 		err = tmp3.Read(this._io, this, this._root)
 		if err != nil {
-			log.Println("here 1")
 			return err
 		}
 		this.Signature = tmp3
@@ -97,7 +93,6 @@ func NewNanotdf_BindingCfg() *Nanotdf_BindingCfg {
 }
 
 func (this *Nanotdf_BindingCfg) Read(io *kaitai.Stream, parent *Nanotdf_Header, root *Nanotdf) (err error) {
-	log.Println("read 2")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -133,7 +128,6 @@ func NewNanotdf_EccKey() *Nanotdf_EccKey {
 }
 
 func (this *Nanotdf_EccKey) Read(io *kaitai.Stream, parent interface{}, root *Nanotdf) (err error) {
-	log.Println("read 3")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -177,7 +171,6 @@ func NewNanotdf_EccSignature() *Nanotdf_EccSignature {
 }
 
 func (this *Nanotdf_EccSignature) Read(io *kaitai.Stream, parent interface{}, root *Nanotdf) (err error) {
-	log.Println("read 4")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -222,21 +215,18 @@ func NewNanotdf_Payload() *Nanotdf_Payload {
 }
 
 func (this *Nanotdf_Payload) Read(io *kaitai.Stream, parent *Nanotdf, root *Nanotdf) (err error) {
-	log.Println("read 4")
 	this._io = io
 	this._parent = parent
 	this._root = root
 
 	tmp15, err := this._io.ReadBitsIntBe(24)
 	if err != nil {
-		log.Println("here temp15")
 		return err
 	}
 	this.Length = tmp15
 	this._io.AlignToByte()
 	tmp16, err := this._io.ReadBytes(int(this.Length))
 	if err != nil {
-		log.Println("here temp16")
 		return err
 	}
 	tmp16 = tmp16
@@ -258,7 +248,6 @@ func NewNanotdf_ResourceLocator() *Nanotdf_ResourceLocator {
 }
 
 func (this *Nanotdf_ResourceLocator) Read(io *kaitai.Stream, parent interface{}, root *Nanotdf) (err error) {
-	log.Println("read 5")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -294,20 +283,17 @@ func NewNanotdf_EmbeddedPolicy() *Nanotdf_EmbeddedPolicy {
 }
 
 func (this *Nanotdf_EmbeddedPolicy) Read(io *kaitai.Stream, parent *Nanotdf_Policy, root *Nanotdf) (err error) {
-	log.Println("read 6")
 	this._io = io
 	this._parent = parent
 	this._root = root
 
 	tmp20, err := this._io.ReadU2be()
 	if err != nil {
-		log.Println("here temp20")
 		return err
 	}
 	this.Length = tmp20
 	tmp21, err := this._io.ReadBytes(int(this.Length))
 	if err != nil {
-		log.Println("here temp21")
 		return err
 	}
 	tmp21 = tmp21
@@ -328,7 +314,6 @@ func NewNanotdf_NtdfSignature() *Nanotdf_NtdfSignature {
 }
 
 func (this *Nanotdf_NtdfSignature) Read(io *kaitai.Stream, parent *Nanotdf, root *Nanotdf) (err error) {
-	log.Println("read 7")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -360,7 +345,6 @@ func NewNanotdf_RemotePolicy() *Nanotdf_RemotePolicy {
 }
 
 func (this *Nanotdf_RemotePolicy) Read(io *kaitai.Stream, parent *Nanotdf_Policy, root *Nanotdf) (err error) {
-	log.Println("read 8")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -392,7 +376,6 @@ func NewNanotdf_Header() *Nanotdf_Header {
 }
 
 func (this *Nanotdf_Header) Read(io *kaitai.Stream, parent *Nanotdf, root *Nanotdf) (err error) {
-	log.Println("read 9")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -457,7 +440,6 @@ func NewNanotdf_SignatureConfig() *Nanotdf_SignatureConfig {
 }
 
 func (this *Nanotdf_SignatureConfig) Read(io *kaitai.Stream, parent *Nanotdf_Header, root *Nanotdf) (err error) {
-	log.Println("read 10")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -495,7 +477,6 @@ func NewNanotdf_Policy() *Nanotdf_Policy {
 }
 
 func (this *Nanotdf_Policy) Read(io *kaitai.Stream, parent *Nanotdf_Header, root *Nanotdf) (err error) {
-	log.Println("read 11")
 	this._io = io
 	this._parent = parent
 	this._root = root
@@ -510,7 +491,6 @@ func (this *Nanotdf_Policy) Read(io *kaitai.Stream, parent *Nanotdf_Header, root
 		tmp35 := NewNanotdf_RemotePolicy()
 		err = tmp35.Read(this._io, this, this._root)
 		if err != nil {
-			log.Println("here temp35")
 			return err
 		}
 		this.Body = tmp35
@@ -518,7 +498,6 @@ func (this *Nanotdf_Policy) Read(io *kaitai.Stream, parent *Nanotdf_Header, root
 		tmp36 := NewNanotdf_EmbeddedPolicy()
 		err = tmp36.Read(this._io, this, this._root)
 		if err != nil {
-			log.Println("here temp36")
 			return err
 		}
 		this.Body = tmp36
@@ -526,7 +505,6 @@ func (this *Nanotdf_Policy) Read(io *kaitai.Stream, parent *Nanotdf_Header, root
 		tmp37 := NewNanotdf_EmbeddedPolicy()
 		err = tmp37.Read(this._io, this, this._root)
 		if err != nil {
-			log.Println("here temp37")
 			return err
 		}
 		this.Body = tmp37
@@ -534,7 +512,6 @@ func (this *Nanotdf_Policy) Read(io *kaitai.Stream, parent *Nanotdf_Header, root
 		tmp38 := NewNanotdf_EmbeddedPolicy()
 		err = tmp38.Read(this._io, this, this._root)
 		if err != nil {
-			log.Println("here temp38")
 			return err
 		}
 		this.Body = tmp38
@@ -542,7 +519,6 @@ func (this *Nanotdf_Policy) Read(io *kaitai.Stream, parent *Nanotdf_Header, root
 	tmp39 := NewNanotdf_EccSignature()
 	err = tmp39.Read(this._io, this._parent, this._root)
 	if err != nil {
-		log.Println("here temp39")
 		return err
 	}
 	this.Binding = tmp39
