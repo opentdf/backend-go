@@ -22,9 +22,9 @@ func TestProvider(t *testing.T) {
 			Scheme: "https",
 			Host:   "access-provider-000.com",
 		},
-		PrivateKey:  privateKey,
-		PublicKey:   publicKey,
-		Certificate: certificate,
+		PrivateKey:   privateKey,
+		PublicKeyRsa: publicKey,
+		Certificate:  certificate,
 		Attributes: []Attribute{
 			{
 				URI: url.URL{
@@ -56,10 +56,10 @@ func TestProviderServeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	provider := Provider{
-		URI:         *uri,
-		PrivateKey:  getPrivateKey(t, "entity-provider-000"),
-		PublicKey:   getPublicKey(t, "entity-provider-000"),
-		Certificate: getCertificate(t, "entity-provider-000"),
+		URI:          *uri,
+		PrivateKey:   getPrivateKey(t, "entity-provider-000"),
+		PublicKeyRsa: getPublicKey(t, "entity-provider-000"),
+		Certificate:  getCertificate(t, "entity-provider-000"),
 	}
 	es := httptest.NewServer(&provider)
 	defer es.Close()

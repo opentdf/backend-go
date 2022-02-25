@@ -3,7 +3,7 @@ Service providers for a protected data lifecycle
 
 ## Overview
 
-- Helm chart with subcharts
+- Helm chart with sub-charts
 - Multi-stage Dockerfile for build, testing, and deployment
 - Fast developer workflow
 
@@ -30,7 +30,7 @@ Service providers for a protected data lifecycle
 
 - Install ctlptl
   - On macOS via Homebrew: `brew install tilt-dev/tap/ctlptl`
-  - Others see https://github.com/kubernetes/examples/blob/master/guidelines.md
+  - Others see https://github.com/tilt-dev/ctlptl
 
 ## Development
 
@@ -75,6 +75,44 @@ docker run \
     postgres
 ```
 
+### Start HSM
+
+#### SoftHSM C Module
+
+https://wiki.opendnssec.org/display/SoftHSMDOCS/SoftHSM+Documentation+v2
+
+```shell
+# macOS
+brew install softhsm
+# get module path
+brew info softhsm
+# /opt/homebrew/Cellar/softhsm/2.6.1  will be  /opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
+export PKCS11_MODULE_PATH=/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
+# installs pkcs11-tool
+brew install opensc
+```
+
+#### SoftHSM Keys
+
+```shell
+# enter two sets of PIN, 12345
+softhsm2-util --init-token --slot 0 --label "development-token"
+# verify login
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
+# crease RSA key and cert
+openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pem -out kas-cert.pem -days 365
+# crease EC key and cert
+openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
+# import RSA key to PKCS
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --id 100 --label development-rsa-kas
+# import RSA cert to PKCS
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-cert.pem --type cert --id 100 --label development-rsa-kas
+# import EC key to PKCS
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --id 200 --label development-ec-kas
+# import EC cert to PKCS
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --id 200 --label development-ec-kas
+```
+
 ### Start services
 
 ```shell
@@ -87,6 +125,13 @@ tilt up
 export POSTGRES_HOST=localhost
 export POSTGRES_DATABASE=postgres
 export POSTGRES_USER=postgres
+export POSTGRES_PASSWORD=mysecretpassword
+export PKCS11_MODULE_PATH=/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
+export PKCS11_SLOT_INDEX=0
+export PKCS11_PIN=12345
+export PKCS11_LABEL_PUBKEY_RSA=development-rsa-kas
+export PKCS11_LABEL_PUBKEY_EC=development-ec-kas
+export PRIVATE_KEY_RSA_PATH=../../kas-private.pem
 ```
 
 ## References
@@ -138,4 +183,42 @@ helm install postgresql bitnami/postgresql
 apt-get install postgresql-client
 pg_isready --dbname=postgres --host=host.minikube.internal --port=5432 --username=postgres
 pg_isready --dbname=postgres --host=ex-postgresql --port=5432 --username=postgres
+```
+
+## Resources
+
+KMIP  
+https://github.com/ThalesGroup/kmip-go
+
+pkcs11-tool  
+https://verschlüsselt.it/generate-rsa-ecc-and-aes-keys-with-opensc-pkcs11-tool/
+
+go-util  
+https://github.com/gbolo/go-util  
+https://github.com/gbolo/go-util/tree/master/pkcs11-test
+
+## Optional
+
+### SoftHSM Docker
+
+https://github.com/psmiraglia/docker-softhsm
+
+```shell
+# build
+docker build --file softhsm2.Dockerfile --tag softhsm2:2.5.0 .
+
+# run
+docker run -ti --rm softhsm2:2.5.0 sh -l
+
+softhsm2-util --init-token --slot 0 --label "development-token"
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login -t
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --keypairgen --key-type rsa:2048 --id 100 --label development-rsa
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --read-object --type pubkey --label development -o development-public.der
+
+openssl rsa -RSAPublicKey_in -in development-public.der -inform DER -outform PEM -out development-public.pem -RSAPublicKey_out
+
+pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --list-objects
 ```
