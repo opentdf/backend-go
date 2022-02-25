@@ -99,17 +99,17 @@ brew install opensc
 softhsm2-util --init-token --slot 0 --label "development-token"
 # verify login
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
-#crease RSA key and cert
+# crease RSA key and cert
 openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pem -out kas-cert.pem -days 365
-#crease EC key and cert
+# crease EC key and cert
 openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
-#import RSA key to PKCS
+# import RSA key to PKCS
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --id 100 --label development-rsa-kas
-#import RSA cert to PKCS
+# import RSA cert to PKCS
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-cert.pem --type cert --id 100 --label development-rsa-kas
-#import EC key to PKCS
+# import EC key to PKCS
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --id 200 --label development-ec-kas
-#import EC cert to PKCS
+# import EC cert to PKCS
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --id 200 --label development-ec-kas
 ```
 
