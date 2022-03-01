@@ -6,25 +6,30 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha512"
+	//"crypto/sha512"
+	//"crypto/sha256"
+	"crypto/sha1"
 	"io"
 )
 
 // EncryptWithRSAPublicKey encrypts data with public key
 func EncryptWithRSAPublicKey(msg []byte, publicKey *rsa.PublicKey) (ciphertext []byte, err error) {
-	return rsa.EncryptOAEP(sha512.New(), rand.Reader, publicKey, msg, nil)
+	//publicKey, _ := (*pub).(*rsa.PublicKey)
+	return rsa.EncryptOAEP(sha1.New(), rand.Reader, publicKey, msg, nil)
 }
 
 // EncryptWithPublicKey encrypts data with public key
-func EncryptWithPublicKey(msg []byte, pub *crypto.PublicKey) (ciphertext []byte, err error) {
+func EncryptWithPublicKey(msg []byte, pub *interface{}) (ciphertext []byte, err error) {
 	publicKey, _ := (*pub).(*rsa.PublicKey)
-	return rsa.EncryptOAEP(sha512.New(), rand.Reader, publicKey, msg, nil)
+	return rsa.EncryptOAEP(sha1.New(), rand.Reader, publicKey, msg, nil)
 }
 
 // DecryptWithPrivateKey decrypts data with private key
 func DecryptWithPrivateKey(msg []byte, private *crypto.PrivateKey) (cleartext []byte, err error) {
 	privateKey, _ := (*private).(*rsa.PrivateKey)
-	return rsa.DecryptOAEP(sha512.New(), rand.Reader, privateKey, msg, nil)
+	//decryptedBytes, err := privateKey.Decrypt(nil, msg, &rsa.OAEPOptions{Hash: crypto.SHA256})
+	return rsa.DecryptOAEP(sha1.New(), rand.Reader, privateKey, msg, nil)
+	//return privateKey.Decrypt(nil, msg, &rsa.OAEPOptions{Hash: crypto.SHA1})
 }
 
 func NewCipher(key []byte) (Block, error) {

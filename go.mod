@@ -8,6 +8,7 @@ require (
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/kaitai-io/kaitai_struct_go_runtime v0.0.0-20210123225611-a8be0c954b0e
 	github.com/miekg/pkcs11 v1.1.1
+	github.com/pkg/errors v0.8.1
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
 	gopkg.in/square/go-jose.v2 v2.5.1
 )

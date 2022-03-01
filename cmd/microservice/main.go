@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/miekg/pkcs11"
 	"github.com/opentdf/backend-go/pkg/access"
+	"github.com/opentdf/backend-go/pkg/p11"
 	"golang.org/x/oauth2"
 )
 
@@ -31,9 +32,11 @@ func main() {
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
 		URI:         *kasURI,
-		PrivateKey:  getPrivateKey(),
+		//PrivateKey:  getPrivateKey(),
+		PrivateKey:  p11.Pkcs11PrivateKeyRSA{},
 		Certificate: x509.Certificate{},
 		Attributes:  nil,
+		Session:	 p11.Pkcs11Session{},
 	}
 	// OIDC
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
@@ -108,6 +111,15 @@ func main() {
 		log.Fatalf("error finding key: %v", err)
 	}
 	log.Println(keyHandle)
+
+	//set private key
+	kas.PrivateKey = p11.NewPrivateKeyRSA(keyHandle)
+
+	//initialize p11.pkcs11session
+	kas.Session = p11.NewSession(ctx, session)
+
+
+
 
 	//RSA Cert
 	log.Printf("Finding RSA certificate: %s", rsaLabel)
@@ -202,6 +214,7 @@ func main() {
 	// os interrupt
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+	
 	// server
 	server := http.Server{
 		Addr:         "127.0.0.1:8080",
@@ -231,14 +244,14 @@ func main() {
 //	return hex.DecodeString(s)
 //}
 
-func getPrivateKey() interface{} {
+func getPrivateKey() *rsa.PrivateKey {
 	privkey := os.Getenv("PRIVATE_KEY_RSA_PATH")
 	fileBytes := loadBytes(privkey)
 	block, _ := pem.Decode(fileBytes)
 	if block == nil {
 		log.Panic("empty block")
 	}
-	privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
 		log.Panic(err)
 	}

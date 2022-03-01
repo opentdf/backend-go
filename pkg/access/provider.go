@@ -1,7 +1,6 @@
 package access
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
@@ -9,15 +8,18 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/opentdf/backend-go/pkg/p11"
 )
 
 type Provider struct {
 	URI          url.URL           `json:"uri"`
-	PrivateKey   crypto.PrivateKey `json:"-"`
+	PrivateKey   p11.Pkcs11PrivateKeyRSA
 	PublicKeyRsa rsa.PublicKey     `json:"publicKey"`
 	PublicKeyEc  ecdsa.PublicKey
 	Certificate  x509.Certificate `json:"certificate"`
 	Attributes   []Attribute      `json:"attributes"`
+	Session      p11.Pkcs11Session
 }
 
 // NewProvider errors if untrusted

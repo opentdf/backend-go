@@ -24,6 +24,7 @@ func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(jData)
+	_,_ = w.Write([]byte("\n")) // added so that /kas_public_key matches opentdf response exactly
 }
 
 
