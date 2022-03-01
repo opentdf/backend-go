@@ -108,14 +108,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-
-	// clientPublicKey := pub.(*rsa.PublicKey)
-	// switch clientPublicKey := clientPublicKey.(type) {
-    // case *rsa.PublicKey:
-    //     log.Println("pub is of type RSA:", clientPublicKey)
-    // default:
-    //     panic("unknown type of public key")
-    // }
+	
 
 	// nano header
 	// log.Println(requestBody.KeyAccess.Header)
