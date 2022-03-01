@@ -14,12 +14,11 @@ import (
 
 // EncryptWithRSAPublicKey encrypts data with public key
 func EncryptWithRSAPublicKey(msg []byte, publicKey *rsa.PublicKey) (ciphertext []byte, err error) {
-	//publicKey, _ := (*pub).(*rsa.PublicKey)
 	return rsa.EncryptOAEP(sha1.New(), rand.Reader, publicKey, msg, nil)
 }
 
 // EncryptWithPublicKey encrypts data with public key
-func EncryptWithPublicKey(msg []byte, pub *interface{}) (ciphertext []byte, err error) {
+func EncryptWithPublicKey(msg []byte, pub *crypto.PublicKey) (ciphertext []byte, err error) {
 	publicKey, _ := (*pub).(*rsa.PublicKey)
 	return rsa.EncryptOAEP(sha1.New(), rand.Reader, publicKey, msg, nil)
 }
@@ -27,9 +26,7 @@ func EncryptWithPublicKey(msg []byte, pub *interface{}) (ciphertext []byte, err 
 // DecryptWithPrivateKey decrypts data with private key
 func DecryptWithPrivateKey(msg []byte, private *crypto.PrivateKey) (cleartext []byte, err error) {
 	privateKey, _ := (*private).(*rsa.PrivateKey)
-	//decryptedBytes, err := privateKey.Decrypt(nil, msg, &rsa.OAEPOptions{Hash: crypto.SHA256})
 	return rsa.DecryptOAEP(sha1.New(), rand.Reader, privateKey, msg, nil)
-	//return privateKey.Decrypt(nil, msg, &rsa.OAEPOptions{Hash: crypto.SHA1})
 }
 
 func NewCipher(key []byte) (Block, error) {

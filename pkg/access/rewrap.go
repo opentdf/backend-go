@@ -108,7 +108,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-	// log.Printf("Underlying Type: %T\n", clientPublicKey)
+
 	// clientPublicKey := pub.(*rsa.PublicKey)
 	// switch clientPublicKey := clientPublicKey.(type) {
     // case *rsa.PublicKey:
@@ -116,6 +116,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
     // default:
     //     panic("unknown type of public key")
     // }
+
 	// nano header
 	// log.Println(requestBody.KeyAccess.Header)
 	// log.Println(len(requestBody.KeyAccess.Header))
@@ -126,34 +127,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// 	log.Panic(err)
 	// }
 	// log.Print(n.Header.Length)
-	// unwrap
-	// log.Printf("Underlying Type: %T\n", &p.PrivateKey)
-	// log.Printf("Underlying Type: %T\n", requestBody.KeyAccess.WrappedKey)
-	// privkey, _ := (p.PrivateKey).(*rsa.PrivateKey)
-	// privkeyBytes := x509.MarshalPKCS1PrivateKey(privkey)
-	// // if err != nil {
-	// // 	log.Println(err)
-	// // }
-	// privkeyPem := pem.EncodeToMemory(
-	// 	&pem.Block{
-	// 		Type:  "RSA PRIVATE KEY",
-	// 		Bytes: privkeyBytes,
-	// 	},
-	// )
-	// log.Println(string(privkeyPem))
 
-	// my_msg := "This-is-my-message"
-	// results, err := tdf3.EncryptWithRSAPublicKey([]byte(my_msg), &p.PublicKeyRsa)
-	// // log.Println(results)
-	// // log.Println(string(results))
-	// my_msg_back, err := tdf3.DecryptWithPrivateKey(results, &p.PrivateKey)
-	// if err != nil {
-	// 	// FIXME handle error
-	// 	log.Panic(err)
-	// 	return
-	// }
-	// log.Println(my_msg_back)
-	// log.Println(string(my_msg_back))
 	
 	// unwrap using a key from file
 	//ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)
