@@ -57,6 +57,13 @@ func main() {
 	}
 	log.Println(oauth2Config)
 
+	// var verifier = provider.Verifier(&oidc.Config{ClientID: ""})
+
+	// kas.Oauth2Config = oauth2Config
+	// kas.OIDCProvider = provider
+	// kas.OIDCVerifier = verifier
+
+
 	// PKCS#11
 	pin := os.Getenv("PKCS11_PIN")
 	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") //development-rsa-kas

@@ -2,6 +2,7 @@ package access
 
 import (
 	// "bytes"
+	// "context"
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
@@ -14,9 +15,11 @@ import (
 
 	// "github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
 	// "github.com/opentdf/backend-go/pkg/nano"
+	// "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/opentdf/backend-go/pkg/tdf3"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"github.com/opentdf/backend-go/pkg/p11"
+	// "golang.org/x/oauth2"
 )
 
 // RewrapRequest HTTP request body in JSON
@@ -32,6 +35,13 @@ type RequestBody struct {
 	Algorithm       string         `json:"algorithm,omitempty"`
 	ClientPublicKey string         `json:"clientPublicKey"`
 	SchemaVersion   string         `json:"schemaVersion,omitempty"`
+}
+
+type ClaimsObject struct{
+	PublicKey	string		`json:"public_key"`
+	ClientPublicSigningKey	string 	`json:"client_public_signing_key"`
+	TdfSpecVersion 	string 	`json:"tdf_spec_version,omitempty"`
+	SubjectAttributes 	[]Attribute 	`json:"subject_attributes"`
 }
 
 type Entity struct {
@@ -51,6 +61,16 @@ type customClaims struct {
 	RequestBody string `json:"requestBody,omitempty"`
 }
 
+type customClaims2 struct {
+	ClientID       string         `json:"clientId"`
+	TDFClaims	   ClaimsObject	  `json:"tdf_claims"`
+}
+
+type keycloakResponse struct{
+	PublicKey string `json:"public_key"`
+}
+
+
 // Handler decrypts and encrypts the symmetric data key
 func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	log.Println("REWRAP")
@@ -61,9 +81,125 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	if r.ContentLength == 0 {
 		return
 	}
-	decoder := json.NewDecoder(r.Body)
+
+	// oauth2Token, err := p.Oauth2Config.Exchange(context.Background(), r.URL.Query().Get(""))
+    // if err != nil {
+    //     log.Panic(err)
+	// 	return
+    // }
+
+    // // Extract the ID Token from OAuth2 token.
+    // rawIDToken, ok := oauth2Token.Extra("id_token").(string)
+    // if !ok {
+    //     log.Panic(err)
+	// 	return
+    // }
+
+    // // Parse and verify ID Token payload.
+    // //idToken, err := p.OIDCVerifier.Verify(context.Background(), rawIDToken)
+	// _, err = p.OIDCVerifier.Verify(context.Background(), rawIDToken)
+    // if err != nil {
+    //     log.Panic(err)
+	// 	return
+    // }
+
+    // // Extract custom claims
+    // var claims struct {
+    //     Email    string `json:"email"`
+    //     Verified bool   `json:"email_verified"`
+    // }
+    // if err := idToken.Claims(&claims); err != nil {
+    //     log.Panic(err)
+	// 	return
+    // }
+
+
+	oidcRequestToken := r.Header.Get("Authorization")
+	splitToken := strings.Split(oidcRequestToken, "Bearer ")
+	oidcRequestToken = splitToken[1]
+	log.Println(oidcRequestToken)
+
+	// We must extract `iss` without validating the JWT,
+	// because we need `iss` to know which specific realm endpoint to hit
+    // to get the public key we would verify it with
+	headerToken, err := jwt.ParseSigned(oidcRequestToken)
+	c := &jwt.Claims{}
+	c2 := &customClaims2{}
+	err = headerToken.UnsafeClaimsWithoutVerification(c, c2)
+	if err != nil {
+		// FIXME handle error
+		log.Panic(err)
+		return
+	}
+	log.Println(c2)
+	log.Println(c)
+
+	//get the public key
+	resp, err := http.Get(c.Issuer)
+	if err != nil {
+		// FIXME handle error
+		log.Panic(err)
+		return
+	}
+	log.Println(resp.Body)
+	decoder := json.NewDecoder(resp.Body)
+	var keyResp keycloakResponse
+	err = decoder.Decode(&keyResp)
+	if err != nil {
+		// FIXME handle error
+		log.Panic(err)
+		return
+	}
+	log.Println(keyResp)
+	block, _ := pem.Decode([]byte("-----BEGIN PUBLIC KEY-----\n"+keyResp.PublicKey+"\n-----END PUBLIC KEY-----\n"))
+	if block == nil {
+		// FIXME handle error
+		log.Panic("err missing keycloak PublicKey")
+		return
+	}
+	keycloakPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+
+
+	//decode with verification
+	c = &jwt.Claims{}
+	c2 = &customClaims2{}
+	err = headerToken.Claims(keycloakPublicKey, c, c2)
+	if err != nil {
+		// FIXME handle error
+		log.Panic(err)
+		return
+	}
+	log.Println(c2)
+	log.Println(c)
+
+
+
+	// decoder := json.NewDecoder(strings.NewReader(c2.RequestHeader))
+	// var requestHeader RequestHeader
+	// err = decoder.Decode(&requestHeader)
+	// if err != nil {
+	// 	// FIXME handle error
+	// 	log.Panic(err)
+	// 	return
+	// }
+	// log.Println(requestHeader.ClientID)
+
+	// decoder := json.NewDecoder(strings.NewReader(c2))
+	// var requestHeader customClaims2
+	// err = decoder.Decode(&requestHeader)
+	// if err != nil {
+	// 	// FIXME handle error
+	// 	log.Panic(err)
+	// 	return
+	// }
+	log.Println(c2.ClientID)
+	log.Println(c2.TDFClaims.PublicKey)
+	
+
+
+	decoder = json.NewDecoder(r.Body)
 	var rewrapRequest RewrapRequest
-	err := decoder.Decode(&rewrapRequest)
+	err = decoder.Decode(&rewrapRequest)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
@@ -75,16 +211,16 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-	c := &jwt.Claims{}
-	c2 := &customClaims{}
-	err = requestToken.UnsafeClaimsWithoutVerification(c, c2)
+	c3 := &jwt.Claims{}
+	c4 := &customClaims{}
+	err = requestToken.UnsafeClaimsWithoutVerification(c3, c4)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
 		return
 	}
-	log.Println(c2.RequestBody)
-	decoder = json.NewDecoder(strings.NewReader(c2.RequestBody))
+	log.Println(c4.RequestBody)
+	decoder = json.NewDecoder(strings.NewReader(c4.RequestBody))
 	var requestBody RequestBody
 	err = decoder.Decode(&requestBody)
 	if err != nil {
@@ -93,10 +229,10 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println(requestBody.ClientPublicKey)
-	// TODO get OIDC public key
+
 
 	// Decode PEM entity public key
-	block, _ := pem.Decode([]byte(requestBody.ClientPublicKey))
+	block, _ = pem.Decode([]byte(requestBody.ClientPublicKey))
 	if block == nil {
 		// FIXME handle error
 		log.Panic("err missing clientPublicKey")
@@ -149,6 +285,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	// // TODO validate policy
 	// log.Println()
+
 	// // TODO store policy
 	// rewrappedKey := []byte("TODO")
 	responseBytes, err := json.Marshal(&RewrapResponse{
