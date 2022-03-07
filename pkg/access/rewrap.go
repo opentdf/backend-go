@@ -40,7 +40,7 @@ type RequestBody struct {
 type ClaimsObject struct{
 	PublicKey	string		`json:"public_key"`
 	ClientPublicSigningKey	string 	`json:"client_public_signing_key"`
-	TdfSpecVersion 	string 	`json:"tdf_spec_version,omitempty"`
+	SchemaVersion 	string 	`json:"tdf_spec_version,omitempty"`
 	SubjectAttributes 	[]Attribute 	`json:"subject_attributes"`
 }
 
@@ -57,11 +57,11 @@ type RewrapResponse struct {
 	SchemaVersion    string `json:"schemaVersion,omitempty"`
 }
 
-type customClaims struct {
+type customClaimsBody struct {
 	RequestBody string `json:"requestBody,omitempty"`
 }
 
-type customClaims2 struct {
+type customClaimsHeader struct {
 	ClientID       string         `json:"clientId"`
 	TDFClaims	   ClaimsObject	  `json:"tdf_claims"`
 }
@@ -124,15 +124,13 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
     // to get the public key we would verify it with
 	headerToken, err := jwt.ParseSigned(oidcRequestToken)
 	c := &jwt.Claims{}
-	c2 := &customClaims2{}
+	c2 := &customClaimsHeader{}
 	err = headerToken.UnsafeClaimsWithoutVerification(c, c2)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
 		return
 	}
-	log.Println(c2)
-	log.Println(c)
 
 	//get the public key
 	resp, err := http.Get(c.Issuer)
@@ -150,7 +148,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-	log.Println(keyResp)
+	// log.Println(keyResp)
 	block, _ := pem.Decode([]byte("-----BEGIN PUBLIC KEY-----\n"+keyResp.PublicKey+"\n-----END PUBLIC KEY-----\n"))
 	if block == nil {
 		// FIXME handle error
@@ -162,15 +160,15 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 	//decode with verification
 	c = &jwt.Claims{}
-	c2 = &customClaims2{}
+	c2 = &customClaimsHeader{}
 	err = headerToken.Claims(keycloakPublicKey, c, c2)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
 		return
 	}
-	log.Println(c2)
-	log.Println(c)
+	// log.Println(c2)
+	// log.Println(c)
 
 
 
@@ -185,7 +183,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// log.Println(requestHeader.ClientID)
 
 	// decoder := json.NewDecoder(strings.NewReader(c2))
-	// var requestHeader customClaims2
+	// var requestHeader customClaimsHeader
 	// err = decoder.Decode(&requestHeader)
 	// if err != nil {
 	// 	// FIXME handle error
@@ -212,7 +210,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c3 := &jwt.Claims{}
-	c4 := &customClaims{}
+	c4 := &customClaimsBody{}
 	err = requestToken.UnsafeClaimsWithoutVerification(c3, c4)
 	if err != nil {
 		// FIXME handle error
