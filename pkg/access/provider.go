@@ -10,8 +10,8 @@ import (
 	"net/url"
 
 	"github.com/opentdf/backend-go/pkg/p11"
-	"github.com/coreos/go-oidc/v3/oidc"
-	"golang.org/x/oauth2"
+	// "github.com/coreos/go-oidc/v3/oidc"
+	// "golang.org/x/oauth2"
 )
 
 type Provider struct {

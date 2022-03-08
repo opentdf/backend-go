@@ -82,7 +82,8 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// oauth2Token, err := p.Oauth2Config.Exchange(context.Background(), r.URL.Query().Get(""))
+	///////////////////////////////
+	// oauth2Token, err := p.Oauth2Config.Exchange(context.Background(), r.URL.Query().Get("code"))
     // if err != nil {
     //     log.Panic(err)
 	// 	return
@@ -96,24 +97,24 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
     // }
 
     // // Parse and verify ID Token payload.
-    // //idToken, err := p.OIDCVerifier.Verify(context.Background(), rawIDToken)
-	// _, err = p.OIDCVerifier.Verify(context.Background(), rawIDToken)
+    // idToken, err := p.OIDCVerifier.Verify(context.Background(), rawIDToken)
+	// //_, err = p.OIDCVerifier.Verify(context.Background(), rawIDToken)
     // if err != nil {
     //     log.Panic(err)
 	// 	return
     // }
 
     // // Extract custom claims
-    // var claims struct {
-    //     Email    string `json:"email"`
-    //     Verified bool   `json:"email_verified"`
-    // }
+    // var claims customClaimsBody
     // if err := idToken.Claims(&claims); err != nil {
     //     log.Panic(err)
 	// 	return
     // }
 
+	// log.Println("no errors")
+	// log.Println(claims)
 
+	/////////////////////////////////////
 	oidcRequestToken := r.Header.Get("Authorization")
 	splitToken := strings.Split(oidcRequestToken, "Bearer ")
 	oidcRequestToken = splitToken[1]
@@ -123,9 +124,9 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// because we need `iss` to know which specific realm endpoint to hit
     // to get the public key we would verify it with
 	headerToken, err := jwt.ParseSigned(oidcRequestToken)
-	c := &jwt.Claims{}
-	c2 := &customClaimsHeader{}
-	err = headerToken.UnsafeClaimsWithoutVerification(c, c2)
+	jwt_claims_header := &jwt.Claims{}
+	// c2 := &customClaimsHeader{}
+	err = headerToken.UnsafeClaimsWithoutVerification(jwt_claims_header)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
@@ -133,7 +134,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//get the public key
-	resp, err := http.Get(c.Issuer)
+	resp, err := http.Get(jwt_claims_header.Issuer)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
@@ -159,16 +160,16 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 
 	//decode with verification
-	c = &jwt.Claims{}
-	c2 = &customClaimsHeader{}
-	err = headerToken.Claims(keycloakPublicKey, c, c2)
+	jwt_claims_header = &jwt.Claims{}
+	header_claims := &customClaimsHeader{}
+	err = headerToken.Claims(keycloakPublicKey, jwt_claims_header, header_claims)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
 		return
 	}
-	// log.Println(c2)
-	// log.Println(c)
+	// log.Println(header_claims)
+	// log.Println(jwt_claims_header)
 
 
 
@@ -190,8 +191,8 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// 	log.Panic(err)
 	// 	return
 	// }
-	log.Println(c2.ClientID)
-	log.Println(c2.TDFClaims.PublicKey)
+	log.Println(header_claims.ClientID)
+	log.Println(header_claims.TDFClaims.PublicKey)
 	
 
 
@@ -209,16 +210,16 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-	c3 := &jwt.Claims{}
-	c4 := &customClaimsBody{}
-	err = requestToken.UnsafeClaimsWithoutVerification(c3, c4)
+	jwt_claims_body := &jwt.Claims{}
+	body_claims := &customClaimsBody{}
+	err = requestToken.UnsafeClaimsWithoutVerification(jwt_claims_body, body_claims)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
 		return
 	}
-	log.Println(c4.RequestBody)
-	decoder = json.NewDecoder(strings.NewReader(c4.RequestBody))
+	log.Println(body_claims.RequestBody)
+	decoder = json.NewDecoder(strings.NewReader(body_claims.RequestBody))
 	var requestBody RequestBody
 	err = decoder.Decode(&requestBody)
 	if err != nil {
@@ -242,6 +243,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
+	///////////////////////////////
 	
 
 	// nano header
@@ -265,6 +267,8 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
+
+	///////////////////////////////
 	//unwrap using hsm key
 	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
 		 requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)

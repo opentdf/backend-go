@@ -57,7 +57,7 @@ func main() {
 	}
 	log.Println(oauth2Config)
 
-	// var verifier = provider.Verifier(&oidc.Config{ClientID: ""})
+	// var verifier = provider.Verifier(&oidc.Config{ClientID: "", SkipClientIDCheck: true})
 
 	// kas.Oauth2Config = oauth2Config
 	// kas.OIDCProvider = provider
