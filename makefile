@@ -1,7 +1,7 @@
 APP_NAME = "go-kas"
 GO_MOD_LINE = $(shell head -n 1 go.mod | cut -c 8-)
 GO_MOD_NAME = ${GO_MOD_LINE}
-CONF_PATH = ${GO_MOD_NAME}/pkg/conf
+CONF_PATH = ${GO_MOD_NAME}/internal/conf
 VERSION = $(shell cat VERSION)
 BUILD_TIME = $(shell date +'%Y-%m-%d_%T')
 SHA1 = $(shell git rev-parse HEAD)

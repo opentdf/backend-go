@@ -1,6 +1,6 @@
-package internal
+package version
 
-import "github.com/opentdf/backend-go/pkg/conf"
+import "github.com/opentdf/backend-go/internal/conf"
 
 type VersionStat struct {
 	Version     string `json:"version"`

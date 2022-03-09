@@ -23,12 +23,23 @@ import (
 	"github.com/miekg/pkcs11"
 	"github.com/opentdf/backend-go/pkg/access"
 	"github.com/opentdf/backend-go/pkg/p11"
+	"github.com/opentdf/backend-go/internal/version"
 	"golang.org/x/oauth2"
 )
 
 const hostname = "localhost"
 
 func main() {
+	//version and build information
+	var stats version.VersionStat
+	stats = version.GetVersion()
+	log.Printf("Version: %s", stats.Version)
+	log.Printf("Version Long: %s", stats.VersionLong)
+	log.Printf("Build Time: %s", stats.BuildTime)
+
+
+
+
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
 		URI:         *kasURI,
