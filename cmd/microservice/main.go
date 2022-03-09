@@ -37,9 +37,6 @@ func main() {
 	log.Printf("Version Long: %s", stats.VersionLong)
 	log.Printf("Build Time: %s", stats.BuildTime)
 
-
-
-
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
 		URI:         *kasURI,
