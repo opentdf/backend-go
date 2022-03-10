@@ -128,7 +128,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Println(requestBody.ClientPublicKey)
-
+  
 
 	// Decode PEM entity public key
 	block, _ := pem.Decode([]byte(requestBody.ClientPublicKey))
