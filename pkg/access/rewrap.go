@@ -2,12 +2,13 @@ package access
 
 import (
 	// "bytes"
-	// "context"
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
 	"log"
+	// "fmt"
 	"net/http"
 	"strings"
 	// "crypto/rsa"
@@ -66,10 +67,6 @@ type customClaimsHeader struct {
 	TDFClaims	   ClaimsObject	  `json:"tdf_claims"`
 }
 
-type keycloakResponse struct{
-	PublicKey string `json:"public_key"`
-}
-
 
 // Handler decrypts and encrypts the symmetric data key
 func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
@@ -82,121 +79,31 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	///////////////////////////////
-	// oauth2Token, err := p.Oauth2Config.Exchange(context.Background(), r.URL.Query().Get("code"))
-    // if err != nil {
-    //     log.Panic(err)
-	// 	return
-    // }
-
-    // // Extract the ID Token from OAuth2 token.
-    // rawIDToken, ok := oauth2Token.Extra("id_token").(string)
-    // if !ok {
-    //     log.Panic(err)
-	// 	return
-    // }
-
-    // // Parse and verify ID Token payload.
-    // idToken, err := p.OIDCVerifier.Verify(context.Background(), rawIDToken)
-	// //_, err = p.OIDCVerifier.Verify(context.Background(), rawIDToken)
-    // if err != nil {
-    //     log.Panic(err)
-	// 	return
-    // }
-
-    // // Extract custom claims
-    // var claims customClaimsBody
-    // if err := idToken.Claims(&claims); err != nil {
-    //     log.Panic(err)
-	// 	return
-    // }
-
-	// log.Println("no errors")
-	// log.Println(claims)
-
-	/////////////////////////////////////
+	//////////////// OIDC VERIFY ///////////////
+	//get the raw token
 	oidcRequestToken := r.Header.Get("Authorization")
 	splitToken := strings.Split(oidcRequestToken, "Bearer ")
 	oidcRequestToken = splitToken[1]
 	log.Println(oidcRequestToken)
 
-	// We must extract `iss` without validating the JWT,
-	// because we need `iss` to know which specific realm endpoint to hit
-    // to get the public key we would verify it with
-	headerToken, err := jwt.ParseSigned(oidcRequestToken)
-	jwt_claims_header := &jwt.Claims{}
-	// c2 := &customClaimsHeader{}
-	err = headerToken.UnsafeClaimsWithoutVerification(jwt_claims_header)
-	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+    // Parse and verify ID Token payload.
+    idToken, err := p.OIDCVerifier.Verify(context.Background(), oidcRequestToken)
+    if err != nil {
+        log.Panic(err)
 		return
-	}
+    }
 
-	//get the public key
-	resp, err := http.Get(jwt_claims_header.Issuer)
-	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+    // Extract custom claims
+    var claims customClaimsHeader
+    if err := idToken.Claims(&claims); err != nil {
+        log.Panic(err)
 		return
-	}
-	log.Println(resp.Body)
-	decoder := json.NewDecoder(resp.Body)
-	var keyResp keycloakResponse
-	err = decoder.Decode(&keyResp)
-	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
-		return
-	}
-	// log.Println(keyResp)
-	block, _ := pem.Decode([]byte("-----BEGIN PUBLIC KEY-----\n"+keyResp.PublicKey+"\n-----END PUBLIC KEY-----\n"))
-	if block == nil {
-		// FIXME handle error
-		log.Panic("err missing keycloak PublicKey")
-		return
-	}
-	keycloakPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+    }
+	log.Println(claims)
 
 
-	//decode with verification
-	jwt_claims_header = &jwt.Claims{}
-	header_claims := &customClaimsHeader{}
-	err = headerToken.Claims(keycloakPublicKey, jwt_claims_header, header_claims)
-	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
-		return
-	}
-	// log.Println(header_claims)
-	// log.Println(jwt_claims_header)
-
-
-
-	// decoder := json.NewDecoder(strings.NewReader(c2.RequestHeader))
-	// var requestHeader RequestHeader
-	// err = decoder.Decode(&requestHeader)
-	// if err != nil {
-	// 	// FIXME handle error
-	// 	log.Panic(err)
-	// 	return
-	// }
-	// log.Println(requestHeader.ClientID)
-
-	// decoder := json.NewDecoder(strings.NewReader(c2))
-	// var requestHeader customClaimsHeader
-	// err = decoder.Decode(&requestHeader)
-	// if err != nil {
-	// 	// FIXME handle error
-	// 	log.Panic(err)
-	// 	return
-	// }
-	log.Println(header_claims.ClientID)
-	log.Println(header_claims.TDFClaims.PublicKey)
-	
-
-
-	decoder = json.NewDecoder(r.Body)
+	//////////////// DECODE BODY EXTRAXT CLIENT PUBKEY /////////////////////
+	decoder := json.NewDecoder(r.Body)
 	var rewrapRequest RewrapRequest
 	err = decoder.Decode(&rewrapRequest)
 	if err != nil {
@@ -231,7 +138,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 
 	// Decode PEM entity public key
-	block, _ = pem.Decode([]byte(requestBody.ClientPublicKey))
+	block, _ := pem.Decode([]byte(requestBody.ClientPublicKey))
 	if block == nil {
 		// FIXME handle error
 		log.Panic("err missing clientPublicKey")
@@ -243,7 +150,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-	///////////////////////////////
+	// ///////////////////////////////
 	
 
 	// nano header
@@ -268,7 +175,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// }
 
 
-	///////////////////////////////
+	// ///////////// UNWRAP AND REWRAP //////////////////
 	//unwrap using hsm key
 	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
 		 requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)

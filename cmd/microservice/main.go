@@ -47,21 +47,21 @@ func main() {
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
 	oauth2Config := oauth2.Config{
-		ClientID:     "",
-		ClientSecret: "",
+		ClientID:     os.Getenv("OIDC_CLIENT_ID"),
+		ClientSecret: os.Getenv("OIDC_CLIENT_SECRET"),
 		RedirectURL:  "",
 		// Discovery returns the OAuth2 endpoints.
 		Endpoint: provider.Endpoint(),
 		// "openid" is a required scope for OpenID Connect flows.
-		Scopes: []string{oidc.ScopeOpenID, "profile", "email"},
+		Scopes: []string{oidc.ScopeOpenID},
 	}
 	log.Println(oauth2Config)
 
-	// var verifier = provider.Verifier(&oidc.Config{ClientID: "", SkipClientIDCheck: true})
+	var verifier = provider.Verifier(&oidc.Config{ClientID: "tdf-attributes", SkipClientIDCheck: true})
 
-	// kas.Oauth2Config = oauth2Config
-	// kas.OIDCProvider = provider
-	// kas.OIDCVerifier = verifier
+	kas.Oauth2Config = oauth2Config
+	kas.OIDCProvider = provider
+	kas.OIDCVerifier = verifier
 
 
 	// PKCS#11
