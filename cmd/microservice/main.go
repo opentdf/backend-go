@@ -31,12 +31,12 @@ const hostname = "localhost"
 func main() {
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
-		URI:         *kasURI,
+		URI: *kasURI,
 		//PrivateKey:  getPrivateKey(),
 		PrivateKey:  p11.Pkcs11PrivateKeyRSA{},
 		Certificate: x509.Certificate{},
 		Attributes:  nil,
-		Session:	 p11.Pkcs11Session{},
+		Session:     p11.Pkcs11Session{},
 	}
 	// OIDC
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
@@ -60,7 +60,6 @@ func main() {
 	var verifier = provider.Verifier(&oidc.Config{ClientID: "tdf-attributes", SkipClientIDCheck: true})
 
 	kas.OIDCVerifier = verifier
-
 
 	// PKCS#11
 	pin := os.Getenv("PKCS11_PIN")
@@ -122,9 +121,6 @@ func main() {
 
 	//initialize p11.pkcs11session
 	kas.Session = p11.NewSession(ctx, session)
-
-
-
 
 	//RSA Cert
 	log.Printf("Finding RSA certificate: %s", rsaLabel)
@@ -219,7 +215,7 @@ func main() {
 	// os interrupt
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
-	
+
 	// server
 	server := http.Server{
 		Addr:         "127.0.0.1:8080",

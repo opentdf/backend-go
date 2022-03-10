@@ -80,7 +80,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	log.Println(oidcRequestToken)
 
     // Parse and verify ID Token payload.
-    idToken, err := p.OIDCVerifier.Verify(context.Background(), oidcRequestToken)
+	idToken, err := p.OIDCVerifier.Verify(context.Background(), oidcRequestToken)
     if err != nil {
         log.Panic(err)
 		return
@@ -95,7 +95,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	log.Println(claims)
 
 
-	//////////////// DECODE BODY EXTRAXT CLIENT PUBKEY /////////////////////
+	//////////////// DECODE BODY EXTRACT CLIENT PUBKEY /////////////////////
 	decoder := json.NewDecoder(r.Body)
 	var rewrapRequest RewrapRequest
 	err = decoder.Decode(&rewrapRequest)
