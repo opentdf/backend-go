@@ -38,13 +38,6 @@ type RequestBody struct {
 	SchemaVersion   string         `json:"schemaVersion,omitempty"`
 }
 
-type ClaimsObject struct{
-	PublicKey	string		`json:"public_key"`
-	ClientPublicSigningKey	string 	`json:"client_public_signing_key"`
-	SchemaVersion 	string 	`json:"tdf_spec_version,omitempty"`
-	SubjectAttributes 	[]Attribute 	`json:"subject_attributes"`
-}
-
 type Entity struct {
 	Id         string
 	Aliases    []string

@@ -15,11 +15,4 @@ type Attribute struct {
 	//Default       bool             // isDefault
 	//Name          string           // displayName
 }
-// type Attribute struct{
-// 	Attribute string `json:"attribute"`
-// 	IsDefault bool `json:"isDefault,omitempty"`
-// 	DisplayName string `json:"displayName"`
-// 	PubKey string `json:"pubKey"`
-// 	KasUrl string `json:"kasUrl"`
-// 	TdfSpecVersion string `json:"tdf_spec_version,omitempty"`
-// }
+
