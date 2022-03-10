@@ -47,8 +47,8 @@ func main() {
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
 	oauth2Config := oauth2.Config{
-		ClientID:     os.Getenv("OIDC_CLIENT_ID"),
-		ClientSecret: os.Getenv("OIDC_CLIENT_SECRET"),
+		ClientID:     "",
+		ClientSecret: "",
 		RedirectURL:  "",
 		// Discovery returns the OAuth2 endpoints.
 		Endpoint: provider.Endpoint(),
