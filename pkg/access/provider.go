@@ -11,7 +11,7 @@ import (
 
 	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/coreos/go-oidc/v3/oidc"
-	"golang.org/x/oauth2"
+	// "golang.org/x/oauth2"
 )
 
 type Provider struct {
@@ -22,8 +22,6 @@ type Provider struct {
 	Certificate  x509.Certificate `json:"certificate"`
 	Attributes   []Attribute      `json:"attributes"`
 	Session      p11.Pkcs11Session
-	Oauth2Config oauth2.Config
-	OIDCProvider *oidc.Provider
 	OIDCVerifier *oidc.IDTokenVerifier
 }
 
