@@ -65,7 +65,7 @@ func main() {
 	}
 	log.Println(oauth2Config)
 
-	var verifier = provider.Verifier(&oidc.Config{ClientID: "tdf-attributes", SkipClientIDCheck: true})
+	var verifier = provider.Verifier(&oidc.Config{ClientID: "", SkipClientIDCheck: true})
 
 	kas.OIDCVerifier = verifier
 
