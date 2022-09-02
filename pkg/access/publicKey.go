@@ -4,13 +4,16 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/pem"
 	"encoding/json"
+	"encoding/pem"
+	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
-func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {	
+func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
 	if err != nil {
 		log.Fatalf("error RSA public key from PKCS11: %v", err)
@@ -24,9 +27,8 @@ func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(jData)
-	_,_ = w.Write([]byte("\n")) // added so that /kas_public_key matches opentdf response exactly
+	_, _ = w.Write([]byte("\n")) // added so that /kas_public_key matches opentdf response exactly
 }
-
 
 // PublicKeyHandlerV2 decrypts and encrypts the symmetric data key
 func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
@@ -37,8 +39,25 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Fatalf("error EC public key from PKCS11: %v", err)
 		}
-		log.Println(ecPublicKeyPem)
 		_, _ = w.Write([]byte(ecPublicKeyPem))
+		return
+	}
+	format := r.URL.Query().Get("format")
+	if format == "JWK" {
+		// Parse, serialize, slice and dice JWKs!
+		rsaPublicKeyJwk, err := jwk.FromRaw(&p.PublicKeyRsa)
+		if err != nil {
+			fmt.Printf("failed to parse JWK: %s\n", err)
+			return
+		}
+		// Keys can be serialized back to JSON
+		json, err := json.Marshal(rsaPublicKeyJwk)
+		if err != nil {
+			log.Printf("failed to marshal key into JSON: %s", err)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(json)
 		return
 	}
 	rsaPublicKeyPem, err := exportRsaPublicKeyAsPemStr(&p.PublicKeyRsa)
@@ -46,7 +65,6 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("error RSA public key from PKCS11: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	log.Println(rsaPublicKeyPem)
 	_, _ = w.Write([]byte(rsaPublicKeyPem))
 }
 

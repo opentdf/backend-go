@@ -3,17 +3,25 @@ module github.com/opentdf/backend-go
 go 1.17
 
 require (
+	github.com/AzureAD/microsoft-authentication-library-for-go v0.5.0
 	github.com/coreos/go-oidc/v3 v3.1.0
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgx/v4 v4.13.0
 	github.com/kaitai-io/kaitai_struct_go_runtime v0.0.0-20210123225611-a8be0c954b0e
+	github.com/lestrrat-go/jwx/v2 v2.0.6
+	github.com/microsoft/kiota-abstractions-go v0.7.0
+	github.com/microsoftgraph/msgraph-sdk-go v0.24.0
 	github.com/miekg/pkcs11 v1.1.1
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
 	gopkg.in/square/go-jose.v2 v2.5.1
 )
 
 require (
+	github.com/cjlapao/common-go v0.0.19 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
+	github.com/goccy/go-json v0.9.11 // indirect
+	github.com/golang-jwt/jwt v3.2.1+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.10.0 // indirect
@@ -22,10 +30,20 @@ require (
 	github.com/jackc/pgproto3/v2 v2.1.1 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/jackc/pgtype v1.8.1 // indirect
-	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97 // indirect
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
-	golang.org/x/text v0.3.6 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
+	github.com/lestrrat-go/httpcc v1.0.1 // indirect
+	github.com/lestrrat-go/httprc v1.0.4 // indirect
+	github.com/lestrrat-go/iter v1.0.2 // indirect
+	github.com/lestrrat-go/option v1.0.0 // indirect
+	github.com/microsoft/kiota-http-go v0.4.0 // indirect
+	github.com/microsoft/kiota-serialization-json-go v0.3.2 // indirect
+	github.com/microsoft/kiota-serialization-text-go v0.2.0 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go-core v0.24.0 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
+	golang.org/x/crypto v0.0.0-20220511200225-c6db032c6c88 // indirect
+	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4 // indirect
+	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
