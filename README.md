@@ -65,13 +65,10 @@ helm install ex nginx-stable/nginx-ingress
 ### Start database
 
 ```shell
-mkdir -p data
 docker run \
     --detach \
-    --publish 0.0.0.0:5432:5432 \
-    --volume data:/var/lib/postgresql/data \
-    --env POSTGRES_PASSWORD=mysecretpassword \
-    --env PGDATA=/var/lib/postgresql/data/pgdata \
+    --publish 5432:5432 \
+    --env POSTGRES_HOST_AUTH_METHOD=trust \
     postgres
 ```
 
@@ -133,6 +130,33 @@ export PKCS11_LABEL_PUBKEY_RSA=development-rsa-kas
 export PKCS11_LABEL_PUBKEY_EC=development-ec-kas
 export PRIVATE_KEY_RSA_PATH=../../kas-private.pem
 export OIDC_ISSUER=https://keycloak.opentdf.us/auth/realms/opentdf-realm
+export OIDC_CLIENT_ID=632cb24a-580b-4a0f-9682-b45ff159774f
+export OIDC_CLIENT_SECRET=myentitlementssecret
+```
+
+## Test
+
+Check public key service is working
+```shell
+curl http://127.0.0.1:8080/kas_public_key
+```
+
+Check entitlements service is working
+```shell
+curl -H "Authorization: Bearer <ACCESS_TOKEN>" http://127.0.0.1:8080/v2/claims
+curl -I -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJub25jZSI6IjRELU1sT29zclBFWURKOXhfU0lHZko4RFNEU0tuR3k4YzRvbmhTR2FVOW8iLCJhbGciOiJSUzI1NiIsIng1dCI6ImpTMVhvMU9XRGpfNTJ2YndHTmd2UU8yVnpNYyIsImtpZCI6ImpTMVhvMU9XRGpfNTJ2YndHTmd2UU8yVnpNYyJ9.eyJhdWQiOiIwMDAwMDAwMy0wMDAwLTAwMDAtYzAwMC0wMDAwMDAwMDAwMDAiLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC8wN2Y1ZjYwYi1mZWFiLTRmNTEtOTA5NS0yNzg1YTg3NzkyODEvIiwiaWF0IjoxNjUzMDY5MzEwLCJuYmYiOjE2NTMwNjkzMTAsImV4cCI6MTY1MzA3NDYyNCwiYWNjdCI6MCwiYWNyIjoiMSIsImFpbyI6IkFTUUEyLzhUQUFBQWxtNUpqUUxpVCtxNkhHVEIzdW0veTdocGxxWEw1N3R2eGRVZFhLZzdUTjQ9IiwiYW1yIjpbInB3ZCJdLCJhcHBfZGlzcGxheW5hbWUiOiJsb2NhbGhvc3QtYWJhY3VzIiwiYXBwaWQiOiIxOTViMzcxNS1lN2VmLTQ3OWItOTI3NC1kNzlkYjViNzYzNGQiLCJhcHBpZGFjciI6IjAiLCJmYW1pbHlfbmFtZSI6IkZseW5uIiwiZ2l2ZW5fbmFtZSI6IlBhdWwiLCJpZHR5cCI6InVzZXIiLCJpcGFkZHIiOiI3My4xMzMuMTgwLjI1NSIsIm5hbWUiOiJQYXVsIEZseW5uIiwib2lkIjoiYmYxZWZhYjAtMDE2Mi00NGY4LTk5ODctMjc0MGNhNzYzNTJmIiwicGxhdGYiOiI1IiwicHVpZCI6IjEwMDNCRkZEQTY2REMwRDUiLCJyaCI6IjAuQVZrQUNfYjFCNnYtVVUtUWxTZUZxSGVTZ1FNQUFBQUFBQUFBd0FBQUFBQUFBQUJaQUtRLiIsInNjcCI6Im9wZW5pZCBwcm9maWxlIFVzZXIuUmVhZCBlbWFpbCIsInN1YiI6Ikdhcm9qMkZsb3lCNkpDdnpLZGczbWZXNjFMQ0xJTXlXRWgzTWt0d01TMXciLCJ0ZW5hbnRfcmVnaW9uX3Njb3BlIjoiTkEiLCJ0aWQiOiIwN2Y1ZjYwYi1mZWFiLTRmNTEtOTA5NS0yNzg1YTg3NzkyODEiLCJ1bmlxdWVfbmFtZSI6InBhdWxAYXJrYXZvLmNvbSIsInVwbiI6InBhdWxAYXJrYXZvLmNvbSIsInV0aSI6Ik1QZWZNenZGcTB5aENaT2g1SVd1QUEiLCJ2ZXIiOiIxLjAiLCJ3aWRzIjpbIjYyZTkwMzk0LTY5ZjUtNDIzNy05MTkwLTAxMjE3NzE0NWUxMCIsImI3OWZiZjRkLTNlZjktNDY4OS04MTQzLTc2YjE5NGU4NTUwOSJdLCJ4bXNfc3QiOnsic3ViIjoibnlZRnVTZWs5emlReWRMZkdqcFZKbnVFUzBzamtHS1R5WlgzeDdMUlREcyJ9LCJ4bXNfdGNkdCI6MTUxMTY2ODg1NH0.Wt3CS7TSQfO-gN_DAE6GlM0lpKawaxZgp_Q3x083QDK5jdBc_J6hiGKE-HGi8wmeMr0NNYuOXKgJp7CK5IqXuexlEezBLKPKxVvYPxsAYdrpwd8jDcWyklewCUNKEvkBRkc8CKlMAGUwEuPbVjGWRYAmfkakpTolRJEJABE7DCmAbLTqQWzI0Ya6U-zlMAJ-tzStgXplrxx26DLI28gZQIJX0A0gERyNvGOrQeb7gFdUvw7_R1AiJVVeVHo-YgPsHJAxA-_xeqHNoSzdc13MNZSj_UtnxAR-BkYsA2nE7QE17w8M1HUobkT9s9ecmnkKV8PR08obiIRd2oshZ-FGQQ" http://127.0.0.1:8080/definitions/groups
+```
+
+### Test Environments
+
+opentdf.us
+```env
+OIDC_CLIENT_ID=opentdf-entitlements;OIDC_ISSUER=https://keycloak.opentdf.us/auth/realms/opentdf-realm;PKCS11_LABEL_PUBKEY_EC=development-ec-kas;PKCS11_LABEL_PUBKEY_RSA=development-rsa-kas;PKCS11_MODULE_PATH=/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so;PKCS11_PIN=12345;PKCS11_SLOT_INDEX=0;POSTGRES_DATABASE=postgres
+```
+
+microsoftonline.com
+```env
+OIDC_CLIENT_ID=opentdf-entitlements;OIDC_ISSUER=https://login.microsoftonline.com/07f5f60b-feab-4f51-9095-2785a8779281/v2.0;PKCS11_LABEL_PUBKEY_EC=development-ec-kas;PKCS11_LABEL_PUBKEY_RSA=development-rsa-kas;PKCS11_MODULE_PATH=/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so;PKCS11_PIN=12345;PKCS11_SLOT_INDEX=0;POSTGRES_DATABASE=postgres
 ```
 
 ## References
@@ -221,5 +245,5 @@ pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --read-object
 
 openssl rsa -RSAPublicKey_in -in development-public.der -inform DER -outform PEM -out development-public.pem -RSAPublicKey_out
 
-pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --list-objects
+pkcs11-tool --module /usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so --login --list-objects
 ```

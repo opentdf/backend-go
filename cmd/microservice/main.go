@@ -4,7 +4,6 @@ import "C"
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -21,9 +20,10 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/jackc/pgx/v4"
 	"github.com/miekg/pkcs11"
-	"github.com/opentdf/backend-go/pkg/access"
-	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/opentdf/backend-go/internal/version"
+	"github.com/opentdf/backend-go/pkg/access"
+	"github.com/opentdf/backend-go/pkg/entitlements"
+	"github.com/opentdf/backend-go/pkg/p11"
 	"golang.org/x/oauth2"
 )
 
@@ -39,12 +39,12 @@ func main() {
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
-		URI:         *kasURI,
+		URI: *kasURI,
 		//PrivateKey:  getPrivateKey(),
 		PrivateKey:  p11.Pkcs11PrivateKeyRSA{},
 		Certificate: x509.Certificate{},
 		Attributes:  nil,
-		Session:	 p11.Pkcs11Session{},
+		Session:     p11.Pkcs11Session{},
 	}
 	// OIDC
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
@@ -55,7 +55,7 @@ func main() {
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
 	oauth2Config := oauth2.Config{
-		ClientID:     "",
+		ClientID:     os.Getenv("OIDC_CLIENT_ID"),
 		ClientSecret: "",
 		RedirectURL:  "",
 		// Discovery returns the OAuth2 endpoints.
@@ -68,7 +68,13 @@ func main() {
 	var verifier = provider.Verifier(&oidc.Config{ClientID: "", SkipClientIDCheck: true})
 
 	kas.OIDCVerifier = verifier
-
+	// entitlements
+	entitlements := entitlements.Provider{
+		ClientID:         os.Getenv("OIDC_CLIENT_ID"),
+		OIDCClientSecret: os.Getenv("OIDC_CLIENT_SECRET"),
+		OIDCAuthority:    os.Getenv("OIDC_ISSUER"),
+		OIDCVerifier:     verifier,
+	}
 	// PKCS#11
 	pin := os.Getenv("PKCS11_PIN")
 	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") //development-rsa-kas
@@ -234,6 +240,7 @@ func main() {
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
 	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
+	http.HandleFunc("/definitions/groups", entitlements.Handler)
 	go func() {
 		log.Printf("listening on http://%s", server.Addr)
 		log.Printf(os.Getenv("SERVICE"))
@@ -316,28 +323,5 @@ func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byt
 		err = fmt.Errorf("multiple key found")
 	}
 
-	return
-}
-
-func getPublic(point []byte) (pub *ecdsa.PublicKey, err error) {
-	var ecdsaPub ecdsa.PublicKey
-
-	ecdsaPub.Curve = elliptic.P256()
-	pointLength := ecdsaPub.Curve.Params().BitSize/8*2 + 1
-	if len(point) != pointLength {
-		err = fmt.Errorf("CKA_EC_POINT (%d) does not fit used curve (%d)", len(point), pointLength)
-		return
-	}
-	ecdsaPub.X, ecdsaPub.Y = elliptic.Unmarshal(ecdsaPub.Curve, point[:pointLength])
-	if ecdsaPub.X == nil {
-		err = fmt.Errorf("failed to decode CKA_EC_POINT")
-		return
-	}
-	if !ecdsaPub.Curve.IsOnCurve(ecdsaPub.X, ecdsaPub.Y) {
-		err = fmt.Errorf("public key is not on Curve")
-		return
-	}
-
-	pub = &ecdsaPub
 	return
 }
