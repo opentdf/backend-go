@@ -43,7 +43,7 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	format := r.URL.Query().Get("format")
-	if format == "JWK" {
+	if format == "jwk" {
 		// Parse, serialize, slice and dice JWKs!
 		rsaPublicKeyJwk, err := jwk.FromRaw(&p.PublicKeyRsa)
 		if err != nil {
