@@ -166,12 +166,24 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// ///////////////////////////////
 
 	///////////////////// RETRIEVE ATTR DEFS /////////////////////
-	namespaces := getNamespacesFromAttributes(policy.Body)
+	namespaces, err := getNamespacesFromAttributes(policy.Body)
+	if err != nil {
+		// logger.Errorf("Could not get namespaces from policy! Error was %s", err)
+		log.Printf("Could not get namespaces from policy! Error was %s", err)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 	
 	// this part goes in the plugin?
 	// if len(namespaces) != 0 {
 	log.Println("Fetching attributes")
-	definitions := fetchAttributes(namespaces)
+	definitions, err := fetchAttributes(namespaces)
+	if err != nil {
+		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
+		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	// fetchAttributes(namespaces)
 	log.Printf("%+v", definitions)
 	// }
@@ -181,15 +193,20 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 	///////////////////// PERFORM ACCESS DECISION /////////////////////
 
-	access := canAccess(claims.EntityID, policy, claims.TDFClaims, definitions)
+	access, err := canAccess(claims.EntityID, policy, claims.TDFClaims, definitions)
+
+	if err != nil {
+		// logger.Errorf("Could not perform access decision! Error was %s", err)
+		log.Printf("Could not perform access decision! Error was %s", err)
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
 
 	if (!access){
-		// FIXME handle error
 		log.Println(errors.New("Not authorized"))
 		http.Error(w, "Access Denied", http.StatusForbidden)
 		return
 	}
-
 
 	// ///////////////////////////////
 

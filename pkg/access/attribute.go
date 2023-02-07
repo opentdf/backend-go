@@ -3,6 +3,7 @@ package access
 import (
 	"crypto"
 	"strings"
+	"errors"
 	// "net/url"
 )
 
@@ -20,10 +21,14 @@ type Attribute struct {
 }
 
 
-func getNamespaceFromUri(attr Attribute) string {
+func getNamespaceFromUri(attr Attribute) (string, error) {
     // extract the namespace from an attribute uri
     var uri string = attr.URI
+	if uri == "" {
+		err := errors.New("Attribute has empty URI")
+		return "", err
+	}
 	splits := strings.Split(uri, ATTR_)
-	return splits[0]
+	return splits[0], nil
 
 }

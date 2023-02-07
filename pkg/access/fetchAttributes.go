@@ -3,7 +3,7 @@ package access
 
 import (
 	"net/http"
-	"net/url"
+	"fmt"
 	"log"
 	// "io/ioutil"
 	// "strings"
@@ -14,22 +14,29 @@ import (
 const attribute_host = "http://localhost:65432/api/attributes"
 
 
-func fetchAttributes(namespaces []string) []attrs.AttributeDefinition {
+func fetchAttributes(namespaces []string) ([]attrs.AttributeDefinition, error) {
 	var definitions []attrs.AttributeDefinition
 	for _, ns := range namespaces {
-		attrDefs := fetchAttributesForNamespace(ns)
+		attrDefs, err := fetchAttributesForNamespace(ns)
+		if err != nil {
+			// logger.Warn("Error creating http request to attributes sercice")
+			log.Printf("Error fetching attributes for namespace %s", ns)
+			return nil, err
+		}
 		definitions = append(definitions, attrDefs...)
 	}
-	return definitions
+	return definitions, nil
 }
 
-func fetchAttributesForNamespace(namespace string) []attrs.AttributeDefinition {
+func fetchAttributesForNamespace(namespace string) ([]attrs.AttributeDefinition, error) {
 	log.Println("Fetching for %v", namespace)
 	client := &http.Client{}
 
 	req, err := http.NewRequest(http.MethodGet, attribute_host+"/v1/attrName", nil)
 	if err != nil {
-		log.Fatal(err)
+		// logger.Warn("Error creating http request to attributes sercice")
+		log.Println("Error creating http request to attributes sercice")
+		return nil, err
 	}
 
   	req.Header.Set("Content-Type", "application/json")
@@ -40,19 +47,28 @@ func fetchAttributesForNamespace(namespace string) []attrs.AttributeDefinition {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Panic("Errored when sending request to the server")
+		// logger.Warn("Error executing http request to attributes service")
+		log.Println("Error executing http request to attributes service")
+		return nil, err
 	}
 
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		err := fmt.Errorf("Issue getting definitions from attributes sevices. Recieved error %s %s", string(resp.StatusCode), string(http.StatusText(resp.StatusCode)))
+		return nil, err
+	}
+
 	var definitions []attrs.AttributeDefinition
 	err = json.NewDecoder(resp.Body).Decode(&definitions)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		// logger.Warn("Error parsing response from attributes service")
+		log.Println("Error parsing response from attributes service")
+		return nil, err
 	}
 
 	// log.Println(resp.Status)
 	// add steps for checking status
 	// log.Printf("%+v", definitions)
-	return definitions
+	return definitions, nil
 }
