@@ -2,6 +2,7 @@ package access
 
 import (
 	"github.com/google/uuid"
+	attrs "github.com/virtru/access-pdp/attributes"
 )
 
 type Policy struct {
@@ -19,14 +20,15 @@ func getNamespacesFromAttributes(body Body) ([]string, error) {
     var dataAttributes []Attribute = body.DataAttributes
 	namespaces := make(map[string]bool)
 	for _, attr := range dataAttributes {
-		ns, err := getNamespaceFromUri(attr)
+		instance, err := attrs.ParseInstanceFromURI(attr.URI)
 		if err != nil {
 			// logger.Warn("Error getting attribute namespace")
 			return nil, err
 		}
-		namespaces[ns] = true
+		namespaces[instance.Authority] = true
 	}
 
+	// get unique
 	keys := make([]string, len(namespaces))
 	indx := 0
 	for key, _ := range namespaces {

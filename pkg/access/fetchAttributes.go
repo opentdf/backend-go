@@ -29,7 +29,7 @@ func fetchAttributes(namespaces []string) ([]attrs.AttributeDefinition, error) {
 }
 
 func fetchAttributesForNamespace(namespace string) ([]attrs.AttributeDefinition, error) {
-	log.Println("Fetching for %v", namespace)
+	log.Println("Fetching for ", namespace)
 	client := &http.Client{}
 
 	req, err := http.NewRequest(http.MethodGet, attribute_host+"/v1/attrName", nil)
@@ -55,7 +55,7 @@ func fetchAttributesForNamespace(namespace string) ([]attrs.AttributeDefinition,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		err := fmt.Errorf("Issue getting definitions from attributes sevices. Recieved error %s %s", string(resp.StatusCode), string(http.StatusText(resp.StatusCode)))
+		err := fmt.Errorf("Issue getting definitions from attributes sevices. Recieved error %v %v", resp.StatusCode, http.StatusText(resp.StatusCode))
 		return nil, err
 	}
 

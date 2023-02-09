@@ -99,6 +99,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 
 	//////////////// DECODE REQUEST BODY /////////////////////
+
 	decoder := json.NewDecoder(r.Body)
 	var rewrapRequest RewrapRequest
 	err = decoder.Decode(&rewrapRequest)
@@ -142,14 +143,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	if requestBody.Algorithm == "ec:secp256r1" {
 		log.Fatal("Nano not implemented yet")
 		// return _nano_tdf_rewrap(requestBody, r.Header, claims)
-	} // else {
-	// 	if requestBody.KeyAccess == nil {
-	// 		log.Fatalf("Key Access missing from %#v", requestBody)
-	// 		// Need to add these custom error types
-    //         // raise KeyAccessError("No key access object")
-	// 	}
-	// 	// return _tdf3_rewrap_v2(dataJson, context, plugin_runner, key_master, claims)
-	// }
+	} 
 
 	///////////////////// EXTRACT POLICY /////////////////////
 	log.Println(requestBody.Policy)
@@ -163,7 +157,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-	// ///////////////////////////////
 
 	///////////////////// RETRIEVE ATTR DEFS /////////////////////
 	namespaces, err := getNamespacesFromAttributes(policy.Body)
@@ -175,7 +168,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// this part goes in the plugin?
-	// if len(namespaces) != 0 {
 	log.Println("Fetching attributes")
 	definitions, err := fetchAttributes(namespaces)
 	if err != nil {
@@ -184,12 +176,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	// fetchAttributes(namespaces)
 	log.Printf("%+v", definitions)
-	// }
-
-	// ///////////////////////////////
-
 
 	///////////////////// PERFORM ACCESS DECISION /////////////////////
 
@@ -208,7 +195,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ///////////////////////////////
 
 	/////////////////////EXTRACT CLIENT PUBKEY /////////////////////
 	log.Println(requestBody.ClientPublicKey)
@@ -252,6 +238,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 
 	// ///////////// UNWRAP AND REWRAP //////////////////
+	
 	//unwrap using hsm key
 	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
 		 requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
