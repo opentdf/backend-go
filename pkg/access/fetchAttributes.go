@@ -5,11 +5,10 @@ import (
 	"net/http"
 	"fmt"
 	"log"
-	// "io/ioutil"
-	// "strings"
 	"encoding/json"
 	attrs "github.com/virtru/access-pdp/attributes"
 )
+
 // const attribute_host = "http://attributes:4020"
 const attribute_host = "http://localhost:65432/api/attributes"
 
@@ -67,8 +66,5 @@ func fetchAttributesForNamespace(namespace string) ([]attrs.AttributeDefinition,
 		return nil, err
 	}
 
-	// log.Println(resp.Status)
-	// add steps for checking status
-	// log.Printf("%+v", definitions)
 	return definitions, nil
 }

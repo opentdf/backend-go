@@ -2,12 +2,9 @@ package access
 
 import (
 	"crypto"
-	// "net/url"
 )
 
 const schemaVersion = "1.1.0"
-const VALUE_ = "/value/"
-const ATTR_ = "/attr/"
 
 type Attribute struct {
 	URI           string          `json:"attribute"` // attribute
