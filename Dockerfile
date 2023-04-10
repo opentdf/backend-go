@@ -16,7 +16,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./...
 # tester
 FROM golang:$GO_VERSION as tester
 WORKDIR /test/
-COPY go.* ./
+COPY . ./
 COPY cmd/ cmd/
 COPY pkg/ pkg/
 # dependency
