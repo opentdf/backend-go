@@ -8,7 +8,7 @@ FROM golang:$GO_VERSION as builder
 # reference https://medium.com/@lizrice/non-privileged-containers-based-on-the-scratch-image-a80105d6d341
 RUN useradd -u 10001 scratchuser
 WORKDIR /build/
-COPY go.* ./
+COPY . ./
 COPY cmd/ cmd/
 COPY pkg/ pkg/
 RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./...
