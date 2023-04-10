@@ -88,7 +88,7 @@ func getCertificate(t *testing.T, name string) x509.Certificate {
 	return *certificate
 }
 
-func getPrivateKey(t *testing.T, name string) rsa.PrivateKey {
+func getPrivateKey(t *testing.T, name string) Pkcs11PrivateKeyRSA {
 	bytes := loadBytes(t, name+"-private.pem")
 	block, x := pem.Decode(bytes)
 	if block == nil {
