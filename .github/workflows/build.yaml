@@ -62,4 +62,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+          tags: ghcr.io/opentdf/gokas:${{ env.VERSION }}
