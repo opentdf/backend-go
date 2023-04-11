@@ -11,12 +11,23 @@ import (
 	"net/url"
 	"path/filepath"
 	"testing"
+	"github.com/opentdf/backend-go/pkg/p11"
 )
 
 func TestProvider(t *testing.T) {
 	publicKey := getPublicKey(t, "access-provider-000")
-	privateKey := getPrivateKey(t, "access-provider-000")
+	privateKey := p11.Pkcs11PrivateKeyRSA {}
 	certificate := getCertificate(t, "access-provider-000")
+	attrURL := &url.URL{
+					Scheme: "https",
+					Host:   "access-provider-000.com",
+					Path:   "/tdf/3/attribute/medical/2/approve",
+	}
+	providerURI := url.URL{
+					Scheme: "https",
+					Host:   "access-provider-000.com",
+					Path:   "/tdf/3/attribute/",
+	}
 	provider := Provider{
 		URI: url.URL{
 			Scheme: "https",
@@ -27,17 +38,9 @@ func TestProvider(t *testing.T) {
 		Certificate:  certificate,
 		Attributes: []Attribute{
 			{
-				URI: url.URL{
-					Scheme: "https",
-					Host:   "access-provider-000.com",
-					Path:   "/tdf/3/attribute/medical/2/approve",
-				},
+				URI: attrURL.String(),
 				PublicKey: publicKey,
-				ProviderURI: url.URL{
-					Scheme: "https",
-					Host:   "access-provider-000.com",
-					Path:   "/tdf/3/attribute/",
-				},
+				ProviderURI: providerURI.String(),
 				SchemaVersion: schemaVersion,
 			},
 		},
@@ -57,7 +60,7 @@ func TestProviderServeHTTP(t *testing.T) {
 	}
 	provider := Provider{
 		URI:          *uri,
-		PrivateKey:   getPrivateKey(t, "entity-provider-000"),
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA {},
 		PublicKeyRsa: getPublicKey(t, "entity-provider-000"),
 		Certificate:  getCertificate(t, "entity-provider-000"),
 	}
@@ -88,13 +91,14 @@ func getCertificate(t *testing.T, name string) x509.Certificate {
 	return *certificate
 }
 
-func getPrivateKey(t *testing.T, name string) p11.Pkcs11PrivateKeyRSA {
+func getPrivateKey(t *testing.T, name string) rsa.PrivateKey {
 	bytes := loadBytes(t, name+"-private.pem")
 	block, x := pem.Decode(bytes)
 	if block == nil {
 		t.Fatal(x)
 	}
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+
 	if err != nil {
 		t.Fatal(err)
 	}
