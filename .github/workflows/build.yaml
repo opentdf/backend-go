@@ -61,5 +61,6 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
+          target: server-debug
           push: true
           tags: ghcr.io/opentdf/gokas:${{ env.VERSION }}

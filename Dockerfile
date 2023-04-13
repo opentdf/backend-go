@@ -36,7 +36,6 @@ COPY --from=builder /build/microservice /
 
 # server - production
 FROM scratch as server
-USER scratchuser
 EXPOSE 8080
 ENTRYPOINT ["/microservice"]
 ENV SERVICE "default"
