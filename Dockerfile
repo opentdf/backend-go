@@ -6,7 +6,6 @@ ARG GO_VERSION=latest
 # reference https://hub.docker.com/_/golang
 FROM golang:$GO_VERSION as builder
 # reference https://medium.com/@lizrice/non-privileged-containers-based-on-the-scratch-image-a80105d6d341
-RUN useradd -u 10001 scratchuser
 WORKDIR /build/
 COPY . ./
 COPY cmd/ cmd/
@@ -69,4 +68,3 @@ ENV PKCS11_SLOT_INDEX ""
 ENV PKCS11_LABEL_PUBKEY_RSA ""
 ENV PKCS11_LABEL_PUBKEY_EC ""
 COPY --from=builder /build/microservice /
-COPY --from=builder /etc/passwd /etc/passwd
