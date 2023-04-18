@@ -1,3 +1,5 @@
 /.idea/
 /data/
 /softhsm-*/
+*.so
+playground/base/main
