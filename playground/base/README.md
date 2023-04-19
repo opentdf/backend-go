@@ -10,12 +10,12 @@ Build and run:
 
 ```
 cd playground/base
-go build . -o main
+go build -o main
 cd ../plugins
 go build -buildmode=plugin ./a.go
 go build -buildmode=plugin ./b.go
 cd ../
-./base/main --plugin plugin/a.so  --plugin plugin/b.so
+./base/main --plugin plugins/a.so  --plugin plugins/b.so
 ```
 
 ## Sample with Dockerfile
