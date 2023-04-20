@@ -1,27 +1,25 @@
-FROM golang:1.20 as build
+# Stage 1: Build
+FROM golang:1.20 AS build
 
 ENV GO111MODULE=on \
-    CGO_ENABLED=0 \
+    CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64
 
-WORKDIR /build
+WORKDIR /app
 
-# TODO add go.sum
 COPY go.mod ./
-RUN go mod download && go mod verify
+RUN go mod download
 
-COPY a.go ./
-RUN go build -buildmode=plugin ./a.go
+COPY . .
+RUN go build -buildmode=plugin -o a.so a.go && \
+    go build -buildmode=plugin -o b.so b.go
 
-COPY b.go ./
-RUN go build -buildmode=plugin ./b.go
-
-WORKDIR /dist
-
+# Stage 2: Application
 FROM base-golang-app as app
 
-RUN cp /build/a.so /build/b.so .
+COPY --from=build /app/a.so /app/
+COPY --from=build /app/b.so /app/
 
-CMD ["/build/main"]
-
+WORKDIR /app
+CMD ["/app/main", "--plugin", "a.so", "--plugin", "b.so"]

@@ -2,7 +2,7 @@
 FROM golang:1.20 as build
 
 ENV GO111MODULE=on \
-    CGO_ENABLED=0 \
+    CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64
 
@@ -16,7 +16,7 @@ COPY base.go ./
 RUN go build -o main .
 
 # Move to /dist directory as the place for resulting binary folder
-WORKDIR /dist
+WORKDIR /app
 
 # Copy binary from build to main folder
 RUN cp /build/main .
