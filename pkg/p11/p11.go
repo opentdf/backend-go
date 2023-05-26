@@ -2,9 +2,9 @@ package p11
 
 import (
 	"crypto"
+	"errors"
 
 	"github.com/miekg/pkcs11"
-	"github.com/pkg/errors"
 )
 
 // See https://github.com/ThalesIgnite/crypto11/blob/d334790e12893aa2f8a2c454b16003dfd9f7d2de/rsa.go
