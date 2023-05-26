@@ -1,12 +1,12 @@
 package access
 
 import (
-	"log"
-	accesspdp "github.com/virtru/access-pdp/pdp"
-	attrs "github.com/virtru/access-pdp/attributes"
-	"go.uber.org/zap"
 	"context"
 	"errors"
+	attrs "github.com/virtru/access-pdp/attributes"
+	accesspdp "github.com/virtru/access-pdp/pdp"
+	"go.uber.org/zap"
+	"log"
 )
 
 func canAccess(entityID string, policy Policy, claims ClaimsObject, attrDefs []attrs.AttributeDefinition) (bool, error) {
@@ -34,12 +34,12 @@ func checkDissems(dissems []string, entityID string) (bool, error) {
 		err := errors.New("No entityID recieved in dissems access decision")
 		return false, err
 	}
-	if len(dissems)==0 || contains(dissems, entityID) {
+	if len(dissems) == 0 || contains(dissems, entityID) {
 		return true, nil
 	} else {
 		return false, nil
 		// logger.debug(f"Entity {entity_id} is not on dissem list {dissem.list}")
-        // raise AuthorizationError("Entity is not on dissem list.")
+		// raise AuthorizationError("Entity is not on dissem list.")
 	}
 }
 
@@ -110,11 +110,10 @@ func convertEntitlementsToEntityAttrMap(entitlements []Entitlement) (map[string]
 }
 
 func contains(s []string, e string) bool {
-    for _, a := range s {
-        if a == e {
-            return true
-        }
-    }
-    return false
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
-

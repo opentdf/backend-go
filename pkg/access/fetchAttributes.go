@@ -1,17 +1,15 @@
 package access
 
-
 import (
-	"net/http"
-	"fmt"
-	"log"
 	"encoding/json"
+	"fmt"
 	attrs "github.com/virtru/access-pdp/attributes"
+	"log"
+	"net/http"
 )
 
 // const attribute_host = "http://attributes:4020"
 const attribute_host = "http://localhost:65432/api/attributes"
-
 
 func fetchAttributes(namespaces []string) ([]attrs.AttributeDefinition, error) {
 	var definitions []attrs.AttributeDefinition
@@ -38,7 +36,7 @@ func fetchAttributesForNamespace(namespace string) ([]attrs.AttributeDefinition,
 		return nil, err
 	}
 
-  	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 
 	q := req.URL.Query()
 	q.Add("authority", namespace)

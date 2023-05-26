@@ -21,9 +21,9 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	// "github.com/jackc/pgx/v4"
 	"github.com/miekg/pkcs11"
+	"github.com/opentdf/backend-go/internal/version"
 	"github.com/opentdf/backend-go/pkg/access"
 	"github.com/opentdf/backend-go/pkg/p11"
-	"github.com/opentdf/backend-go/internal/version"
 	"golang.org/x/oauth2"
 )
 
@@ -39,12 +39,12 @@ func main() {
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
-		URI:         *kasURI,
+		URI: *kasURI,
 		//PrivateKey:  getPrivateKey(),
 		PrivateKey:  p11.Pkcs11PrivateKeyRSA{},
 		Certificate: x509.Certificate{},
 		Attributes:  nil,
-		Session:	 p11.Pkcs11Session{},
+		Session:     p11.Pkcs11Session{},
 	}
 	// OIDC
 	oidcIssuer := os.Getenv("OIDC_ISSUER")

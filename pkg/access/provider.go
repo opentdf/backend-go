@@ -9,15 +9,15 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/opentdf/backend-go/pkg/p11"
 	// "golang.org/x/oauth2"
 )
 
 type Provider struct {
-	URI          url.URL           `json:"uri"`
+	URI          url.URL `json:"uri"`
 	PrivateKey   p11.Pkcs11PrivateKeyRSA
-	PublicKeyRsa rsa.PublicKey     `json:"publicKey"`
+	PublicKeyRsa rsa.PublicKey `json:"publicKey"`
 	PublicKeyEc  ecdsa.PublicKey
 	Certificate  x509.Certificate `json:"certificate"`
 	Attributes   []Attribute      `json:"attributes"`

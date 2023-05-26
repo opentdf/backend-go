@@ -31,5 +31,5 @@ type KeyAccess struct {
 	URL               string `json:"url"`
 	WrappedKey        []byte `json:"wrappedKey,omitempty"`
 	Header            []byte `json:"header,omitempty"`
-	Algorithm		  string `json:"algorithm,omitempty"`
+	Algorithm         string `json:"algorithm,omitempty"`
 }

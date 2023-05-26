@@ -20,14 +20,14 @@ type Pkcs11PrivateKeyRSA struct {
 	handle pkcs11.ObjectHandle
 }
 
-func NewSession(ctx *pkcs11.Ctx, handle pkcs11.SessionHandle) (Pkcs11Session){
+func NewSession(ctx *pkcs11.Ctx, handle pkcs11.SessionHandle) Pkcs11Session {
 	return Pkcs11Session{
 		handle: handle,
-		ctx: ctx,
+		ctx:    ctx,
 	}
 }
 
-func NewPrivateKeyRSA(handle pkcs11.ObjectHandle) (Pkcs11PrivateKeyRSA){
+func NewPrivateKeyRSA(handle pkcs11.ObjectHandle) Pkcs11PrivateKeyRSA {
 	return Pkcs11PrivateKeyRSA{
 		handle: handle,
 	}

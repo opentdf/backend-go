@@ -16,8 +16,8 @@ type Body struct {
 }
 
 func getNamespacesFromAttributes(body Body) ([]string, error) {
-    // extract the namespace from an attribute uri
-    var dataAttributes []Attribute = body.DataAttributes
+	// extract the namespace from an attribute uri
+	var dataAttributes []Attribute = body.DataAttributes
 	namespaces := make(map[string]bool)
 	for _, attr := range dataAttributes {
 		instance, err := attrs.ParseInstanceFromURI(attr.URI)

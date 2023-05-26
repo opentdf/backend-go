@@ -16,7 +16,7 @@ import (
 func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 	algorithm := r.URL.Query().Get("algorithm")
 	if algorithm == "ec:secp256r1" {
-		 
+
 		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
 		if err != nil {
 			log.Fatalf("error EC public key from PKCS11: %v", err)
@@ -46,7 +46,7 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 	algorithm := r.URL.Query().Get("algorithm")
 	// ?algorithm=ec:secp256r1
 	if algorithm == "ec:secp256r1" {
-		 
+
 		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
 		if err != nil {
 			log.Fatalf("error EC public key from PKCS11: %v", err)

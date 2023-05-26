@@ -5,28 +5,28 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"github.com/opentdf/backend-go/pkg/p11"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
 	"testing"
-	"github.com/opentdf/backend-go/pkg/p11"
 )
 
 func TestProvider(t *testing.T) {
 	publicKey := getPublicKey(t, "access-provider-000")
-	privateKey := p11.Pkcs11PrivateKeyRSA {}
+	privateKey := p11.Pkcs11PrivateKeyRSA{}
 	certificate := getCertificate(t, "access-provider-000")
 	attrURL := &url.URL{
-					Scheme: "https",
-					Host:   "access-provider-000.com",
-					Path:   "/tdf/3/attribute/medical/2/approve",
+		Scheme: "https",
+		Host:   "access-provider-000.com",
+		Path:   "/tdf/3/attribute/medical/2/approve",
 	}
 	providerURI := url.URL{
-					Scheme: "https",
-					Host:   "access-provider-000.com",
-					Path:   "/tdf/3/attribute/",
+		Scheme: "https",
+		Host:   "access-provider-000.com",
+		Path:   "/tdf/3/attribute/",
 	}
 	provider := Provider{
 		URI: url.URL{
@@ -38,9 +38,9 @@ func TestProvider(t *testing.T) {
 		Certificate:  certificate,
 		Attributes: []Attribute{
 			{
-				URI: attrURL.String(),
-				PublicKey: publicKey,
-				ProviderURI: providerURI.String(),
+				URI:           attrURL.String(),
+				PublicKey:     publicKey,
+				ProviderURI:   providerURI.String(),
 				SchemaVersion: schemaVersion,
 			},
 		},
@@ -60,7 +60,7 @@ func TestProviderServeHTTP(t *testing.T) {
 	}
 	provider := Provider{
 		URI:          *uri,
-		PrivateKey:   p11.Pkcs11PrivateKeyRSA {},
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
 		PublicKeyRsa: getPublicKey(t, "entity-provider-000"),
 		Certificate:  getCertificate(t, "entity-provider-000"),
 	}
