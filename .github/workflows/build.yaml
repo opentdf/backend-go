@@ -4,7 +4,6 @@ env:
 on:
   push:
     branches:
-      - PLAT-2416-kas-replace-python-go
       - main
   pull_request:
     types:
