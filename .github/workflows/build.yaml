@@ -89,4 +89,4 @@ jobs:
           context: .
           platforms: "${{ env.CONTAINER_ARCHS }}"
           push: true
-          tags: ghcr.io/opentdf/gokas:${{ version.outputs.VERSION }}
+          tags: ghcr.io/opentdf/gokas:${{ steps.version.outputs.VERSION }}
