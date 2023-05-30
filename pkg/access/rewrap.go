@@ -9,7 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"log"
-	// "fmt"
+	"fmt"
 	"net/http"
 	"strings"
 	b64 "encoding/base64"
@@ -76,10 +76,22 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//////////////// OIDC VERIFY ///////////////
-	//get the raw token
-	oidcRequestToken := r.Header.Get("Authorization")
-	splitToken := strings.Split(oidcRequestToken, "Bearer ")
-	oidcRequestToken = splitToken[1]
+	// Check if Authorization header is present
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprint(w, "Missing Authorization header")
+		return
+	}
+
+	// Extract OIDC token from the Authorization header
+	oidcRequestToken := strings.TrimPrefix(authHeader, "Bearer ")
+	if oidcRequestToken == authHeader {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid Authorization header format")
+		return
+	}
+
 	log.Println(oidcRequestToken)
 
     // Parse and verify ID Token payload.
