@@ -1,6 +1,6 @@
 module github.com/opentdf/backend-go
 
-go 1.17
+go 1.19
 
 require (
 	github.com/coreos/go-oidc/v3 v3.5.0
@@ -8,7 +8,6 @@ require (
 	github.com/kaitai-io/kaitai_struct_go_runtime v0.10.0
 	github.com/lestrrat-go/jwx/v2 v2.0.11
 	github.com/miekg/pkcs11 v1.1.1
-	github.com/pkg/errors v0.9.1
 	github.com/virtru/access-pdp v1.5.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/oauth2 v0.4.0

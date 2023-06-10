@@ -1,39 +1,44 @@
 package access
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
 	attrs "github.com/virtru/access-pdp/attributes"
 )
 
+const (
+	ErrPolicyDataAttributeParse = Error("policy data attribute invalid")
+)
+
 type Policy struct {
-	UUID uuid.UUID
-	Body Body
+	UUID uuid.UUID `json:"uuid"`
+	Body Body      `json:"body"`
 }
 
 type Body struct {
-	DataAttributes []Attribute
-	Dissem         []string
+	DataAttributes []Attribute `json:"dataAttributes"`
+	Dissem         []string    `json:"dissem"`
 }
 
 func getNamespacesFromAttributes(body Body) ([]string, error) {
-    // extract the namespace from an attribute uri
-    var dataAttributes []Attribute = body.DataAttributes
+	// extract the namespace from an attribute uri
+	var dataAttributes = body.DataAttributes
 	namespaces := make(map[string]bool)
 	for _, attr := range dataAttributes {
 		instance, err := attrs.ParseInstanceFromURI(attr.URI)
 		if err != nil {
-			// logger.Warn("Error getting attribute namespace")
-			return nil, err
+			return nil, errors.Join(ErrPolicyDataAttributeParse, err)
 		}
 		namespaces[instance.Authority] = true
 	}
 
 	// get unique
 	keys := make([]string, len(namespaces))
-	indx := 0
-	for key, _ := range namespaces {
-		keys[indx] = key
-		indx++
+	index := 0
+	for key := range namespaces {
+		keys[index] = key
+		index++
 	}
 
 	return keys, nil

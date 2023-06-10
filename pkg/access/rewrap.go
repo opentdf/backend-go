@@ -5,22 +5,22 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	b64 "encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
-	"log"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
-	b64 "encoding/base64"
+
 	// "crypto/rsa"
 
+	"github.com/opentdf/backend-go/pkg/p11"
 	// "github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
 	// "github.com/opentdf/backend-go/pkg/nano"
 	// "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/opentdf/backend-go/pkg/tdf3"
 	"gopkg.in/square/go-jose.v2/jwt"
-	"github.com/opentdf/backend-go/pkg/p11"
 	// "golang.org/x/oauth2"
 )
 
@@ -32,18 +32,10 @@ type RewrapRequest struct {
 type RequestBody struct {
 	AuthToken       string         `json:"authToken"`
 	KeyAccess       tdf3.KeyAccess `json:"keyAccess"`
-	Entity          Entity         `json:"entity"`
 	Policy          string         `json:"policy,omitempty"`
 	Algorithm       string         `json:"algorithm,omitempty"`
 	ClientPublicKey string         `json:"clientPublicKey"`
 	SchemaVersion   string         `json:"schemaVersion,omitempty"`
-}
-
-type Entity struct {
-	Id         string
-	Aliases    []string
-	Attributes []Attribute
-	PublicKey  []byte
 }
 
 type RewrapResponse struct {
@@ -57,11 +49,10 @@ type customClaimsBody struct {
 }
 
 type customClaimsHeader struct {
-	EntityID	   string		  `json:"sub"`
-	ClientID       string         `json:"clientId"`
-	TDFClaims	   ClaimsObject	  `json:"tdf_claims"`
+	EntityID  string       `json:"sub"`
+	ClientID  string       `json:"clientId"`
+	TDFClaims ClaimsObject `json:"tdf_claims"`
 }
-
 
 // Handler decrypts and encrypts the symmetric data key
 func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +71,11 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprint(w, "Missing Authorization header")
+		_, err := fmt.Fprint(w, "Missing Authorization header")
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		return
 	}
 
@@ -88,27 +83,30 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	oidcRequestToken := strings.TrimPrefix(authHeader, "Bearer ")
 	if oidcRequestToken == authHeader {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Invalid Authorization header format")
+		_, err := fmt.Fprint(w, "Invalid Authorization header format")
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		return
 	}
 
 	log.Println(oidcRequestToken)
 
-    // Parse and verify ID Token payload.
+	// Parse and verify ID Token payload.
 	idToken, err := p.OIDCVerifier.Verify(context.Background(), oidcRequestToken)
-    if err != nil {
-        log.Panic(err)
+	if err != nil {
+		log.Panic(err)
 		return
-    }
+	}
 
-    // Extract custom claims
-    var claims customClaimsHeader
-    if err := idToken.Claims(&claims); err != nil {
-        log.Panic(err)
+	// Extract custom claims
+	var claims customClaimsHeader
+	if err := idToken.Claims(&claims); err != nil {
+		log.Panic(err)
 		return
-    }
+	}
 	log.Println(claims)
-
 
 	//////////////// DECODE REQUEST BODY /////////////////////
 
@@ -126,16 +124,16 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-	jwt_claims_body := &jwt.Claims{}
-	body_claims := &customClaimsBody{}
-	err = requestToken.UnsafeClaimsWithoutVerification(jwt_claims_body, body_claims)
+	var jwtClaimsBody jwt.Claims
+	var bodyClaims customClaimsBody
+	err = requestToken.UnsafeClaimsWithoutVerification(jwtClaimsBody, bodyClaims)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
 		return
 	}
-	log.Println(body_claims.RequestBody)
-	decoder = json.NewDecoder(strings.NewReader(body_claims.RequestBody))
+	log.Println(bodyClaims.RequestBody)
+	decoder = json.NewDecoder(strings.NewReader(bodyClaims.RequestBody))
 	var requestBody RequestBody
 	err = decoder.Decode(&requestBody)
 	if err != nil {
@@ -149,19 +147,19 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	if requestBody.Algorithm == "" {
 		// log warn
 		log.Println("'algorithm' is missing; defaulting to TDF3 rewrap standard, RSA-2048.")
-        requestBody.Algorithm = "rsa:2048"
+		requestBody.Algorithm = "rsa:2048"
 	}
 
 	if requestBody.Algorithm == "ec:secp256r1" {
 		log.Fatal("Nano not implemented yet")
 		// return _nano_tdf_rewrap(requestBody, r.Header, claims)
-	} 
+	}
 
 	///////////////////// EXTRACT POLICY /////////////////////
 	log.Println(requestBody.Policy)
-	// base 64 decode 
+	// base 64 decode
 	sDecPolicy, _ := b64.StdEncoding.DecodeString(requestBody.Policy)
-	decoder = json.NewDecoder(strings.NewReader(string(sDecPolicy[:])))
+	decoder = json.NewDecoder(strings.NewReader(string(sDecPolicy)))
 	var policy Policy
 	err = decoder.Decode(&policy)
 	if err != nil {
@@ -178,10 +176,10 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-	
+
 	// this part goes in the plugin?
 	log.Println("Fetching attributes")
-	definitions, err := fetchAttributes(namespaces)
+	definitions, err := fetchAttributes(r.Context(), namespaces)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
 		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)
@@ -201,12 +199,11 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if (!access){
-		log.Println(errors.New("Not authorized"))
+	if !access {
+		log.Println("not authorized")
 		http.Error(w, "Access Denied", http.StatusForbidden)
 		return
 	}
-
 
 	/////////////////////EXTRACT CLIENT PUBKEY /////////////////////
 	log.Println(requestBody.ClientPublicKey)
@@ -225,7 +222,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// ///////////////////////////////
-	
 
 	// nano header
 	// log.Println(requestBody.KeyAccess.Header)
@@ -238,9 +234,8 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// }
 	// log.Print(n.Header.Length)
 
-	
 	// unwrap using a key from file
-	//ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)
+	// ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)
 	// symmetricKey, err := tdf3.DecryptWithPrivateKey(requestBody.KeyAccess.WrappedKey, &p.PrivateKey)
 	// if err != nil {
 	// 	// FIXME handle error
@@ -248,12 +243,11 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-
 	// ///////////// UNWRAP AND REWRAP //////////////////
-	
-	//unwrap using hsm key
+
+	// unwrap using hsm key
 	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
-		 requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
+		requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
@@ -274,6 +268,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// rewrappedKey := []byte("TODO")
 	responseBytes, err := json.Marshal(&RewrapResponse{
 		EntityWrappedKey: rewrappedKey,
+		SessionPublicKey: "",
 		SchemaVersion:    schemaVersion,
 	})
 	if err != nil {

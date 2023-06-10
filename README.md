@@ -1,36 +1,18 @@
 # backend-go
-Service providers for a protected data lifecycle
-
-## Overview
-
-- Helm chart with sub-charts
-- Multi-stage Dockerfile for build, testing, and deployment
-- Fast developer workflow
+Key Access Service Go implementation supporting [Trusted Data Format Protocol](https://github.com/opentdf/spec) 
 
 ## Prerequisites
 
-- Install Docker
-    - see https://docs.docker.com/get-docker/
+- [Docker](https://docs.docker.com/get-docker/) 
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) 
+- [minikube](https://minikube.sigs.k8s.io/docs/start/) 
+- [Helm](https://helm.sh/docs/intro/install/) 
+- [Tilt](https://docs.tilt.dev/install.html) 
+- [ctlptl](https://github.com/tilt-dev/ctlptl) 
 
-- Install kubectl
-    - On macOS via Homebrew: `brew install kubectl`
-    - Others see https://kubernetes.io/docs/tasks/tools/
-
-- Install minikube
-    - On macOS via Homebrew: `brew install minikube`
-    - Others see https://minikube.sigs.k8s.io/docs/start/
-
-- Install Helm
-    - On macOS via Homebrew: `brew install helm`
-    - Others see https://helm.sh/docs/intro/install/
-
-- Install Tilt
-    - On macOS via Homebrew: `brew install tilt-dev/tap/tilt`
-    - Others see https://docs.tilt.dev/install.html
-
-- Install ctlptl
-  - On macOS via Homebrew: `brew install tilt-dev/tap/ctlptl`
-  - Others see https://github.com/tilt-dev/ctlptl
+```shell
+brew install kubectl minikube helm tilt-dev/tap/tilt tilt-dev/tap/ctlptl
+```
 
 ## Development
 
@@ -135,6 +117,12 @@ export PRIVATE_KEY_RSA_PATH=../../kas-private.pem
 export OIDC_ISSUER=http://localhost:65432/auth/realms/opentdf
 ```
 
+### Unit test
+
+```shell
+go test -bench=. -benchmem ./...
+```
+
 ## References
 
 ### Helm
@@ -166,39 +154,15 @@ https://github.com/coreos/go-oidc
 ### Ingress
 https://docs.nginx.com/nginx-ingress-controller/installation/installation-with-helm/  
 
-## TODO
-- add ingress
-- add more services to support popular pet store example 
-
-## Troubleshooting
-
-### inside a container
-
-```shell
-apt-get update -y
-apt-get install -y netcat
-nc -vz host.minikube.internal 5432
-
-helm install postgresql bitnami/postgresql
-
-apt-get install postgresql-client
-pg_isready --dbname=postgres --host=host.minikube.internal --port=5432 --username=postgres
-pg_isready --dbname=postgres --host=ex-postgresql --port=5432 --username=postgres
-```
-
-## Resources
-
-KMIP  
+### KMIP  
 https://github.com/ThalesGroup/kmip-go
 
-pkcs11-tool  
+### pkcs11-tool  
 https://verschlüsselt.it/generate-rsa-ecc-and-aes-keys-with-opensc-pkcs11-tool/
 
-go-util  
+### go-util  
 https://github.com/gbolo/go-util  
 https://github.com/gbolo/go-util/tree/master/pkcs11-test
-
-## Optional
 
 ### SoftHSM Docker
 
@@ -222,4 +186,20 @@ pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --read-object
 openssl rsa -RSAPublicKey_in -in development-public.der -inform DER -outform PEM -out development-public.pem -RSAPublicKey_out
 
 pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --list-objects
+```
+
+## Troubleshooting
+
+### inside a container
+
+```shell
+apt-get update -y
+apt-get install -y netcat
+nc -vz host.minikube.internal 5432
+
+helm install postgresql bitnami/postgresql
+
+apt-get install postgresql-client
+pg_isready --dbname=postgres --host=host.minikube.internal --port=5432 --username=postgres
+pg_isready --dbname=postgres --host=ex-postgresql --port=5432 --username=postgres
 ```
