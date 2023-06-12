@@ -56,7 +56,6 @@ type customClaimsHeader struct {
 
 // Handler decrypts and encrypts the symmetric data key
 func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
-
 	log.Println("REWRAP")
 	log.Printf("headers %s", r.Header)
 	log.Printf("body %s", r.Body)

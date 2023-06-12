@@ -117,6 +117,12 @@ export PRIVATE_KEY_RSA_PATH=../../kas-private.pem
 export OIDC_ISSUER=http://localhost:65432/auth/realms/opentdf
 ```
 
+### Lint
+
+```shell
+golangci-lint run
+```
+
 ### Unit test
 
 ```shell
