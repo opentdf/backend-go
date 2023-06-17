@@ -54,6 +54,9 @@ linters-settings:
       - "^os/exec.Cmd$"
       - "^reflect.StructField$"
       - "^crypto/tls.Config$"
+      - "^crypto/x509.Certificate$"
+      - "^crypto/rsa.PublicKey"
+      - "^crypto/ecdsa.PublicKey"
       # public libs
       - "^github.com/Shopify/sarama.Config$"
       - "^github.com/Shopify/sarama.ProducerMessage$"
