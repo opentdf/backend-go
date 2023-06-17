@@ -8,7 +8,7 @@ on:
   push:
 jobs:
   # This job will build the image using Docker Buildx
-  build:
+  image:
     runs-on: ubuntu-latest
     steps:
       # Checkout the code from the repository

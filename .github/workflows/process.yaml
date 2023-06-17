@@ -45,27 +45,28 @@ jobs:
             const versionBase = '${{ steps.version-base.outputs.version }}'
             if (!semver.valid(versionPr)) {
               const reason = `Invalid version number: ${versionPr}`
-              github.rest.pulls.createReviewComment({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  pull_number: context.runId,
-                  body: reason,
-                  commit_id: context.sha,
-                  path: "VERSION",
-                  line: 1
-                });
+              // requires authorization
+              // github.rest.pulls.createReviewComment({
+              //     owner: context.repo.owner,
+              //     repo: context.repo.repo,
+              //     pull_number: context.runId,
+              //     body: reason,
+              //     commit_id: context.sha,
+              //     path: "VERSION",
+              //     line: 1
+              //   });
               core.setFailed(reason)
             } else if (!semver.gt(versionPr, versionBase)) {
               const reason = `Version number not incremented: ${versionPr} <= ${versionBase}`
-              github.rest.pulls.createReviewComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.runId,
-                body: reason,
-                commit_id: context.sha,
-                path: "VERSION",
-                line: 1
-              });
+              // github.rest.pulls.createReviewComment({
+              //   owner: context.repo.owner,
+              //   repo: context.repo.repo,
+              //   pull_number: context.runId,
+              //   body: reason,
+              //   commit_id: context.sha,
+              //   path: "VERSION",
+              //   line: 1
+              // });
               core.setFailed(reason)
             } else {
               console.log(`Version number OK: ${versionPr} > ${versionBase}`)
