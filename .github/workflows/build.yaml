@@ -2,7 +2,7 @@
 # The build job will create a Golang Docker image with a production target for multiple architectures
 # The publish job will push the image to GitHub packages with the commit sha and build number as labels
 # The image will also have some metadata labels about the build
-# act --container-architecture linux/amd64 --workflows .github/workflows/build.yaml
+# act --secret-file act.env --container-architecture linux/amd64 --workflows .github/workflows/build.yaml
 name: build
 on:
   push:

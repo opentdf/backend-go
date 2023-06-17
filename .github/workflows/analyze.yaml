@@ -1,6 +1,7 @@
+# This GitHub action will check that the developer tools are run
+# This checks code quality
 # https://github.com/golangci/golangci-lint-action
-# brew install act
-# act --container-architecture linux/amd64 --workflows .github/workflows/analyze.yaml
+# act --secret-file act.env --container-architecture linux/amd64 --workflows .github/workflows/analyze.yaml
 name: analyze
 on:
   push:
@@ -24,3 +25,9 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
+
+# TODO
+#  # test and benchmark
+#  RUN go test -bench=. -benchmem ./...
+#  # race condition
+#  RUN CGO_ENABLED=1 GOOS=linux go build -v -a -race -installsuffix cgo -o . ./...

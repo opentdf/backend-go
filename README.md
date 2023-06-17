@@ -135,11 +135,17 @@ Tools
 
 ##### Workflow
 
-Running `act` requires a GITHUB_TOKEN, see https://github.com/nektos/act#github_token  
+Running `act` requires a GITHUB_TOKEN, see https://github.com/nektos/act#github_token
+Place the secret in the `act.env` file.
+
+```dotenv
+GITHUB_TOKEN=<<your_token_here>>
+```
+
 To run the `analyze` workflow used in the CI
 
 ```shell
-act --container-architecture linux/amd64 --workflows .github/workflows/analyze.yaml
+act --secret-file act.env --container-architecture linux/amd64 --workflows .github/workflows/analyze.yaml
 ```
 
 ##### Lint
