@@ -1,0 +1,45 @@
+# This is a GitHub action that will have two jobs: build and publish
+# The build job will create a Golang Docker image with a production target for multiple architectures
+# The publish job will push the image to GitHub packages with the commit sha and build number as labels
+# The image will also have some metadata labels about the build
+# act --container-architecture linux/amd64 --workflows .github/workflows/build.yaml
+name: build
+on:
+  push:
+jobs:
+  # This job will build the image using Docker Buildx
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      # Login to GitHub Container Registry
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Build and push the image to a temporary tag
+      - name: Build and push image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          target: production
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.clone_url }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.title=${{ github.event.repository.name }}
+            com.github.build.number=${{ github.run_number }}
+          # Use cache for faster builds
+          cache-from: type=gha,scope=${{ github.workflow }}
+          cache-to: type=gha,scope=${{ github.workflow }},mode=max

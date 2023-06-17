@@ -135,6 +135,7 @@ Tools
 
 ##### Workflow
 
+Running `act` requires a GITHUB_TOKEN, see https://github.com/nektos/act#github_token  
 To run the `analyze` workflow used in the CI
 
 ```shell

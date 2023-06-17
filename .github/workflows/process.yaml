@@ -1,0 +1,45 @@
+# This GitHub action will check that the developer process
+# act --container-architecture linux/amd64 --workflows .github/workflows/process.yaml
+name: process
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      # This step will checkout the source code of the pull request branch
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Fetch all history for all branches and tags
+      # This step will read the version number from the VERSION file in the pull request branch
+      # and store it as an output variable named version
+      - name: Read VERSION file from pull request branch
+        id: getversion-pr
+        run: echo "::set-output name=version::$(cat VERSION)"
+      # This step will read the version number from the VERSION file in the base branch
+      # and store it as an output variable named version
+      - name: Read VERSION file from base branch
+        id: getversion-base
+        run: |
+          git checkout ${{ github.base_ref }}
+          echo "::set-output name=version::$(cat VERSION)"
+      # This step will compare the version numbers using a semantic versioning library
+      # and set the action status to failed if the version number in the pull request branch
+      # is not valid or not greater than the one in the base branch
+      - name: Compare version numbers
+        uses: actions/github-script@v5
+        with:
+          script: |
+            const semver = require('semver')
+            const versionPr = '${{ steps.getversion-pr.outputs.version }}'
+            const versionBase = '${{ steps.getversion-base.outputs.version }}'
+            if (!semver.valid(versionPr)) {
+              core.setFailed(`Invalid version number: ${versionPr}`)
+            } else if (!semver.gt(versionPr, versionBase)) {
+              core.setFailed(`Version number not incremented: ${versionPr} <= ${versionBase}`)
+            } else {
+              console.log(`Version number OK: ${versionPr} > ${versionBase}`)
+            }
