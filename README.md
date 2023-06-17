@@ -117,16 +117,57 @@ export PRIVATE_KEY_RSA_PATH=../../kas-private.pem
 export OIDC_ISSUER=http://localhost:65432/auth/realms/opentdf
 ```
 
-### Lint
+#### Analyze
+
+Development tools to check code quality and standards.
+
+##### Prerequisite
+
+```shell
+brew install act golangci-lint
+```
+
+Tools
+- https://www.docker.com
+- https://github.com/nektos/act
+- https://github.com/golangci/golangci-lint
+- https://github.com/kaitai-io/kaitai_struct
+
+##### Workflow
+
+To run the `analyze` workflow used in the CI
+
+```shell
+act --container-architecture linux/amd64 --workflows .github/workflows/analyze.yaml
+```
+
+##### Lint
 
 ```shell
 golangci-lint run
 ```
 
-### Unit test
+##### Unit test
 
 ```shell
 go test -bench=. -benchmem ./...
+```
+
+##### Code Generation
+
+Under `cmd/codegen`, Build kaitai image
+
+```shell
+docker build --tag ksc:0.8 --target compiler .
+```
+
+To codegen run kaitai container
+
+```shell
+docker run -it --volume "$PWD":/workdir ksc:0.8 \
+    --target go \
+    --outdir build/gencode \
+    nanotdf.ksy
 ```
 
 ## References
