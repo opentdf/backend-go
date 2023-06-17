@@ -11,7 +11,7 @@ jobs:
     steps:
       # This step will checkout the source code of the pull request branch
       - name: Checkout source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0 # Fetch all history for all branches and tags
       # This step will read the version number from the VERSION file in the pull request branch
