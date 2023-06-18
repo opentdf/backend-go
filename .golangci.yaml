@@ -6,7 +6,7 @@ run:
   # Default: 1m
   timeout: 5m
   skip-files:
-    - _test.go
+#    - _test.go
     - nanotdf.go
     - p11.go
 
