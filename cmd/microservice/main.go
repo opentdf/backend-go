@@ -18,7 +18,6 @@ import (
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/miekg/pkcs11"
-	"github.com/opentdf/backend-go/internal/version"
 	"github.com/opentdf/backend-go/pkg/access"
 	"github.com/opentdf/backend-go/pkg/p11"
 	"golang.org/x/oauth2"
@@ -32,12 +31,10 @@ const (
 	timeoutServerIdle  = 120 * time.Second
 )
 
+var Version string
+
 func main() {
-	// version and build information
-	stats := version.GetVersion()
-	log.Printf("Version: %s", stats.Version)
-	log.Printf("Version Long: %s", stats.VersionLong)
-	log.Printf("Build Time: %s", stats.BuildTime)
+	log.Printf("Version: %s", Version)
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{

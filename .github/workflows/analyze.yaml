@@ -1,6 +1,7 @@
+# This GitHub action will check that the developer tools are run
+# This checks code quality
 # https://github.com/golangci/golangci-lint-action
-# brew install act
-# act --container-architecture linux/amd64 --workflows .github/workflows/analyze.yaml
+# act --secret-file act.env --container-architecture linux/amd64 --workflows .github/workflows/analyze.yaml
 name: analyze
 on:
   push:
@@ -8,19 +9,53 @@ permissions:
   contents: read
 jobs:
   lint:
+    name: lint
     strategy:
       matrix:
         go: ['1.20']
         os: [ubuntu-latest]
-    name: lint
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
-          cache: false
+      # Run golangci-lint tool against configuration .golangci.yaml
+      # https://github.com/marketplace/actions/run-golangci-lint
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
           version: latest
+  # This job will build the run go test with coverage
+  coverage:
+    name: coverage
+    strategy:
+      matrix:
+        go: ['1.20']
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go }}
+      # Run go test with coverage
+      - name: coverprofile
+        run: go test ./... -coverprofile=./cover.out
+      # Run go test with coverage
+      # https://github.com/marketplace/actions/go-test-coverage
+      - name: go-test-coverage
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          # Configure action by specifying input parameters individually (option 2)
+          profile: cover.out
+          local-prefix: ${{ github.repository }}
+          threshold-file: 0
+          threshold-package: 20
+          threshold-total: 25
+
+# TODO
+#  # test and benchmark
+#  RUN go test -bench=. -benchmem ./...
+#  # race condition
+#  RUN CGO_ENABLED=1 GOOS=linux go build -v -a -race -installsuffix cgo -o . ./...
