@@ -40,6 +40,6 @@ jobs:
             org.opencontainers.image.created=${{ steps.prep.outputs.created }}
             org.opencontainers.image.title=${{ github.event.repository.name }}
             com.github.build.number=${{ github.run_number }}
-          # Use cache for faster builds
-          cache-from: type=gha,scope=${{ github.workflow }}
-          cache-to: type=gha,scope=${{ github.workflow }},mode=max
+          # Use cache for faster builds, no scope for faster builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
