@@ -20,7 +20,8 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
-          cache: false
+      # Run golangci-lint tool against configuration .golangci.yaml
+      # https://github.com/marketplace/actions/run-golangci-lint
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
@@ -38,11 +39,11 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
-          cache: false
       # Run go test with coverage
       - name: coverprofile
         run: go test ./... -coverprofile=./cover.out
       # Run go test with coverage
+      # https://github.com/marketplace/actions/go-test-coverage
       - name: go-test-coverage
         uses: vladopajic/go-test-coverage@v2
         with:
