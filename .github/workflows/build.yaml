@@ -7,6 +7,29 @@ name: build
 on:
   push:
 jobs:
+  # This job will build the image using ubuntu
+  binary:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+      # Build a linux application
+      - name: Build Go application
+        # Build optimized - from Dockerfile
+        run: |
+          CGO_ENABLED=1 GOOS=linux go build \
+          -v -a -installsuffix cgo \
+          -o . \
+          -ldflags="-s -w -X cmd/microservice/main.Version=$(cat <VERSION)-${{ github.sha }}" \
+          ./...
+      - name: Upload Go test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: microservice-${{ github.sha }}
+          path: ./microservice
   # This job will build the image using Docker Buildx
   image:
     runs-on: ubuntu-latest
