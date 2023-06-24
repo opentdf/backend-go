@@ -3,3 +3,5 @@
 /softhsm-*/
 /act.env
 /environment/
+/server.key
+/server.pem

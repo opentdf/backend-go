@@ -114,6 +114,20 @@ export PKCS11_PIN=12345
 export PKCS11_LABEL_PUBKEY_RSA=development-rsa-kas
 export PKCS11_LABEL_PUBKEY_EC=development-ec-kas
 export OIDC_ISSUER=http://localhost:65432/auth/realms/opentdf
+export SERVER_PUBLIC_NAME=localhost
+export SERVER_PORT=8080
+# optional TLS
+export SERVER_SECURE_PORT=8443
+export SERVER_SECURE_CERTIFICATE_PATH=server.pem
+export SERVER_SECURE_KEY_PATH=server.key
+```
+
+#### TLS
+
+Create `server.key` and `server.pem`
+```shell
+openssl genrsa -out server.key 2048
+openssl req -new -x509 -sha256 -key server.key -out server.pem -days 365 -subj "/CN=localhost"
 ```
 
 #### Analyze
@@ -174,6 +188,14 @@ docker run -it --volume "$PWD":/workdir ksc:0.8 \
     --target go \
     --outdir build/gencode \
     nanotdf.ksy
+```
+
+## Test
+
+```shell
+curl http://localhost:8080/v2/kas_public_key
+# with local TLS
+curl --insecure https://localhost:8443/v2/kas_public_key
 ```
 
 ## References

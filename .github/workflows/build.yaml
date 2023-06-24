@@ -23,7 +23,7 @@ jobs:
           CGO_ENABLED=1 GOOS=linux go build \
           -v -a -installsuffix cgo \
           -o . \
-          -ldflags="-s -w -X cmd/microservice/main.Version=$(cat <VERSION)-${{ github.sha }}" \
+          -ldflags="-s -w -X cmd/microservice/main.Version=${{ github.sha }}" \
           ./...
       - name: Upload Go binary
         uses: actions/upload-artifact@v3

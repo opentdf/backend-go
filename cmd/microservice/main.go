@@ -245,6 +245,19 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
+	go func() {
+		if os.Getenv("SERVER_SECURE_PORT") != "" {
+			log.Printf("listening on https://0.0.0.0:%s", os.Getenv("SERVER_SECURE_PORT"))
+			if err := http.ListenAndServeTLS(
+				"0.0.0.0:"+os.Getenv("SERVER_SECURE_PORT"),
+				os.Getenv("SERVER_SECURE_CERTIFICATE_PATH"),
+				os.Getenv("SERVER_SECURE_KEY_PATH"),
+				nil,
+			); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}()
 	<-stop
 	err = server.Shutdown(context.Background())
 	if err != nil {
