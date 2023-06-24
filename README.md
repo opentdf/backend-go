@@ -113,7 +113,6 @@ export PKCS11_SLOT_INDEX=0
 export PKCS11_PIN=12345
 export PKCS11_LABEL_PUBKEY_RSA=development-rsa-kas
 export PKCS11_LABEL_PUBKEY_EC=development-ec-kas
-export PRIVATE_KEY_RSA_PATH=../../kas-private.pem
 export OIDC_ISSUER=http://localhost:65432/auth/realms/opentdf
 ```
 

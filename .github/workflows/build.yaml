@@ -25,7 +25,7 @@ jobs:
           -o . \
           -ldflags="-s -w -X cmd/microservice/main.Version=$(cat <VERSION)-${{ github.sha }}" \
           ./...
-      - name: Upload Go test results
+      - name: Upload Go binary
         uses: actions/upload-artifact@v3
         with:
           name: microservice-${{ github.sha }}

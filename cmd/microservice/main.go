@@ -25,7 +25,6 @@ import (
 
 const (
 	ErrHsm             = Error("hsm unexpected")
-	hostname           = "localhost"
 	timeoutServerRead  = 5 * time.Second
 	timeoutServerWrite = 10 * time.Second
 	timeoutServerIdle  = 120 * time.Second
@@ -35,7 +34,7 @@ var Version string
 
 func main() {
 	log.Printf("Version: %s", Version)
-
+	hostname := os.Getenv("SERVER_PUBLIC_NAME")
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
 		URI:          *kasURI,
@@ -232,7 +231,7 @@ func main() {
 
 	// server
 	server := http.Server{
-		Addr:         "127.0.0.1:8080",
+		Addr:         "0.0.0.0:" + os.Getenv("SERVER_PORT"),
 		ReadTimeout:  timeoutServerRead,
 		WriteTimeout: timeoutServerWrite,
 		IdleTimeout:  timeoutServerIdle,
