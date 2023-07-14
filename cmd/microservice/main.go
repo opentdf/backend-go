@@ -17,9 +17,12 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/miekg/pkcs11"
 	"github.com/opentdf/backend-go/pkg/access"
+	"github.com/opentdf/backend-go/pkg/keys"
 	"github.com/opentdf/backend-go/pkg/p11"
+	"github.com/opentdf/backend-go/pkg/wellknown"
 	"golang.org/x/oauth2"
 )
 
@@ -239,10 +242,56 @@ func main() {
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
 	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
+	// keys
+	keySet := jwk.NewSet()
+	rsaPublicKeyJwk, err := jwk.FromRaw(kas.PublicKeyRsa)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = rsaPublicKeyJwk.Set(jwk.KeyUsageKey, jwk.ForEncryption)
+	if err != nil {
+		return
+	}
+	err = keySet.AddKey(rsaPublicKeyJwk)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = jwk.AssignKeyID(rsaPublicKeyJwk)
+	if err != nil {
+		log.Panic(err)
+	}
+	ecPublicKeyJwk, err := jwk.FromRaw(kas.PublicKeyEc)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = ecPublicKeyJwk.Set(jwk.KeyUsageKey, jwk.ForEncryption)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = keySet.AddKey(ecPublicKeyJwk)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = jwk.AssignKeyID(ecPublicKeyJwk)
+	if err != nil {
+		log.Panic(err)
+	}
+	k := keys.Provider{
+		Set: keySet,
+	}
+	http.HandleFunc("/keys", k.Handler)
+	// .well-known/opentdf-configuration
+	wk := wellknown.Provider{
+		OpenTdfConfiguration: wellknown.OpenTdfConfiguration{
+			JwksUri: "http://localhost:8080/keys",
+			Issuer:  oidcIssuer,
+		},
+	}
+	http.HandleFunc("/.well-known/opentdf-configuration", wk.Handler)
 	go func() {
 		log.Printf("listening on http://%s", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
-			log.Fatal(err)
+			log.Panic(err)
 		}
 	}()
 	go func() {
@@ -254,7 +303,7 @@ func main() {
 				os.Getenv("SERVER_SECURE_KEY_PATH"),
 				nil,
 			); err != nil {
-				log.Fatal(err)
+				log.Panic(err)
 			}
 		}
 	}()

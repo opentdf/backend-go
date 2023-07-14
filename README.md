@@ -192,11 +192,23 @@ docker run -it --volume "$PWD":/workdir ksc:0.8 \
 
 ## Test
 
+Note to test with https replace with `curl --insecure https://localhost:8443/`
+
+Keys JSON Web Key Set (JWKS)
 ```shell
-curl http://localhost:8080/v2/kas_public_key
-# with local TLS
-curl --insecure https://localhost:8443/v2/kas_public_key
+curl http://localhost:8080/keys
 ```
+
+KAS Public Key
+```shell
+curl "http://localhost:8080/v2/kas_public_key?format=jwk"
+```
+
+Well-known configuration
+```shell
+curl http://localhost:8080/.well-known/opentdf-configuration
+```
+
 
 ## References
 

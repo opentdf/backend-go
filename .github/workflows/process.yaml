@@ -1,4 +1,4 @@
-# This GitHub action will check that the developer process
+# This GitHub action will check the developer process
 # act --secret-file act.env --container-architecture linux/amd64 --workflows .github/workflows/process.yaml
 name: process
 on:
