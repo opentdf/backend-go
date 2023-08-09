@@ -2,14 +2,15 @@ package version
 
 import "github.com/opentdf/backend-go/internal/conf"
 
-type VersionStat struct {
+type Stat struct {
 	Version     string `json:"version"`
 	VersionLong string `json:"versionLong"`
 	BuildTime   string `json:"buildTime"`
 }
 
-func GetVersion() VersionStat {
-	return VersionStat{
+func GetVersion() Stat {
+	conf.VersionLong = conf.Version + "+" + conf.Sha1
+	return Stat{
 		Version:     conf.Version,
 		VersionLong: conf.VersionLong,
 		BuildTime:   conf.BuildTime,
