@@ -23,6 +23,10 @@ const (
 	CreateErrorTransaction TransactionType = "create_error"
 )
 
+type dataAttributes interface {
+	exportRaw() []string
+}
+
 type Dissem struct {
 	list []string
 }
@@ -52,8 +56,8 @@ type AuditLog struct {
 	actorAttributes      ActorAttributes
 }
 
-type dataAttributes interface {
-	exportRaw() []string
+type DataJson struct {
+	policy Policy
 }
 
 type ReturnValue struct {
@@ -178,10 +182,6 @@ func errAuditHook(functionName string, err string, data string) {
 	log.Println("AuditLog", auditLog)
 	//except Exception as e:
 	//logger.error(f"Error on err_audit_hook - unable to log audit: {str(e)}")
-}
-
-type DataJson struct {
-	policy Policy
 }
 
 func ExtractPolicyDataFromTdf3(auditLog AuditLog, dataJson DataJson) AuditLog {
