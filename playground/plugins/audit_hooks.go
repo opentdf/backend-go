@@ -1,13 +1,17 @@
-package main
+package plugins
 
 import (
-	"fmt"
 	"github.com/google/uuid"
 	"gopkg.in/square/go-jose.v2/jwt"
 	"log"
 	"os"
 	"time"
 )
+
+type AuditHooks interface {
+	AuditHook()
+	ErrAuditHook()
+}
 
 type EventType string
 type TransactionType string
@@ -22,14 +26,6 @@ const (
 	CreateTransaction      TransactionType = "create"
 	CreateErrorTransaction TransactionType = "create_error"
 )
-
-type dataAttributes interface {
-	exportRaw() []string
-}
-
-type Dissem struct {
-	list []string
-}
 
 type TdfAttributes struct {
 	dissem []string
@@ -56,36 +52,71 @@ type AuditLog struct {
 	actorAttributes      ActorAttributes
 }
 
-type DataJson struct {
-	policy Policy
-}
-
-type ReturnValue struct {
-	uuid           string
-	dissem         Dissem
-	dataAttributes dataAttributes
+type dataAttributes interface {
+	exportRaw() []string
 }
 
 type Policy struct {
 	uuid string
 }
 
+type DataJson struct {
+	policy    Policy
+	keyAccess struct {
+		header string
+	}
+}
+
+type Dissem struct {
+	list []string
+}
+
+type AuditHookReturnValue struct {
+	uuid           string
+	dissem         Dissem
+	dataAttributes dataAttributes
+}
+
+// mock dependencies
 func (p Policy) constructFromRawCanonical(pl Policy) Policy {
 	return pl
 }
 
-var policy = Policy{uuid: uuid.NewString()}
+type policyInfo struct {
+}
+
+type eccMode struct {
+}
+
+type symmetricAndPayloadConfig struct {
+}
+
+func (p policyInfo) parse(eccMode string, payloadConfig string, header string) (string, string) {
+	return payloadConfig, header
+}
+
+func (s1 symmetricAndPayloadConfig) parse(s string) (string, string) {
+	return s, s
+}
+
+func (receiver eccMode) parse(s string) (string, string) {
+	return s, s
+}
+
+var SymmetricAndPayloadConfig = symmetricAndPayloadConfig{}
+var ECCMode = eccMode{}
+var PolicyInfo = policyInfo{}
+
+// mock dependencies
 
 var OrgId = os.Getenv("CONFIG_ORG_ID")
+var policy = Policy{uuid: uuid.NewString()}
 
-func AuditHook(functionName string, returnValue ReturnValue) ReturnValue {
+func AuditHook(returnValue AuditHookReturnValue) AuditHookReturnValue {
 	log.SetPrefix("AuditHook: ")
-
+	log.Println("OrgId", OrgId)
 	res := returnValue
 	policy := returnValue
-	claims := returnValue
-
-	log.Println("res, policy, claims", res, policy, claims)
 
 	auditLog := AuditLog{
 		id:                   uuid.NewString(),
@@ -108,21 +139,19 @@ func AuditHook(functionName string, returnValue ReturnValue) ReturnValue {
 		},
 	}
 
-	log.Println("raw auditLog", auditLog)
+	log.Println("Raw auditLog", auditLog)
 
 	for _, attr := range policy.dataAttributes.exportRaw() {
 		auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, attr)
 	}
-
 	auditLog.tdfAttributes.dissem = policy.dissem.list
-	auditLog = extractInfoFromAuthToken(auditLog, "token")
+	auditLog = ExtractInfoFromAuthToken(auditLog, "token")
 
-	log.Println(auditLog)
-
+	log.Println("Processed auditLog", auditLog)
 	return res
 }
 
-func errAuditHook(functionName string, err string, data string) {
+func ErrAuditHook(err string, data string) {
 	log.SetPrefix("ErrAuditHook: ")
 	log.Println("OrgId", OrgId)
 
@@ -152,14 +181,10 @@ func errAuditHook(functionName string, err string, data string) {
 		},
 	}
 
-	auditLog = extractInfoFromAuthToken(auditLog, "token")
-
-	//# wrap in try except -- should not fail since succeeded before
-	//if "signedRequestToken" not in data:
-	//logger.error(
-	//	"Rewrap success without signedRequestToken - should never get here"
-	//)
-	//else:
+	if "signedRequestToken" != data {
+		log.Println("Rewrap success without signedRequestToken - should never get here")
+		return
+	}
 	//decoded_request = jwt.decode(
 	//	data["signedRequestToken"],
 	//	options={"verify_signature": False},
@@ -169,28 +194,27 @@ func errAuditHook(functionName string, err string, data string) {
 	//requestBody = decoded_request["requestBody"]
 	//json_string = requestBody.replace("'", '"')
 	//dataJson = json.loads(json_string)
-	//if dataJson.get("algorithm", "rsa:2048") == "ec:secp256r1":
-	//# nano
-	//audit_log = extract_policy_data_from_nano(
-	//audit_log, dataJson, context, key_master
-	//)
-	//else:
-	//# tdf3
-
+	//dataJson := data
 	dataJson := DataJson{}
+
+	// TODO
+	if dataJson.policy.uuid == "ec:secp256r1" {
+		// nano
+		auditLog = ExtractPolicyDataFromNano(auditLog, dataJson, "", "")
+		return
+	}
 	auditLog = ExtractPolicyDataFromTdf3(auditLog, dataJson)
 	log.Println("AuditLog", auditLog)
-	//except Exception as e:
-	//logger.error(f"Error on err_audit_hook - unable to log audit: {str(e)}")
 }
 
 func ExtractPolicyDataFromTdf3(auditLog AuditLog, dataJson DataJson) AuditLog {
+	log.SetPrefix("ExtractPolicyDataFromTdf3: ")
 	log.SetPrefix("ExtractPolicyDataFromTdf3: ")
 	canonicalPolicy := dataJson.policy
 	originalPolicy := policy.constructFromRawCanonical(canonicalPolicy)
 	auditLog.tdfId = originalPolicy.uuid
 
-	policy := ReturnValue{}
+	policy := AuditHookReturnValue{}
 	for _, attr := range policy.dataAttributes.exportRaw() {
 		auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, attr)
 	}
@@ -198,24 +222,15 @@ func ExtractPolicyDataFromTdf3(auditLog AuditLog, dataJson DataJson) AuditLog {
 	return auditLog
 }
 
-func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson string, context string, keyMaster string) AuditLog {
+func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson DataJson, context string, keyMaster string) AuditLog {
 	log.SetPrefix("ExtractPolicyDataFromNano: ")
 
-	//	header = base64.b64decode(dataJson["keyAccess"]["header"])
-	//	legacy_wrapping = (
-	//		os.environ.get("LEGACY_NANOTDF_IV") == "1"
-	//	) and packaging.version.parse(
-	//		context.get("virtru-ntdf-version") or "0.0.0"
-	//	) < packaging.version.parse(
-	//		"0.0.1"
-	//	)
-	//
-	//	(ecc_mode, header) = ECCMode.parse(ResourceLocator.parse(header[3:])[1])
-	//	# extract payload config from header.
-	//	(payload_config, header) = SymmetricAndPayloadConfig.parse(header)
-	//	# extract policy from header.
-	//	(policy_info, header) = PolicyInfo.parse(ecc_mode, payload_config, header)
-	//
+	header := dataJson.keyAccess.header
+
+	eccMode, header := ECCMode.parse(header)
+	payloadConfig, header := SymmetricAndPayloadConfig.parse(header)
+	policyInfo, header := PolicyInfo.parse(eccMode, payloadConfig, header)
+
 	//	private_key_bytes = key_master.get_key("KAS-EC-SECP256R1-PRIVATE").private_bytes(
 	//		serialization.Encoding.DER,
 	//		serialization.PrivateFormat.PKCS8,
@@ -240,15 +255,17 @@ func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson string, context strin
 	//		policy_data_as_byte.decode("utf-8")
 	//	)
 	//
-	policy := ReturnValue{}
+
+	policy := AuditHookReturnValue{}
 	for _, attr := range policy.dataAttributes.exportRaw() {
 		auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, attr)
 	}
 	auditLog.tdfAttributes.dissem = policy.dissem.list
+
 	return auditLog
 }
 
-func extractInfoFromAuthToken(auditLog AuditLog, token string) AuditLog {
+func ExtractInfoFromAuthToken(auditLog AuditLog, token string) AuditLog {
 	log.SetPrefix("ExtractInfoFromAuthToken: ")
 
 	secret := []byte("itsa16bytesecret")
@@ -277,31 +294,4 @@ func extractInfoFromAuthToken(auditLog AuditLog, token string) AuditLog {
 	//		audit_log["actorAttributes"]["actorId"] = decoded_auth.get("azp")
 
 	return auditLog
-}
-
-func main() {
-	auditLog := AuditLog{
-		id:                   uuid.NewString(),
-		transactionId:        uuid.NewString(), // TODO
-		transactionTimestamp: time.Now().Format(time.RFC3339Nano),
-		tdfId:                "",
-		tdfName:              "",
-		ownerId:              "",
-		ownerOrganizationId:  OrgId,
-		transactionType:      CreateTransaction,
-		eventType:            AccessDeniedEvent,
-		tdfAttributes: TdfAttributes{
-			dissem: []string{},
-			attrs:  []string{},
-		},
-		actorAttributes: ActorAttributes{
-			npe:     true,
-			actorId: "",
-			attrs:   []string{},
-		},
-	}
-	fmt.Println(auditLog.ownerId)
-	newAuditLog := extractInfoFromAuthToken(auditLog, "token")
-	fmt.Println(newAuditLog.ownerId)
-	//AuditHook("functionName", returnValue)
 }

@@ -78,7 +78,7 @@ brew install opensc
 
 ```shell
 # enter two sets of PIN, 12345
-softhsm2-util --init-token --slot 0 --label "development-token"
+softhsm2-util --init-token --slot 0 --label "development-token" --pin 12345 --so-pin 12345
 # verify login
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
 # crease RSA key and cert

@@ -1,4 +1,4 @@
-package main
+package plugins
 
 import (
 	"context"
@@ -22,6 +22,8 @@ func (a accesspdp) NewHealthClient(conection *grpc.ClientConn) {
 	log.Println("NewHealthClient", conection)
 }
 
+var AccessPDP = accesspdp{}
+
 func (p *AccessPDPHealthzPlugin) Healthz(ctx context.Context, probe bool) error {
 	log.Println("Access PDP gRPC health check")
 
@@ -31,8 +33,8 @@ func (p *AccessPDPHealthzPlugin) Healthz(ctx context.Context, probe bool) error 
 	}
 	defer conn.Close()
 
-	client := accesspdp.NewHealthClient(conn)
-	req := &accesspdp.HealthCheckRequest{}
+	client := AccessPDP.NewHealthClient(conn)
+	req := &AccessPDP.HealthCheckRequest()
 	response, err := client.Check(ctx, req)
 	if err != nil {
 		return err

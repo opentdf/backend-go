@@ -24,6 +24,11 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type AuditHooks interface {
+	AuditHook()
+	ErrAuditHook()
+}
+
 const (
 	ErrHsm             = Error("hsm unexpected")
 	hostname           = "localhost"
@@ -39,6 +44,9 @@ func main() {
 	log.Printf("Version Long: %s", stats.VersionLong)
 	log.Printf("Build Time: %s", stats.BuildTime)
 
+	auditEnabled := os.Getenv("AUDIT_ENABLED")
+	log.Printf("AUDIT_ENABLED: %s", auditEnabled)
+
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
 		URI:          *kasURI,
@@ -51,6 +59,7 @@ func main() {
 		OIDCVerifier: nil,
 	}
 	// OIDC
+	//
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
 	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {

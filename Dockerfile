@@ -68,5 +68,7 @@ ENV PKCS11_PIN ""
 ENV PKCS11_SLOT_INDEX ""
 ENV PKCS11_LABEL_PUBKEY_RSA ""
 ENV PKCS11_LABEL_PUBKEY_EC ""
+#
+ENV AUDIT_ENABLED=true
 COPY --from=builder /build/microservice /
 COPY --from=builder /etc/passwd /etc/passwd

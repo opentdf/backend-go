@@ -1,4 +1,4 @@
-package main
+package plugins
 
 //"""OpenTDF rewrap plugin."""
 //

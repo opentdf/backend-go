@@ -1,32 +1,33 @@
-package main
+package plugins
 
-//class RevocationPlugin(AbstractRewrapPlugin, AbstractUpsertPlugin):
-//""" """
-//
-//def __init__(self, *, allows=None, blocks=None):
-//"""Initialize the plugin."""
-//self.allows = allows
-//self.blocks = blocks
-//
-//def update(self, req, res):
-//"""Validate the entity in the request is allowed."""
-//self.match_or_raise(entity=req["entity"])
-//return (req, res)
-//
-//def upsert(self, *, entity):
-//"""validate the entity is unrevoked, and allowed."""
-//self.match_or_raise(entity=entity)
-//return ""
-//
-//def match_or_raise(self, *, entity):
-//def match(v):
-//if v == "*":
-//return True
-//return v == entity.user_id
-//
-//if self.allows:
-//if not any(match(v) for v in self.allows):
-//raise AuthorizationError(f"Not allowed user [{entity.user_id}]")
-//if self.blocks:
-//if any(match(v) for v in self.blocks):
-//raise AuthorizationError(f"Blocked user [{entity.user_id}]")
+type entity struct {
+	userId string
+}
+
+func update(req string, res string) (string, string) {
+	return req, res
+}
+
+func upsert(req string, res string) (string, string) {
+	return req, res
+}
+
+func matchOrRaise(prop string, entity entity) bool {
+	if prop == "*" {
+		return true
+	}
+
+	//TODO convert it to golang
+	//if self.allows:
+	//	if not any(match(v) for v in self.allows):
+	//		raise AuthorizationError(f"Not allowed user [{entity.user_id}]")
+	//if self.blocks:
+	//	if any(match(v) for v in self.blocks):
+	//raise AuthorizationError(f"Blocked user [{entity.user_id}]")
+
+	if entity.userId == "" {
+		panic("")
+	}
+
+	return prop == entity.userId
+}
