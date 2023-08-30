@@ -3,22 +3,26 @@ package access
 import (
 	"context"
 	"errors"
-	attrs "github.com/virtru/access-pdp/attributes"
-	accesspdp "github.com/virtru/access-pdp/pdp"
-	"go.uber.org/zap"
 	"log"
+
+	attrs "github.com/virtru/access-pdp/attributes"
+	accessPdp "github.com/virtru/access-pdp/pdp"
+	"go.uber.org/zap"
+)
+
+const (
+	ErrPolicyDissemInvalid = Error("policy dissem invalid")
+	ErrDecisionUnexpected  = Error("access policy decision unexpected")
 )
 
 func canAccess(entityID string, policy Policy, claims ClaimsObject, attrDefs []attrs.AttributeDefinition) (bool, error) {
 	dissemAccess, err := checkDissems(policy.Body.Dissem, entityID)
 	if err != nil {
-		// logger.Warn("Error in dissem access decision")
 		log.Println("Error in dissem access decision")
 		return false, err
 	}
 	attrAccess, err := checkAttributes(policy.Body.DataAttributes, claims.Entitlements, attrDefs)
 	if err != nil {
-		// logger.Warn("Error in attributes access decision")
 		log.Println("Error in attributes access decision")
 		return false, err
 	}
@@ -31,16 +35,12 @@ func canAccess(entityID string, policy Policy, claims ClaimsObject, attrDefs []a
 
 func checkDissems(dissems []string, entityID string) (bool, error) {
 	if entityID == "" {
-		err := errors.New("No entityID recieved in dissems access decision")
-		return false, err
+		return false, ErrPolicyDissemInvalid
 	}
 	if len(dissems) == 0 || contains(dissems, entityID) {
 		return true, nil
-	} else {
-		return false, nil
-		// logger.debug(f"Entity {entity_id} is not on dissem list {dissem.list}")
-		// raise AuthorizationError("Entity is not on dissem list.")
 	}
+	return false, nil
 }
 
 func checkAttributes(dataAttrs []Attribute, entitlements []Entitlement, attrDefs []attrs.AttributeDefinition) (bool, error) {
@@ -50,24 +50,21 @@ func checkAttributes(dataAttrs []Attribute, entitlements []Entitlement, attrDefs
 	log.Println("Converting data attrs to instances")
 	dataAttrInstances, err := convertAttrsToAttrInstances(dataAttrs)
 	if err != nil {
-		// logger.Warn("Error converting data attributes to AttributeInstance")
 		log.Printf("Error converting data attributes to AttributeInstance")
 		return false, err
 	}
 	entityAttrMap, err := convertEntitlementsToEntityAttrMap(entitlements)
 	if err != nil {
-		// logger.Warn("Error converting entitlements to entity attribute map")
 		log.Printf("Error converting entitlements to entity attribute map")
 		return false, err
 	}
 
-	accessPDP := accesspdp.NewAccessPDP(zapLog.Sugar())
+	accessPDP := accessPdp.NewAccessPDP(zapLog.Sugar())
 
 	decisions, err := accessPDP.DetermineAccess(dataAttrInstances, entityAttrMap, attrDefs, context.Background())
 	if err != nil {
-		// logger.Warn("Error recieved from accessPDP")
 		log.Printf("Error recieved from accessPDP")
-		return false, err
+		return false, errors.Join(ErrDecisionUnexpected, err)
 	}
 	// check the decisions
 	for _, decision := range decisions {
@@ -80,16 +77,15 @@ func checkAttributes(dataAttrs []Attribute, entitlements []Entitlement, attrDefs
 
 func convertAttrsToAttrInstances(attributes []Attribute) ([]attrs.AttributeInstance, error) {
 	log.Println("Converting to attr instances")
-	var instances []attrs.AttributeInstance
-	for _, attr := range attributes {
+	instances := make([]attrs.AttributeInstance, len(attributes))
+	for i, attr := range attributes {
 		log.Printf("%+v", attr)
 		instance, err := attrs.ParseInstanceFromURI(attr.URI)
 		if err != nil {
-			// logger.Warn("Error parsing AttributeInstance from URI")
 			log.Printf("Error parsing AttributeInstance from URI")
-			return nil, err
+			return nil, errors.Join(ErrPolicyDataAttributeParse, err)
 		}
-		instances = append(instances, instance)
+		instances[i] = instance
 	}
 	return instances, nil
 }
@@ -100,7 +96,6 @@ func convertEntitlementsToEntityAttrMap(entitlements []Entitlement) (map[string]
 	for _, entitlement := range entitlements {
 		instances, err := convertAttrsToAttrInstances(entitlement.EntityAttributes)
 		if err != nil {
-			// logger.Warn("Error converting entity attributes to AttributeInstance")
 			log.Printf("Error converting entity attributes to AttributeInstance")
 			return nil, err
 		}

@@ -5,16 +5,17 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	b64 "encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
+	"fmt"
 	"log"
-	// "fmt"
-	b64 "encoding/base64"
 	"net/http"
 	"strings"
+
 	// "crypto/rsa"
 
+	"github.com/opentdf/backend-go/pkg/p11"
 	// "github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
 	// "github.com/opentdf/backend-go/pkg/nano"
 	// "github.com/coreos/go-oidc/v3/oidc"
@@ -32,18 +33,10 @@ type RewrapRequest struct {
 type RequestBody struct {
 	AuthToken       string         `json:"authToken"`
 	KeyAccess       tdf3.KeyAccess `json:"keyAccess"`
-	Entity          Entity         `json:"entity"`
 	Policy          string         `json:"policy,omitempty"`
 	Algorithm       string         `json:"algorithm,omitempty"`
 	ClientPublicKey string         `json:"clientPublicKey"`
 	SchemaVersion   string         `json:"schemaVersion,omitempty"`
-}
-
-type Entity struct {
-	Id         string
-	Aliases    []string
-	Attributes []Attribute
-	PublicKey  []byte
 }
 
 type RewrapResponse struct {
@@ -64,7 +57,6 @@ type customClaimsHeader struct {
 
 // Handler decrypts and encrypts the symmetric data key
 func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
-
 	log.Println("REWRAP")
 	log.Printf("headers %s", r.Header)
 	log.Printf("body %s", r.Body)
@@ -75,10 +67,30 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//////////////// OIDC VERIFY ///////////////
-	//get the raw token
-	oidcRequestToken := r.Header.Get("Authorization")
-	splitToken := strings.Split(oidcRequestToken, "Bearer ")
-	oidcRequestToken = splitToken[1]
+	// Check if Authorization header is present
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, err := fmt.Fprint(w, "Missing Authorization header")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
+	}
+
+	// Extract OIDC token from the Authorization header
+	oidcRequestToken := strings.TrimPrefix(authHeader, "Bearer ")
+	if oidcRequestToken == authHeader {
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := fmt.Fprint(w, "Invalid Authorization header format")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
+	}
+
 	log.Println(oidcRequestToken)
 
 	// Parse and verify ID Token payload.
@@ -112,16 +124,16 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		log.Panic(err)
 		return
 	}
-	jwt_claims_body := &jwt.Claims{}
-	body_claims := &customClaimsBody{}
-	err = requestToken.UnsafeClaimsWithoutVerification(jwt_claims_body, body_claims)
+	var jwtClaimsBody jwt.Claims
+	var bodyClaims customClaimsBody
+	err = requestToken.UnsafeClaimsWithoutVerification(jwtClaimsBody, bodyClaims)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
 		return
 	}
-	log.Println(body_claims.RequestBody)
-	decoder = json.NewDecoder(strings.NewReader(body_claims.RequestBody))
+	log.Println(bodyClaims.RequestBody)
+	decoder = json.NewDecoder(strings.NewReader(bodyClaims.RequestBody))
 	var requestBody RequestBody
 	err = decoder.Decode(&requestBody)
 	if err != nil {
@@ -147,7 +159,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	log.Println(requestBody.Policy)
 	// base 64 decode
 	sDecPolicy, _ := b64.StdEncoding.DecodeString(requestBody.Policy)
-	decoder = json.NewDecoder(strings.NewReader(string(sDecPolicy[:])))
+	decoder = json.NewDecoder(strings.NewReader(string(sDecPolicy)))
 	var policy Policy
 	err = decoder.Decode(&policy)
 	if err != nil {
@@ -167,7 +179,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 	// this part goes in the plugin?
 	log.Println("Fetching attributes")
-	definitions, err := fetchAttributes(namespaces)
+	definitions, err := fetchAttributes(r.Context(), namespaces)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
 		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)
@@ -188,7 +200,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !access {
-		log.Println(errors.New("Not authorized"))
+		log.Println("not authorized")
 		http.Error(w, "Access Denied", http.StatusForbidden)
 		return
 	}
@@ -223,7 +235,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// log.Print(n.Header.Length)
 
 	// unwrap using a key from file
-	//ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)
+	// ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)
 	// symmetricKey, err := tdf3.DecryptWithPrivateKey(requestBody.KeyAccess.WrappedKey, &p.PrivateKey)
 	// if err != nil {
 	// 	// FIXME handle error
@@ -233,7 +245,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 	// ///////////// UNWRAP AND REWRAP //////////////////
 
-	//unwrap using hsm key
+	// unwrap using hsm key
 	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
 		requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
 	if err != nil {
@@ -256,6 +268,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// rewrappedKey := []byte("TODO")
 	responseBytes, err := json.Marshal(&RewrapResponse{
 		EntityWrappedKey: rewrappedKey,
+		SessionPublicKey: "",
 		SchemaVersion:    schemaVersion,
 	})
 	if err != nil {

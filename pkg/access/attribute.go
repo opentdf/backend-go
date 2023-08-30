@@ -12,5 +12,4 @@ type Attribute struct {
 	ProviderURI   string           `json:"kasUrl"`    // kasUrl
 	SchemaVersion string           `json:"tdf_spec_version,omitempty"`
 	Name          string           `json:"displayName"` // displayName
-	//Default       bool             // isDefault
 }

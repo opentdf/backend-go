@@ -7,7 +7,6 @@ type Block struct {
 	Algorithm  string
 	Streamable bool
 	IV         []byte
-	keyLength  int
 }
 
 func (b Block) Method() EncryptionMethod {

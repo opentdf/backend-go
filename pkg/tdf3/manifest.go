@@ -1,18 +1,5 @@
 package tdf3
 
-//type EncryptionInformation struct {
-//	Type      KeyScheme
-//	Access    []KeyAccess
-//	Method    EncryptionMethod
-//	Integrity EncryptionIntegrity
-//}
-//
-//type KeyScheme int
-//
-//const (
-//	Split KeyScheme = iota
-//)
-
 type EncryptionInformation struct {
 	IntegrityInformation IntegrityInformation `json:"integrityInformation"`
 	KeyAccess            []KeyAccess          `json:"keyAccess"`
@@ -41,7 +28,7 @@ type IntegrityInformation struct {
 }
 
 type EncryptionMethod struct {
-	Algorithm  string
-	Streamable bool
-	IV         []byte
+	Algorithm  string `json:"algorithm"`
+	Streamable bool   `json:"isStreamable"`
+	IV         []byte `json:"iv"`
 }
