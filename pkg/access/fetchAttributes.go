@@ -1,4 +1,4 @@
-package access
+package main
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"github.com/virtru/access-pdp/attributes"
 )
 
+type attribute string
+
 const (
 	ErrAttributeDefinitionsUnmarshal   = Error("attribute definitions unmarshal")
 	ErrAttributeDefinitionsServiceCall = Error("attribute definitions service call unexpected")
@@ -20,7 +22,7 @@ const (
 // const attributeHost = "http://attributes:4020"
 const attributeHost = "http://localhost:65432/api/attributes"
 
-func fetchAttributes(ctx context.Context, namespaces []string) ([]attributes.AttributeDefinition, error) {
+func (a attribute) fetchAttributes(ctx context.Context, namespaces []string) ([]attributes.AttributeDefinition, error) {
 	var definitions []attributes.AttributeDefinition
 	for _, ns := range namespaces {
 		attrDefs, err := fetchAttributesForNamespace(ctx, ns)
@@ -73,3 +75,6 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attri
 
 	return definitions, nil
 }
+
+// export as symbol named "Attributes"
+var Attributes attribute

@@ -178,7 +178,27 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 	// this part goes in the plugin?
 	log.Println("Fetching attributes")
-	definitions, err := fetchAttributes(r.Context(), namespaces)
+
+	// load attribute plugin
+	attrPlug, attrErr := plugin.Open("attributes.so")
+	if attrErr != nil {
+		kill(attrErr)
+	}
+
+	// look up the Pass function
+	symAttribute, attrErr := attrPlug.Lookup("Attributes")
+	if midErr != nil {
+		kill(attrErr)
+	}
+
+	var attribute Attributes
+	attribute, ok := symAttribute.(Attributes)
+	if !ok {
+	  kill("The attribute module has wrong type")
+	}
+
+	//use the module
+	definitions, err := attribute.fetchAttributes(r.Context(), namespaces)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
 		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)
