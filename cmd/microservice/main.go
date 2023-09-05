@@ -7,12 +7,14 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"plugin"
 	"strconv"
 	"time"
 
@@ -24,11 +26,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-type AuditHooks interface {
-	AuditHook()
-	ErrAuditHook()
-}
-
 const (
 	ErrHsm             = Error("hsm unexpected")
 	hostname           = "localhost"
@@ -37,7 +34,27 @@ const (
 	timeoutServerIdle  = 120 * time.Second
 )
 
+type Middleware interface {
+	AuditHook(f http.HandlerFunc) http.HandlerFunc
+}
+
+type pluginFlagValues []string
+
+func (i *pluginFlagValues) String() string {
+	return fmt.Sprintf("<%v>", *i)
+}
+
+func (i *pluginFlagValues) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+var pluginNames pluginFlagValues
+
 func main() {
+	flag.Var(&pluginNames, "plugin", "Plugin paths to load")
+	flag.Parse()
+
 	// version and build information
 	stats := version.GetVersion()
 	log.Printf("Version: %s", stats.Version)
@@ -249,9 +266,15 @@ func main() {
 		WriteTimeout: timeoutServerWrite,
 		IdleTimeout:  timeoutServerIdle,
 	}
+
+	plug, err := plugin.Open(pluginNames[0])
+	symMiddleware, err := plug.Lookup("Middleware")
+	mid, ok := symMiddleware.(Middleware)
+
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
-	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
+	http.HandleFunc("/v2/kas_public_key", mid.AuditHook(kas.PublicKeyHandlerV2))
 	http.HandleFunc("/v2/rewrap", kas.Handler)
+
 	go func() {
 		log.Printf("listening on http://%s", server.Addr)
 		if err := server.ListenAndServe(); err != nil {

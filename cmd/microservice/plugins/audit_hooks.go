@@ -1,20 +1,14 @@
-package plugins
+package main
 
 import (
+	"fmt"
 	"github.com/google/uuid"
-	"gopkg.in/square/go-jose.v2/jwt"
 	"log"
+	"log/slog"
+	"net/http"
 	"os"
 	"time"
 )
-
-type AuditHooks interface {
-	AuditHook()
-	ErrAuditHook()
-}
-
-type EventType string
-type TransactionType string
 
 const (
 	AccessDeniedEvent EventType = "access_denied"
@@ -27,9 +21,43 @@ const (
 	CreateErrorTransaction TransactionType = "create_error"
 )
 
+type a string
+
+type Dissem struct {
+	list []string
+}
+
+type dataAttributes interface {
+	exportRaw() []string
+}
+
+type AuditHookReturnValue struct {
+	uuid           string
+	dissem         Dissem
+	dataAttributes dataAttributes
+}
+
+type EventType string
+type TransactionType string
+
+type policyInfo struct{}
+type symmetricAndPayloadConfig struct {
+}
+type Policy struct {
+	uuid   string
+	dissem []string
+}
+
 type TdfAttributes struct {
 	dissem []string
 	attrs  []string
+}
+
+type DataJson struct {
+	policy    Policy
+	keyAccess struct {
+		header string
+	}
 }
 
 type ActorAttributes struct {
@@ -52,71 +80,57 @@ type AuditLog struct {
 	actorAttributes      ActorAttributes
 }
 
-type dataAttributes interface {
-	exportRaw() []string
-}
-
-type Policy struct {
-	uuid string
-}
-
-type DataJson struct {
-	policy    Policy
-	keyAccess struct {
-		header string
-	}
-}
-
-type Dissem struct {
-	list []string
-}
-
-type AuditHookReturnValue struct {
-	uuid           string
-	dissem         Dissem
-	dataAttributes dataAttributes
-}
-
-// mock dependencies
-func (p Policy) constructFromRawCanonical(pl Policy) Policy {
-	return pl
-}
-
-type policyInfo struct {
-}
-
 type eccMode struct {
-}
-
-type symmetricAndPayloadConfig struct {
-}
-
-func (p policyInfo) parse(eccMode string, payloadConfig string, header string) (string, string) {
-	return payloadConfig, header
-}
-
-func (s1 symmetricAndPayloadConfig) parse(s string) (string, string) {
-	return s, s
 }
 
 func (receiver eccMode) parse(s string) (string, string) {
 	return s, s
 }
 
-var SymmetricAndPayloadConfig = symmetricAndPayloadConfig{}
-var ECCMode = eccMode{}
-var PolicyInfo = policyInfo{}
+func (p Policy) constructFromRawCanonical(pl Policy) Policy {
+	return pl
+}
 
-// mock dependencies
+func (p policyInfo) parse(eccMode string, payloadConfig string, header string) (string, string) {
+	return payloadConfig, header
+}
+
+func (p Policy) exportRaw() []string {
+	return []string{}
+}
+
+func (s1 symmetricAndPayloadConfig) parse(s string) (string, string) {
+	return s, s
+}
 
 var OrgId = os.Getenv("CONFIG_ORG_ID")
 var policy = Policy{uuid: uuid.NewString()}
+var Middleware a
+var PolicyInfo = policyInfo{}
+var ECCMode = eccMode{}
+var SymmetricAndPayloadConfig = symmetricAndPayloadConfig{}
 
-func AuditHook(returnValue AuditHookReturnValue) AuditHookReturnValue {
-	log.SetPrefix("AuditHook: ")
-	log.Println("OrgId", OrgId)
-	res := returnValue
-	policy := returnValue
+func createLogger() (*slog.Logger, error) {
+	logFile, err := os.OpenFile("logs.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, err
+	}
+	// Make sure to close the file when you're done.
+	// TODO Should we close file when server down ?
+	//defer logFile.Close()
+
+	logger := slog.New(slog.NewJSONHandler(logFile, nil))
+
+	return logger, nil
+}
+
+func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
+	logger, err := createLogger()
+	if err != nil {
+		panic(err)
+	}
+	auditHookLogger := logger.With("location", "AuditHook")
+	auditHookLogger.Info("AuditHook call", "OrgId", OrgId)
 
 	auditLog := AuditLog{
 		id:                   uuid.NewString(),
@@ -139,16 +153,29 @@ func AuditHook(returnValue AuditHookReturnValue) AuditHookReturnValue {
 		},
 	}
 
-	log.Println("Raw auditLog", auditLog)
+	auditLogAsString := fmt.Sprintf("%+v", auditLog)
+	auditHookLogger.Info("Created AuditLog", "auditLog", auditLogAsString)
 
-	for _, attr := range policy.dataAttributes.exportRaw() {
+	for _, attr := range policy.exportRaw() {
 		auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, attr)
 	}
-	auditLog.tdfAttributes.dissem = policy.dissem.list
-	auditLog = ExtractInfoFromAuthToken(auditLog, "token")
 
-	log.Println("Processed auditLog", auditLog)
-	return res
+	return func(w http.ResponseWriter, r *http.Request) {
+		auditHookLogger.Info("Method", r.Method, "Url", r.URL)
+
+		auditLog.tdfAttributes.dissem = policy.dissem
+
+		// TODO Use real token when /attribute endpoints will be ready
+		// tokenString := r.Header.Get("Authorization")
+		tokenString := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJodHRwczovL2FhLnZpcnRydS5jb20vYXR0ci91bmlxdWUtaWRlbnRpZmllci92YWx1ZS9mZTEzZjBmYS0xNmU1LTQ3ZDYtODdjYy1hOTI1MzJhYzcxYzQiLCJuYW1lIjoiZmUxM2YwZmEtMTZlNS00N2Q2LTg3Y2MtYTkyNTMyYWM3MWM0IiwiaWF0IjoxNTUzNDg1MjQ3LCJleHAiOjE1NTM1NzE2NDd9.qg8BYLJ6ZKu6e641_NLfjlghDwWexEr_YUCadUyPX-B1tonWIJUjGddhx2cz5H8Ldxpj0AurilCz2xAIcRItwm9-0M3RlNUAZ7l5wYahRnSWijwV4lL7Yvm_HwMYgrrVNvcUwj5cqpMREHfCDScS-lSb89zhq76dypVmkgmhZe3t9lD1fTSJKCJylc7X9AzbWzLc0fDQH702yU__ZVOVkBwTO2jJ4ovBDPB0w9LgCEZ-9pzvdUiTdYuhZ2PzQBTNHlK1xxQQCu148uuiTw8Fk_bs7efuGgUU7zfrKR2Lvgw5QLDpavL11HnXIKZihxzJbcrjBdKQCK0V7v3i7F2CkA`
+
+		auditLog = ExtractInfoFromAuthToken(auditLog, tokenString)
+
+		processedAuditLogAsString := fmt.Sprintf("%+v", auditLog)
+		auditHookLogger.Info("Processed AuditLog", "auditLog", processedAuditLogAsString)
+
+		next(w, r)
+	}
 }
 
 func ErrAuditHook(err string, data string) {
@@ -229,7 +256,7 @@ func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson DataJson, context str
 
 	eccMode, header := ECCMode.parse(header)
 	payloadConfig, header := SymmetricAndPayloadConfig.parse(header)
-	policyInfo, header := PolicyInfo.parse(eccMode, payloadConfig, header)
+	_, header = PolicyInfo.parse(eccMode, payloadConfig, header)
 
 	//	private_key_bytes = key_master.get_key("KAS-EC-SECP256R1-PRIVATE").private_bytes(
 	//		serialization.Encoding.DER,
@@ -268,20 +295,19 @@ func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson DataJson, context str
 func ExtractInfoFromAuthToken(auditLog AuditLog, token string) AuditLog {
 	log.SetPrefix("ExtractInfoFromAuthToken: ")
 
-	secret := []byte("itsa16bytesecret")
-	tokenString := `eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4R0NNIn0..jg45D9nmr6-8awml.z-zglLlEw9MVkYHi-Znd9bSwc-oRGbqKzf9WjXqZxno.kqji2DiZHZmh-1bLF6ARPw`
-	tok, err := jwt.ParseEncrypted(tokenString)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	decodedToken := jwt.Claims{}
-	if err := tok.Claims(secret, &decodedToken); err != nil {
-		log.Fatal(err)
-	}
-	log.Println(decodedToken)
-	auditLog.ownerId = decodedToken.Subject
+	//secret := []byte("itsa16bytesecret")
+	//tok, err := jwt.ParseEncrypted(tokenString)
+	//
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//decodedToken := jwt.Claims{}
+	//if err := tok.Claims(secret, &decodedToken); err != nil {
+	//	log.Fatal(err)
+	//}
+	//log.Println(decodedToken)
+	//auditLog.ownerId = decodedToken.Subject
 
 	//if decoded_auth.get("tdf_claims").get("entitlements"):
 	//	attributes = set()
