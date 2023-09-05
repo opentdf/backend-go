@@ -229,7 +229,7 @@ func (this *Nanotdf_Payload) Read(io *kaitai.Stream, parent *Nanotdf, root *Nano
 	if err != nil {
 		return err
 	}
-	tmp16 = tmp16
+	// tmp16 = tmp16
 	this.PayloadBody = tmp16
 	return err
 }
@@ -296,7 +296,7 @@ func (this *Nanotdf_EmbeddedPolicy) Read(io *kaitai.Stream, parent *Nanotdf_Poli
 	if err != nil {
 		return err
 	}
-	tmp21 = tmp21
+	//tmp21 = tmp21
 	this.Body = string(tmp21)
 	return err
 }

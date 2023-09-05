@@ -1,3 +1,9 @@
 /.idea/
 /data/
 /softhsm-*/
+
+# binaries
+/build
+/backend-go
+/kas
+/go-kas

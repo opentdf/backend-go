@@ -1,7 +1,6 @@
 package access
 
 import (
-	// "bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
@@ -10,21 +9,17 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
+	"os"
 	"net/http"
 	"os"
 	"plugin"
 	"strings"
 
-	// "crypto/rsa"
-
+	attrs "github.com/virtru/access-pdp/attributes"
 	"github.com/opentdf/backend-go/pkg/p11"
-	// "github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
-	// "github.com/opentdf/backend-go/pkg/nano"
-	// "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/opentdf/backend-go/pkg/tdf3"
 	attrs "github.com/virtru/access-pdp/attributes"
 	"gopkg.in/square/go-jose.v2/jwt"
-	// "golang.org/x/oauth2"
 )
 
 type IAttributesPlug interface {
