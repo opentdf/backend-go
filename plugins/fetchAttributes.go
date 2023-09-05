@@ -79,5 +79,5 @@ func (attributePlug) FetchAllAttributes(ctx context.Context, namespaces []string
 
 func GetPluginIface() (f interface{}, err error) {
     f = attributePlug{}
-    return
+    return f, nil
 }

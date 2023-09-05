@@ -10,19 +10,19 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
-	"os"
 	"net/http"
+	"os"
 	"plugin"
 	"strings"
 
 	// "crypto/rsa"
 
 	"github.com/opentdf/backend-go/pkg/p11"
-	attrs "github.com/virtru/access-pdp/attributes"
 	// "github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
 	// "github.com/opentdf/backend-go/pkg/nano"
 	// "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/opentdf/backend-go/pkg/tdf3"
+	attrs "github.com/virtru/access-pdp/attributes"
 	"gopkg.in/square/go-jose.v2/jwt"
 	// "golang.org/x/oauth2"
 )
@@ -189,23 +189,27 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// load attribute plugin
 	attrPlug, attrErr := plugin.Open("attributes.so")
 	if attrErr != nil {
-	  fmt.Println(attrErr)
+	  log.Printf("Plugin load failed %s", attrErr)
 	  os.Exit(1)
 	}
 
 	// look up the GetPluginIface function
-	symAttribute, attrErr := attrPlug.Lookup("GetPluginIface")
-	if attrErr != nil {
-	  fmt.Println(attrErr)
+	symAttribute, symErr := attrPlug.Lookup("GetPluginIface")
+	if symErr != nil {
+	  log.Printf("Plugin GetPluginIface function failed %s", symErr)
 	  os.Exit(1)
 	}
 
 	pluginIface, err := symAttribute.(func() (interface{}, error))()
-    plugFunc, err := pluginIface.(IAttributesPlug), err
+	if err != nil {
+	  log.Printf("Plugin lookup function failed %s", err)
+	  os.Exit(1)
+	}
 
-	//use the module
+    plugFunc, _ := pluginIface.(IAttributesPlug)
+
+	// use the module
 	definitions, err := plugFunc.FetchAllAttributes(r.Context(), namespaces)
-	fmt.Println("returned %s", definitions)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
 		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)
