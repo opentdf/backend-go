@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG GOLANG_VERSION=1.20
+ARG GOLANG_VERSION=1.21
 FROM golang:${GOLANG_VERSION} AS builder
 WORKDIR /build/
 # dependencies
@@ -8,7 +8,6 @@ RUN go mod download
 # copy Go files - add new package to this list
 COPY *.go ./
 COPY /cmd/ ./cmd/
-COPY /internal/ ./internal/
 COPY /pkg/ ./pkg/
 COPY VERSION .
 # build optimized

@@ -291,7 +291,7 @@ func main() {
 	go func() {
 		log.Printf("listening on http://%s", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
-			log.Panic(err)
+			log.Println(err)
 		}
 	}()
 	go func() {
