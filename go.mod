@@ -1,6 +1,6 @@
 module github.com/opentdf/backend-go
 
-go 1.19
+go 1.20
 
 require (
 	github.com/coreos/go-oidc/v3 v3.5.0
@@ -26,6 +26,7 @@ require (
 	github.com/lestrrat-go/httprc v1.0.4 // indirect
 	github.com/lestrrat-go/iter v1.0.2 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	go.opentelemetry.io/otel v1.12.0 // indirect
 	go.opentelemetry.io/otel/trace v1.12.0 // indirect

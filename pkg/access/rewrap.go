@@ -10,12 +10,15 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
+	"os"
 	"net/http"
+	"plugin"
 	"strings"
 
 	// "crypto/rsa"
 
 	"github.com/opentdf/backend-go/pkg/p11"
+	attrs "github.com/virtru/access-pdp/attributes"
 	// "github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
 	// "github.com/opentdf/backend-go/pkg/nano"
 	// "github.com/coreos/go-oidc/v3/oidc"
@@ -23,6 +26,10 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 	// "golang.org/x/oauth2"
 )
+
+type IAttributesPlug interface {
+	FetchAllAttributes(ctx context.Context, namespaces []string) ([]attrs.AttributeDefinition, error)
+}
 
 // RewrapRequest HTTP request body in JSON
 type RewrapRequest struct {
@@ -125,7 +132,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	var jwtClaimsBody jwt.Claims
 	var bodyClaims customClaimsBody
-	err = requestToken.UnsafeClaimsWithoutVerification(jwtClaimsBody, bodyClaims)
+	err = requestToken.UnsafeClaimsWithoutVerification(&jwtClaimsBody, &bodyClaims)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
@@ -182,23 +189,23 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// load attribute plugin
 	attrPlug, attrErr := plugin.Open("attributes.so")
 	if attrErr != nil {
-		kill(attrErr)
+	  fmt.Println(attrErr)
+	  os.Exit(1)
 	}
 
-	// look up the Pass function
-	symAttribute, attrErr := attrPlug.Lookup("Attributes")
-	if midErr != nil {
-		kill(attrErr)
+	// look up the GetPluginIface function
+	symAttribute, attrErr := attrPlug.Lookup("GetPluginIface")
+	if attrErr != nil {
+	  fmt.Println(attrErr)
+	  os.Exit(1)
 	}
 
-	var attribute Attributes
-	attribute, ok := symAttribute.(Attributes)
-	if !ok {
-	  kill("The attribute module has wrong type")
-	}
+	pluginIface, err := symAttribute.(func() (interface{}, error))()
+    plugFunc, err := pluginIface.(IAttributesPlug), err
 
 	//use the module
-	definitions, err := attribute.fetchAttributes(r.Context(), namespaces)
+	definitions, err := plugFunc.FetchAllAttributes(r.Context(), namespaces)
+	fmt.Println("returned %s", definitions)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
 		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)

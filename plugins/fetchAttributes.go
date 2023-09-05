@@ -9,34 +9,20 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/virtru/access-pdp/attributes"
+	attrs "github.com/virtru/access-pdp/attributes"
 )
 
-type attribute string
+type attributePlug struct{}
 
-const (
-	ErrAttributeDefinitionsUnmarshal   = Error("attribute definitions unmarshal")
-	ErrAttributeDefinitionsServiceCall = Error("attribute definitions service call unexpected")
+var (
+	ErrAttributeDefinitionsUnmarshal   = errors.New("attribute definitions unmarshal")
+	ErrAttributeDefinitionsServiceCall = errors.New("attribute definitions service call unexpected")
 )
 
 // const attributeHost = "http://attributes:4020"
 const attributeHost = "http://localhost:65432/api/attributes"
 
-func (a attribute) fetchAttributes(ctx context.Context, namespaces []string) ([]attributes.AttributeDefinition, error) {
-	var definitions []attributes.AttributeDefinition
-	for _, ns := range namespaces {
-		attrDefs, err := fetchAttributesForNamespace(ctx, ns)
-		if err != nil {
-			// logger.Warn("Error creating http request to attributes service")
-			log.Printf("Error fetching attributes for namespace %s", ns)
-			return nil, err
-		}
-		definitions = append(definitions, attrDefs...)
-	}
-	return definitions, nil
-}
-
-func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attributes.AttributeDefinition, error) {
+func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attrs.AttributeDefinition, error) {
 	log.Println("Fetching for ", namespace)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, attributeHost+"/v1/attrName", nil)
 	if err != nil {
@@ -66,7 +52,7 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attri
 		return nil, errors.Join(ErrAttributeDefinitionsServiceCall, err)
 	}
 
-	var definitions []attributes.AttributeDefinition
+	var definitions []attrs.AttributeDefinition
 	err = json.NewDecoder(resp.Body).Decode(&definitions)
 	if err != nil {
 		log.Println("Error parsing response from attributes service")
@@ -76,5 +62,22 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attri
 	return definitions, nil
 }
 
-// export as symbol named "Attributes"
-var Attributes attribute
+func (attributePlug) FetchAllAttributes(ctx context.Context, namespaces []string) ([]attrs.AttributeDefinition, error) {
+    var definitions []attrs.AttributeDefinition
+	for _, ns := range namespaces {
+		attrDefs, err := fetchAttributesForNamespace(ctx, ns)
+		if err != nil {
+			// logger.Warn("Error creating http request to attributes service")
+			log.Printf("Error fetching attributes for namespace %s", ns)
+			return nil, err
+		}
+		definitions = append(definitions, attrDefs...)
+	}
+	return definitions, nil
+}
+
+
+func GetPluginIface() (f interface{}, err error) {
+    f = attributePlug{}
+    return
+}
