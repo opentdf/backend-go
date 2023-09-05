@@ -9,13 +9,11 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
-	"os"
 	"net/http"
 	"os"
 	"plugin"
 	"strings"
 
-	attrs "github.com/virtru/access-pdp/attributes"
 	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/opentdf/backend-go/pkg/tdf3"
 	attrs "github.com/virtru/access-pdp/attributes"
