@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"slices"
+	"strings"
 )
 
 type b string
@@ -14,13 +16,16 @@ type entity struct {
 
 var Revocation b
 
-func update(next http.HandlerFunc) http.HandlerFunc {
+var allowlistEnv = os.Getenv("EO_ALLOW_LIST")
+var blockListEnv = os.Getenv("EO_ALLOW_LIST")
+
+func Update(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//Entity := r.Header.Get("entity")
 		mockEntity := entity{userId: "mockId"}
 		if !match(mockEntity) {
-			w.WriteHeader(http.StatusUnauthorized)
-			_, err := fmt.Fprint(w, "Missing Authorization header")
+			w.WriteHeader(http.StatusForbidden)
+			_, err := fmt.Fprint(w, "Access denied")
 			if err != nil {
 				panic(err)
 			}
@@ -30,13 +35,13 @@ func update(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func upsert(next http.HandlerFunc) http.HandlerFunc {
+func Upsert(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//Entity := r.Header.Get("entity")
 		mockEntity := entity{userId: "mockId"}
 		if !match(mockEntity) {
-			w.WriteHeader(http.StatusUnauthorized)
-			_, err := fmt.Fprint(w, "Missing Authorization header")
+			w.WriteHeader(http.StatusForbidden)
+			_, err := fmt.Fprint(w, "Access denied")
 			if err != nil {
 				panic(err)
 			}
@@ -47,8 +52,8 @@ func upsert(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func match(entity entity) bool {
-	allows := []string{""}
-	blocks := []string{""}
+	allows := strings.Split(allowlistEnv, ",")
+	blocks := strings.Split(blockListEnv, ",")
 
 	if slices.Contains(blocks, entity.userId) {
 		return false

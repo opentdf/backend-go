@@ -7,7 +7,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -49,11 +48,11 @@ func (i *pluginFlagValues) Set(value string) error {
 	return nil
 }
 
-var pluginNames pluginFlagValues
+//var pluginNames pluginFlagValues
 
 func main() {
-	flag.Var(&pluginNames, "plugin", "Plugin paths to load")
-	flag.Parse()
+	//flag.Var(&pluginNames, "plugin", "Plugin paths to load")
+	//flag.Parse()
 
 	// version and build information
 	stats := version.GetVersion()
@@ -267,11 +266,12 @@ func main() {
 		IdleTimeout:  timeoutServerIdle,
 	}
 
-	plug, err := plugin.Open(pluginNames[0])
+	plug, err := plugin.Open("audit_hooks.so")
 	symMiddleware, err := plug.Lookup("Middleware")
 	mid, ok := symMiddleware.(Middleware)
 
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
+	// TODO mid.AuditHook should be in attributes module
 	http.HandleFunc("/v2/kas_public_key", mid.AuditHook(kas.PublicKeyHandlerV2))
 	http.HandleFunc("/v2/rewrap", kas.Handler)
 

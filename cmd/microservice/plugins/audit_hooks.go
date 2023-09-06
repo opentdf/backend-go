@@ -21,6 +21,8 @@ const (
 	CreateErrorTransaction TransactionType = "create_error"
 )
 
+const LogFileName = "logs.txt"
+
 type a string
 
 type Dissem struct {
@@ -110,8 +112,8 @@ var PolicyInfo = policyInfo{}
 var ECCMode = eccMode{}
 var SymmetricAndPayloadConfig = symmetricAndPayloadConfig{}
 
-func createLogger() (*slog.Logger, error) {
-	logFile, err := os.OpenFile("logs.txt", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+func CreateLogger() (*slog.Logger, error) {
+	logFile, err := os.OpenFile(LogFileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, err
 	}
@@ -124,8 +126,10 @@ func createLogger() (*slog.Logger, error) {
 	return logger, nil
 }
 
+// go build -buildmode=plugin ./plugins/audit_hooks.go
+
 func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
-	logger, err := createLogger()
+	logger, err := CreateLogger()
 	if err != nil {
 		panic(err)
 	}
@@ -161,7 +165,7 @@ func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		auditHookLogger.Info("Method", r.Method, "Url", r.URL)
+		auditHookLogger.Info("HTTP request", "Method", r.Method, "Url", r.URL.Path)
 
 		auditLog.tdfAttributes.dissem = policy.dissem
 
