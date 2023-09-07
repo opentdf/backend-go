@@ -3,4 +3,4 @@
 /softhsm-*/
 *.so
 *.pem
-playground/base/main
+cmd/microservice/log.txt

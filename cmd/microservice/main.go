@@ -33,7 +33,7 @@ const (
 	timeoutServerIdle  = 120 * time.Second
 )
 
-type Middleware interface {
+type IMiddleware interface {
 	AuditHook(f http.HandlerFunc) http.HandlerFunc
 }
 
@@ -268,7 +268,7 @@ func main() {
 
 	plug, err := plugin.Open("audit_hooks.so")
 	symMiddleware, err := plug.Lookup("Middleware")
-	mid, ok := symMiddleware.(Middleware)
+	mid, ok := symMiddleware.(IMiddleware)
 
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
 	// TODO mid.AuditHook should be in attributes module
