@@ -245,9 +245,8 @@ pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
 
 ### Build plugins and start app
 
-1. `cd cmd/microservice`
-2. `go build -buildmode=plugin ./plugins/audit_hooks.go`
-3. `go build main.go`
+1. `go build -buildmode=plugin ./plugins/audit_hooks.go`
+2. `go build cmd/microservice/main.go`
 4. `./main`
 
 ## Troubleshooting

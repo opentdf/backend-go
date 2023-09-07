@@ -11,13 +11,17 @@ WORKDIR /build/
 COPY . ./
 COPY cmd/ cmd/
 COPY pkg/ pkg/
-RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./...
+RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./cmd/microservice
+COPY plugins/ plugins/
+RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/audit_hooks.go
+RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/revocation_plugin.go
 
 # tester
 FROM golang:$GO_VERSION as tester
 WORKDIR /test/
 COPY . ./
 COPY cmd/ cmd/
+COPY plugins/ plugins/
 COPY pkg/ pkg/
 # dependency
 RUN go list -m -u all
@@ -26,7 +30,7 @@ RUN go vet ./...
 # test and benchmark
 RUN go test -bench=. -benchmem ./...
 # race condition
-RUN CGO_ENABLED=1 GOOS=linux go build -v -a -race -installsuffix cgo -o . ./...
+RUN CGO_ENABLED=1 GOOS=linux go build -v -a -race -installsuffix cgo -o . ./cmd/microservice
 
 # server-debug - root
 FROM ubuntu:latest as server-debug
