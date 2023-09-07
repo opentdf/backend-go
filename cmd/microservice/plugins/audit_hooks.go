@@ -107,7 +107,8 @@ func (s1 symmetricAndPayloadConfig) parse(s string) (string, string) {
 }
 
 var OrgId = os.Getenv("CONFIG_ORG_ID")
-var policy = Policy{uuid: uuid.NewString()}
+
+var policy = Policy{uuid: uuid.NewString(), dissem: []string{""}}
 var Middleware a
 var PolicyInfo = policyInfo{}
 var ECCMode = eccMode{}
@@ -159,9 +160,7 @@ func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
 	auditLogAsString := fmt.Sprintf("%+v", auditLog)
 	auditHookLogger.Info("Created AuditLog", "auditLog", auditLogAsString)
 
-	for _, attr := range policy.exportRaw() {
-		auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, attr)
-	}
+	auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, policy.exportRaw()...)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		auditHookLogger.Info("HTTP request", "Method", r.Method, "Url", r.URL.Path)
@@ -215,25 +214,25 @@ func ErrAuditHook(err string, data string) {
 		log.Println("Rewrap success without signedRequestToken - should never get here")
 		return
 	}
-	//decoded_request = jwt.decode(
+	// decoded_request = jwt.decode(
 	//	data["signedRequestToken"],
 	//	options={"verify_signature": False},
-	//algorithms=["RS256", "ES256", "ES384", "ES512"],
-	//leeway=30,
-	//)
-	//requestBody = decoded_request["requestBody"]
-	//json_string = requestBody.replace("'", '"')
-	//dataJson = json.loads(json_string)
-	//dataJson := data
-	dataJson := DataJson{}
+	//  algorithms=["RS256", "ES256", "ES384", "ES512"],
+	//  leeway=30,
+	// )
+	// requestBody = decoded_request["requestBody"]
+	// json_string = requestBody.replace("'", '"')
+	// dataJson = json.loads(json_string)
+	// dataJson := data
+	// main.DataJson is missing fields policy, keyAccess (exhaustruct)
+	//dataJson := DataJson{policy: Policy{uuid: "secp256r1"}}
 
-	// TODO
-	if dataJson.policy.uuid == "ec:secp256r1" {
-		// nano
-		auditLog = ExtractPolicyDataFromNano(auditLog, dataJson, "", "")
-		return
-	}
-	auditLog = ExtractPolicyDataFromTdf3(auditLog, dataJson)
+	//if dataJson.policy.uuid == "ec:secp256r1" {
+	//	// nano
+	//	auditLog = ExtractPolicyDataFromNano(auditLog, dataJson, "", "")
+	//	return
+	//}
+	//auditLog = ExtractPolicyDataFromTdf3(auditLog, dataJson)
 	log.Println("AuditLog", auditLog)
 }
 
@@ -244,11 +243,12 @@ func ExtractPolicyDataFromTdf3(auditLog AuditLog, dataJson DataJson) AuditLog {
 	originalPolicy := policy.constructFromRawCanonical(canonicalPolicy)
 	auditLog.tdfId = originalPolicy.uuid
 
-	policy := AuditHookReturnValue{}
+	policy := AuditHookReturnValue{uuid: "mockUuid", dissem: Dissem{list: []string{""}}}
+
 	log.Println("policy uuid", policy.uuid)
-	for _, attr := range policy.dataAttributes.exportRaw() {
-		auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, attr)
-	}
+
+	auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, policy.dataAttributes.exportRaw()...)
+
 	auditLog.tdfAttributes.dissem = policy.dissem.list
 	return auditLog
 }
@@ -262,7 +262,8 @@ func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson DataJson, context str
 
 	eccMode, header := ECCMode.parse(header)
 	payloadConfig, header := SymmetricAndPayloadConfig.parse(header)
-	_, header = PolicyInfo.parse(eccMode, payloadConfig, header)
+
+	_, _ = PolicyInfo.parse(eccMode, payloadConfig, header)
 
 	//	private_key_bytes = key_master.get_key("KAS-EC-SECP256R1-PRIVATE").private_bytes(
 	//		serialization.Encoding.DER,
@@ -289,10 +290,9 @@ func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson DataJson, context str
 	//	)
 	//
 
-	policy := AuditHookReturnValue{}
-	for _, attr := range policy.dataAttributes.exportRaw() {
-		auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, attr)
-	}
+	policy := AuditHookReturnValue{uuid: "mockUuid", dissem: Dissem{list: []string{""}}}
+
+	auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, policy.dataAttributes.exportRaw()...)
 	auditLog.tdfAttributes.dissem = policy.dissem.list
 
 	return auditLog

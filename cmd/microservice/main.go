@@ -56,7 +56,6 @@ func main() {
 		OIDCVerifier: nil,
 	}
 	// OIDC
-	//
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
 	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {
