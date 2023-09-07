@@ -37,31 +37,12 @@ type IMiddleware interface {
 	AuditHook(f http.HandlerFunc) http.HandlerFunc
 }
 
-type pluginFlagValues []string
-
-func (i *pluginFlagValues) String() string {
-	return fmt.Sprintf("<%v>", *i)
-}
-
-func (i *pluginFlagValues) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
-//var pluginNames pluginFlagValues
-
 func main() {
-	//flag.Var(&pluginNames, "plugin", "Plugin paths to load")
-	//flag.Parse()
-
 	// version and build information
 	stats := version.GetVersion()
 	log.Printf("Version: %s", stats.Version)
 	log.Printf("Version Long: %s", stats.VersionLong)
 	log.Printf("Build Time: %s", stats.BuildTime)
-
-	auditEnabled := os.Getenv("AUDIT_ENABLED")
-	log.Printf("AUDIT_ENABLED: %s", auditEnabled)
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
@@ -265,6 +246,10 @@ func main() {
 		WriteTimeout: timeoutServerWrite,
 		IdleTimeout:  timeoutServerIdle,
 	}
+
+	// TODO Use AUDIT_ENABLED env for connection audit_hooks for attributes
+	auditEnabled := os.Getenv("AUDIT_ENABLED")
+	log.Printf("AUDIT_ENABLED: %s", auditEnabled)
 
 	plug, err := plugin.Open("audit_hooks.so")
 	symMiddleware, err := plug.Lookup("Middleware")

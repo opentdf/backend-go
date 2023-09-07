@@ -126,8 +126,6 @@ func CreateLogger() (*slog.Logger, error) {
 	return logger, nil
 }
 
-// go build -buildmode=plugin ./plugins/audit_hooks.go
-
 func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
 	logger, err := CreateLogger()
 	if err != nil {
