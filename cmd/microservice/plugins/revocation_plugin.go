@@ -21,7 +21,7 @@ var blockListEnv = os.Getenv("EO_ALLOW_LIST")
 
 func Update(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//Entity := r.Header.Get("entity")
+		// Entity := r.Header.Get("entity")
 		mockEntity := entity{userId: "mockId"}
 		if !match(mockEntity) {
 			w.WriteHeader(http.StatusForbidden)
@@ -37,7 +37,7 @@ func Update(next http.HandlerFunc) http.HandlerFunc {
 
 func Upsert(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		//Entity := r.Header.Get("entity")
+		// Entity := r.Header.Get("entity")
 		mockEntity := entity{userId: "mockId"}
 		if !match(mockEntity) {
 			w.WriteHeader(http.StatusForbidden)

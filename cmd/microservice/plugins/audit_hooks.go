@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -119,7 +120,7 @@ func CreateLogger() (*slog.Logger, error) {
 	}
 	// Make sure to close the file when you're done.
 	// TODO Should we close file when server down ?
-	//defer logFile.Close()
+	// defer logFile.Close()
 
 	logger := slog.New(slog.NewJSONHandler(logFile, nil))
 
@@ -169,7 +170,7 @@ func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
 
 		// TODO Use real token when /attribute endpoints will be ready
 		// tokenString := r.Header.Get("Authorization")
-		tokenString := `eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1cmwiOiJodHRwczovL2FhLnZpcnRydS5jb20vYXR0ci91bmlxdWUtaWRlbnRpZmllci92YWx1ZS9mZTEzZjBmYS0xNmU1LTQ3ZDYtODdjYy1hOTI1MzJhYzcxYzQiLCJuYW1lIjoiZmUxM2YwZmEtMTZlNS00N2Q2LTg3Y2MtYTkyNTMyYWM3MWM0IiwiaWF0IjoxNTUzNDg1MjQ3LCJleHAiOjE1NTM1NzE2NDd9.qg8BYLJ6ZKu6e641_NLfjlghDwWexEr_YUCadUyPX-B1tonWIJUjGddhx2cz5H8Ldxpj0AurilCz2xAIcRItwm9-0M3RlNUAZ7l5wYahRnSWijwV4lL7Yvm_HwMYgrrVNvcUwj5cqpMREHfCDScS-lSb89zhq76dypVmkgmhZe3t9lD1fTSJKCJylc7X9AzbWzLc0fDQH702yU__ZVOVkBwTO2jJ4ovBDPB0w9LgCEZ-9pzvdUiTdYuhZ2PzQBTNHlK1xxQQCu148uuiTw8Fk_bs7efuGgUU7zfrKR2Lvgw5QLDpavL11HnXIKZihxzJbcrjBdKQCK0V7v3i7F2CkA`
+		tokenString := `mock token`
 
 		auditLog = ExtractInfoFromAuthToken(auditLog, tokenString)
 
@@ -244,6 +245,7 @@ func ExtractPolicyDataFromTdf3(auditLog AuditLog, dataJson DataJson) AuditLog {
 	auditLog.tdfId = originalPolicy.uuid
 
 	policy := AuditHookReturnValue{}
+	log.Println("policy uuid", policy.uuid)
 	for _, attr := range policy.dataAttributes.exportRaw() {
 		auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, attr)
 	}
@@ -253,6 +255,8 @@ func ExtractPolicyDataFromTdf3(auditLog AuditLog, dataJson DataJson) AuditLog {
 
 func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson DataJson, context string, keyMaster string) AuditLog {
 	log.SetPrefix("ExtractPolicyDataFromNano: ")
+	log.Println("context", context)
+	log.Println("keyMaster", keyMaster)
 
 	header := dataJson.keyAccess.header
 
@@ -297,24 +301,24 @@ func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson DataJson, context str
 func ExtractInfoFromAuthToken(auditLog AuditLog, token string) AuditLog {
 	log.SetPrefix("ExtractInfoFromAuthToken: ")
 
-	//secret := []byte("itsa16bytesecret")
-	//tok, err := jwt.ParseEncrypted(tokenString)
+	// secret := []byte("itsa16bytesecret")
+	// tok, err := jwt.ParseEncrypted(tokenString)
 	//
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	// if err != nil {
+	//	 log.Fatal(err)
+	// }
 	//
-	//decodedToken := jwt.Claims{}
-	//if err := tok.Claims(secret, &decodedToken); err != nil {
-	//	log.Fatal(err)
-	//}
-	//log.Println(decodedToken)
-	//auditLog.ownerId = decodedToken.Subject
+	// decodedToken := jwt.Claims{}
+	// if err := tok.Claims(secret, &decodedToken); err != nil {
+	// 	log.Fatal(err)
+	// }
+	// log.Println(decodedToken)
+	// auditLog.ownerId = decodedToken.Subject
 
-	//if decoded_auth.get("tdf_claims").get("entitlements"):
-	//	attributes = set()
-	//	# just put all entitlements into one list, dont seperate by entity for now
-	//	for item in decoded_auth.get("tdf_claims").get("entitlements"):
+	// if decoded_auth.get("tdf_claims").get("entitlements"):
+	//	 attributes = set()
+	//	 # just put all entitlements into one list, dont seperate by entity for now
+	//	 for item in decoded_auth.get("tdf_claims").get("entitlements"):
 	//		for attribute in item.get("entity_attributes"):
 	//			attributes.add(attribute.get("attribute"))
 	//	audit_log["actorAttributes"]["attrs"] = list(attributes)
