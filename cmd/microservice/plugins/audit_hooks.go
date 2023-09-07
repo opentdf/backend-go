@@ -30,14 +30,9 @@ type Dissem struct {
 	list []string
 }
 
-type dataAttributes interface {
-	exportRaw() []string
-}
-
 type AuditHookReturnValue struct {
-	uuid           string
-	dissem         Dissem
-	dataAttributes dataAttributes
+	uuid   string
+	dissem Dissem
 }
 
 type EventType string
@@ -101,6 +96,9 @@ func (p policyInfo) parse(eccMode string, payloadConfig string, header string) (
 func (p Policy) exportRaw() []string {
 	return []string{}
 }
+func (p AuditHookReturnValue) exportRaw() []string {
+	return []string{}
+}
 
 func (s1 symmetricAndPayloadConfig) parse(s string) (string, string) {
 	return s, s
@@ -117,7 +115,7 @@ var SymmetricAndPayloadConfig = symmetricAndPayloadConfig{}
 func CreateLogger() (*slog.Logger, error) {
 	logFile, err := os.OpenFile(LogFileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	// Make sure to close the file when you're done.
 	// TODO Should we close file when server down ?
@@ -180,7 +178,7 @@ func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func ErrAuditHook(err string, data string) {
+func ErrAuditHook(err string) {
 	log.SetPrefix("ErrAuditHook: ")
 	log.Println("OrgId", OrgId)
 
@@ -210,10 +208,10 @@ func ErrAuditHook(err string, data string) {
 		},
 	}
 
-	if "signedRequestToken" != data {
-		log.Println("Rewrap success without signedRequestToken - should never get here")
-		return
-	}
+	// if "signedRequestToken" != data {
+	//	 log.Println("Rewrap success without signedRequestToken - should never get here")
+	//	 return
+	// }
 	// decoded_request = jwt.decode(
 	//	data["signedRequestToken"],
 	//	options={"verify_signature": False},
@@ -225,14 +223,14 @@ func ErrAuditHook(err string, data string) {
 	// dataJson = json.loads(json_string)
 	// dataJson := data
 	// main.DataJson is missing fields policy, keyAccess (exhaustruct)
-	//dataJson := DataJson{policy: Policy{uuid: "secp256r1"}}
+	// dataJson := DataJson{policy: Policy{uuid: "secp256r1"}}
 
-	//if dataJson.policy.uuid == "ec:secp256r1" {
+	// if dataJson.policy.uuid == "ec:secp256r1" {
 	//	// nano
 	//	auditLog = ExtractPolicyDataFromNano(auditLog, dataJson, "", "")
 	//	return
-	//}
-	//auditLog = ExtractPolicyDataFromTdf3(auditLog, dataJson)
+	// }
+	// auditLog = ExtractPolicyDataFromTdf3(auditLog, dataJson)
 	log.Println("AuditLog", auditLog)
 }
 
@@ -247,7 +245,7 @@ func ExtractPolicyDataFromTdf3(auditLog AuditLog, dataJson DataJson) AuditLog {
 
 	log.Println("policy uuid", policy.uuid)
 
-	auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, policy.dataAttributes.exportRaw()...)
+	auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, policy.exportRaw()...)
 
 	auditLog.tdfAttributes.dissem = policy.dissem.list
 	return auditLog
@@ -292,7 +290,7 @@ func ExtractPolicyDataFromNano(auditLog AuditLog, dataJson DataJson, context str
 
 	policy := AuditHookReturnValue{uuid: "mockUuid", dissem: Dissem{list: []string{""}}}
 
-	auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, policy.dataAttributes.exportRaw()...)
+	auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, policy.exportRaw()...)
 	auditLog.tdfAttributes.dissem = policy.dissem.list
 
 	return auditLog

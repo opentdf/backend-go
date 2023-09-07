@@ -251,8 +251,14 @@ func main() {
 	log.Printf("AUDIT_ENABLED: %s", auditEnabled)
 
 	plug, err := plugin.Open("audit_hooks.so")
+	if err != nil {
+		panic(err)
+	}
 	symMiddleware, err := plug.Lookup("Middleware")
-	mid, ok := symMiddleware.(IMiddleware)
+	if err != nil {
+		panic(err)
+	}
+	mid, _ := symMiddleware.(IMiddleware)
 
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
 	// TODO mid.AuditHook should be in attributes module
