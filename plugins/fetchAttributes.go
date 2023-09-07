@@ -9,20 +9,17 @@ import (
 	"log"
 	"net/http"
 
-	attrs "github.com/virtru/access-pdp/attributes"
+	"github.com/virtru/access-pdp/attributes"
 )
-
-type attributePlug struct{}
 
 var (
 	ErrAttributeDefinitionsUnmarshal   = errors.New("attribute definitions unmarshal")
 	ErrAttributeDefinitionsServiceCall = errors.New("attribute definitions service call unexpected")
 )
 
-// const attributeHost = "http://attributes:4020"
 const attributeHost = "http://localhost:65432/api/attributes"
 
-func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attrs.AttributeDefinition, error) {
+func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attributes.AttributeDefinition, error) {
 	log.Println("Fetching for ", namespace)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, attributeHost+"/v1/attrName", nil)
 	if err != nil {
@@ -52,7 +49,7 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attrs
 		return nil, errors.Join(ErrAttributeDefinitionsServiceCall, err)
 	}
 
-	var definitions []attrs.AttributeDefinition
+	var definitions []attributes.AttributeDefinition
 	err = json.NewDecoder(resp.Body).Decode(&definitions)
 	if err != nil {
 		log.Println("Error parsing response from attributes service")
@@ -62,8 +59,8 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attrs
 	return definitions, nil
 }
 
-func (attributePlug) FetchAllAttributes(ctx context.Context, namespaces []string) ([]attrs.AttributeDefinition, error) {
-    var definitions []attrs.AttributeDefinition
+func FetchAllAttributes(ctx context.Context, namespaces []string) ([]attributes.AttributeDefinition, error) {
+	var definitions []attributes.AttributeDefinition
 	for _, ns := range namespaces {
 		attrDefs, err := fetchAttributesForNamespace(ctx, ns)
 		if err != nil {
@@ -74,10 +71,4 @@ func (attributePlug) FetchAllAttributes(ctx context.Context, namespaces []string
 		definitions = append(definitions, attrDefs...)
 	}
 	return definitions, nil
-}
-
-
-func GetPluginIface() (f interface{}, err error) {
-    f = attributePlug{}
-    return f, nil
 }

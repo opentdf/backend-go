@@ -10,19 +10,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"plugin"
 	"strings"
 
 	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/opentdf/backend-go/pkg/tdf3"
-	attrs "github.com/virtru/access-pdp/attributes"
+	"github.com/virtru/access-pdp/attributes"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
-
-type IAttributesPlug interface {
-	FetchAllAttributes(ctx context.Context, namespaces []string) ([]attrs.AttributeDefinition, error)
-}
 
 // RewrapRequest HTTP request body in JSON
 type RewrapRequest struct {
@@ -179,30 +174,27 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// this part goes in the plugin?
 	log.Println("Fetching attributes")
 
-	// load attribute plugin
-	attrPlug, attrErr := plugin.Open("attributes.so")
-	if attrErr != nil {
-	  log.Printf("Plugin load failed %s", attrErr)
-	  os.Exit(1)
-	}
-
-	// look up the GetPluginIface function
-	symAttribute, symErr := attrPlug.Lookup("GetPluginIface")
-	if symErr != nil {
-	  log.Printf("Plugin GetPluginIface function failed %s", symErr)
-	  os.Exit(1)
-	}
-
-	pluginIface, err := symAttribute.(func() (interface{}, error))()
+	// Load the plugin
+	pl, err := plugin.Open("attributes.so") // Replace with the actual path to your plugin file
 	if err != nil {
-	  log.Printf("Plugin lookup function failed %s", err)
-	  os.Exit(1)
+		log.Panic(err)
+		return
+	}
+	// Look up the exported function
+	fetchAttributesSymbol, err := pl.Lookup("FetchAllAttributes")
+	if err != nil {
+		log.Panic(err)
+		return
 	}
 
-    plugFunc, _ := pluginIface.(IAttributesPlug)
-
+	// Assert the symbol to the correct function type
+	fetchAttributesFn, ok := fetchAttributesSymbol.(func(context.Context, []string) ([]attributes.AttributeDefinition, error))
+	if !ok {
+		log.Panic(err)
+		return
+	}
 	// use the module
-	definitions, err := plugFunc.FetchAllAttributes(r.Context(), namespaces)
+	definitions, err := fetchAttributesFn(r.Context(), namespaces)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
 		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)
