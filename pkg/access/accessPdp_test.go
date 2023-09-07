@@ -1,9 +1,10 @@
 package access
 
 import (
+	"testing"
+
 	uuid "github.com/google/uuid"
 	attrs "github.com/virtru/access-pdp/attributes"
-	"testing"
 )
 
 // ######## Dissem tests ################

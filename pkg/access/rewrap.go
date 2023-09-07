@@ -1,7 +1,6 @@
 package access
 
 import (
-	// "bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
@@ -13,18 +12,11 @@ import (
 	"net/http"
 	"strings"
 
-	// "crypto/rsa"
-
 	"github.com/opentdf/backend-go/pkg/p11"
-	// "github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
-	// "github.com/opentdf/backend-go/pkg/nano"
-	// "github.com/coreos/go-oidc/v3/oidc"
 	"github.com/opentdf/backend-go/pkg/tdf3"
 	"gopkg.in/square/go-jose.v2/jwt"
-	// "golang.org/x/oauth2"
 )
 
-// RewrapRequest HTTP request body in JSON
 type RewrapRequest struct {
 	SignedRequestToken string `json:"signedRequestToken"`
 }
@@ -144,8 +136,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	//////////////// FILTER BASED ON ALGORITHM /////////////////////
 
 	if requestBody.Algorithm == "" {
-		// log warn
-		log.Println("'algorithm' is missing; defaulting to TDF3 rewrap standard, RSA-2048.")
 		requestBody.Algorithm = "rsa:2048"
 	}
 

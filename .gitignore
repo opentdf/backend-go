@@ -4,3 +4,9 @@
 *.so
 *.pem
 cmd/microservice/log.txt
+
+# binaries
+/build
+/backend-go
+/kas
+/go-kas
