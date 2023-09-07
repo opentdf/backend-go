@@ -3,11 +3,10 @@ package access
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 
 	attrs "github.com/virtru/access-pdp/attributes"
 	accessPdp "github.com/virtru/access-pdp/pdp"
-	"go.uber.org/zap"
 )
 
 const (
@@ -18,12 +17,10 @@ const (
 func canAccess(entityID string, policy Policy, claims ClaimsObject, attrDefs []attrs.AttributeDefinition) (bool, error) {
 	dissemAccess, err := checkDissems(policy.Body.Dissem, entityID)
 	if err != nil {
-		log.Println("Error in dissem access decision")
 		return false, err
 	}
 	attrAccess, err := checkAttributes(policy.Body.DataAttributes, claims.Entitlements, attrDefs)
 	if err != nil {
-		log.Println("Error in attributes access decision")
 		return false, err
 	}
 	if dissemAccess && attrAccess {
@@ -47,15 +44,12 @@ func checkAttributes(dataAttrs []Attribute, entitlements []Entitlement, attrDefs
 	zapLog, _ := zap.NewDevelopment()
 
 	// convert data and entitty attrs to attrs.AttributeInstance
-	log.Println("Converting data attrs to instances")
 	dataAttrInstances, err := convertAttrsToAttrInstances(dataAttrs)
 	if err != nil {
-		log.Printf("Error converting data attributes to AttributeInstance")
 		return false, err
 	}
 	entityAttrMap, err := convertEntitlementsToEntityAttrMap(entitlements)
 	if err != nil {
-		log.Printf("Error converting entitlements to entity attribute map")
 		return false, err
 	}
 

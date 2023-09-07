@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -56,11 +56,11 @@ func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 	// version and build information
 	stats := version.GetVersion()
-	log.Printf("Version: %s", stats.Version)
-	log.Printf("Version Long: %s", stats.VersionLong)
-	log.Printf("Build Time: %s", stats.BuildTime)
+	log.Info("INIT", "Version", stats.Version, "Version Long", stats.VersionLong, "Build Time", stats.BuildTime)
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
@@ -77,8 +77,8 @@ func main() {
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
 	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {
-		// handle error
-		log.Panic(err)
+		log.Error("OIDC Init failed", "Err", err)
+		panic(err)
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
 	oauth2Config := oauth2.Config{
@@ -90,7 +90,7 @@ func main() {
 		// "openid" is a required scope for OpenID Connect flows.
 		Scopes: []string{oidc.ScopeOpenID},
 	}
-	log.Println(oauth2Config)
+	log.Info("initializing oauth2", "oauth2", oauth2Config)
 	oidcConfig := oidc.Config{
 		ClientID:                   "",
 		SupportedSigningAlgs:       nil,
@@ -110,60 +110,78 @@ func main() {
 	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC")   // development-ec-kas
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
-		log.Fatalf("PKCS11_SLOT parse error: %v", err)
+		log.Error("PKCS11_SLOT_INDEX parse error", "err", err)
+		os.Exit(1)
 	}
 	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
-	log.Println(pkcs11ModulePath)
+	log.Debug("pkcs11ModulePath", "PKCS11_MODULE_PATH", pkcs11ModulePath)
 	ctx := pkcs11.New(pkcs11ModulePath)
 	if err := ctx.Initialize(); err != nil {
-		log.Fatalf("error initializing module: %v", err)
+		log.Error("error initializing pkcs11 module", "err", err)
+		os.Exit(1)
 	}
 	defer ctx.Destroy()
 	defer func(ctx *pkcs11.Ctx) {
 		err := ctx.Finalize()
 		if err != nil {
-			log.Println(err)
+			log.Error("error finalizing pkcs11 module", "err", err)
 		}
 	}(ctx)
-	log.Println(ctx.GetInfo())
+	info, err := ctx.GetInfo()
+	if err != nil {
+		log.Error("error inspecting pkcs11 module", "err", err)
+		os.Exit(1)
+	}
+	log.Info("initializing PKCS11 context", "info", info)
 	var keyID []byte
 	slots, err := ctx.GetSlotList(true)
 	if err != nil {
-		log.Panicf("error getting slots: %v", err)
+		log.Error("error getting slots", "err", err)
+		panic(err)
 	}
-	log.Println(slots)
+	log.Info("acquired PKCS11 slots", "slots", slots)
 	if int(slot) >= len(slots) || slot < 0 {
-		log.Panicf("fail PKCS11_SLOT_INDEX is invalid")
+		log.Error("fail PKCS11_SLOT_INDEX is invalid")
+		panic("slotfail")
 	}
-	log.Println(slots[slot])
+	log.Info("Selected slot", "slot", slots[slot])
 	session, err := ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
-		log.Panicf("error opening session: %v", err)
+		log.Error("error opening session", "err", err)
+		panic(err)
 	}
 	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
 		err := ctx.CloseSession(sh)
 		if err != nil {
-			log.Println(err)
+			log.Error("error closing session", "err", err)
 		}
 	}(ctx, session)
 
 	err = ctx.Login(session, pkcs11.CKU_USER, pin)
 	if err != nil {
-		log.Panicf("error logging in: %v", err)
+		log.Error("error logging in", "err", err)
+		panic(err)
 	}
 	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
 		err := ctx.Logout(sh)
 		if err != nil {
-			log.Println(err)
+			log.Error("error logging out", "err", err)
 		}
 	}(ctx, session)
-	log.Println(ctx.GetInfo())
-	log.Println("Finding RSA key to wrap.")
+	info, err = ctx.GetInfo()
+	if err != nil {
+		log.Error("error inspecting pkcs11 module", "err", err)
+		os.Exit(1)
+	}
+	log.Info("PKCS11 state after configuration", "info", info)
+
+	log.Info("Finding RSA key to wrap.")
 	keyHandle, err := findKey(ctx, session, pkcs11.CKO_PRIVATE_KEY, keyID, rsaLabel)
 	if err != nil {
-		log.Panicf("error finding key: %v", err)
+		log.Error("error finding key", "err", err)
+		panic(err)
 	}
-	log.Println(keyHandle)
+	log.Info("Found key", "handle", keyHandle)
 
 	// set private key
 	kas.PrivateKey = p11.NewPrivateKeyRSA(keyHandle)
@@ -172,8 +190,12 @@ func main() {
 	kas.Session = p11.NewSession(ctx, session)
 
 	// RSA Cert
-	log.Printf("Finding RSA certificate: %s", rsaLabel)
+	log.Info("Finding RSA certificate", "label", rsaLabel)
 	certHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
+	if err != nil {
+		log.Error("error finding cert", "err", err)
+		panic(err)
+	}
 	certTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
 		pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
@@ -181,41 +203,42 @@ func main() {
 		pkcs11.NewAttribute(pkcs11.CKA_VALUE, []byte("")),
 		pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
 	}
-	if err != nil {
-		log.Panic(err)
-	}
 	attrs, err := ctx.GetAttributeValue(session, certHandle, certTemplate)
 	if err != nil {
-		log.Panic(err)
+		log.Error("Unable to get attribute value", "err", err)
+		panic(err)
 	}
-	log.Println(attrs)
+	log.Info("Got attribute value", "attrs", attrs)
 
 	for i, a := range attrs {
-		log.Printf("attr %d, type %d, valuelen %d\n", i, a.Type, len(a.Value))
+		log.Info("verifying", "attr", i, "type", a.Type, "valuelen", len(a.Value))
 		if a.Type == pkcs11.CKA_VALUE {
 			certRsa, err := x509.ParseCertificate(a.Value)
 			if err != nil {
-				log.Panic(err)
+				log.Error("Unable to parse attribute cert", "err", err)
+				panic(err)
 			}
 			kas.Certificate = *certRsa
 		}
 	}
 
 	// RSA Public key
-	log.Println("Finding RSA public key from cert.")
+	log.Info("Finding RSA public key from cert")
 	rsaPublicKey, ok := kas.Certificate.PublicKey.(*rsa.PublicKey)
 	if !ok {
-		log.Panic("RSA public key from cert error")
+		log.Error("RSA public key from cert error", "err", err)
+		panic(err)
 	}
 	kas.PublicKeyRsa = *rsaPublicKey
 
 	// EC Cert
-	log.Println("Finding EC cert.")
+	log.Info("Finding EC cert.")
 	var ecCert x509.Certificate
 
 	certECHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
-		log.Panic(err)
+		log.Error("EC public key find fail", "err", err)
+		panic(err)
 	}
 	certECTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
@@ -226,29 +249,31 @@ func main() {
 	}
 	ecCertAttrs, err := ctx.GetAttributeValue(session, certECHandle, certECTemplate)
 	if err != nil {
-		log.Panic(err)
+		log.Error("EC GetAttributeValue failure", "err", err)
+		panic(err)
 	}
-	log.Println(ecCertAttrs)
+	log.Info("ec GetAttributeValue", "ecCertAttrs", ecCertAttrs)
 
 	for i, a := range ecCertAttrs {
-		log.Printf("attr %d, type %d, valuelen %d\n", i, a.Type, len(a.Value))
+		log.Info("verifying", "attr", i, "type", a.Type, "valuelen", len(a.Value))
 		if a.Type == pkcs11.CKA_VALUE {
 			// exponent := big.NewInt(0)
 			// exponent.SetBytes(a.Value)
 			certEC, err := x509.ParseCertificate(a.Value)
 			if err != nil {
-				log.Panic(err)
+				log.Error("EC ParseCertificate failure", "err", err)
+				panic(err)
 			}
 			ecCert = *certEC
 		}
 	}
 
 	// EC Public Key
-	log.Println("Finding EC public key from cert.")
-	log.Println(ecCert.PublicKeyAlgorithm)
+	log.Info("Finding EC public key from cert", "algorithm", ecCert.PublicKeyAlgorithm)
 	ecPublicKey, ok := ecCert.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
-		log.Panic("EC public key from cert error")
+		log.Error("EC PublicKey failure")
+		panic(1)
 	}
 	kas.PublicKeyEc = *ecPublicKey
 
@@ -273,15 +298,16 @@ func main() {
 	http.HandleFunc("/v2/rewrap", kas.Handler)
 
 	go func() {
-		log.Printf("listening on http://%s", server.Addr)
+		log.Info("listening", "addr", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
-			log.Fatal(err)
+			log.Error("ListenAndServe error", "err", err)
+			os.Exit(1)
 		}
 	}()
 	<-stop
 	err = server.Shutdown(context.Background())
 	if err != nil {
-		log.Println(err)
+		log.Error("Shutdown error", "err", err)
 	}
 }
 

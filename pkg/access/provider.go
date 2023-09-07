@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
+	"log/slog"
 	"net/url"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -18,6 +19,7 @@ type Provider struct {
 	PublicKeyEc  ecdsa.PublicKey
 	Certificate  x509.Certificate `json:"certificate"`
 	Attributes   []Attribute      `json:"attributes"`
+	Logger       *slog.Logger
 	Session      p11.Pkcs11Session
 	OIDCVerifier *oidc.IDTokenVerifier
 }
