@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"log"
 	"strings"
 )
 
@@ -40,12 +39,11 @@ func Valid(r io.Reader) error {
 			if err != nil {
 				return errors.Join(ErrManifestRead, err)
 			}
-			manifest, err := io.ReadAll(rc)
+			_, err = io.ReadAll(rc)
 			if err != nil {
 				return errors.Join(ErrManifestRead, err)
 			}
 			_ = rc.Close()
-			log.Println(manifest)
 		}
 	}
 	return nil

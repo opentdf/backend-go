@@ -3,7 +3,6 @@ package manifest
 import (
 	"encoding/json"
 	"errors"
-	"log"
 )
 
 const (
@@ -26,7 +25,6 @@ func Valid(m []byte) error {
 	if err != nil {
 		return errors.Join(ErrUnmarshal, err)
 	}
-	log.Println(manifest)
 	return nil
 }
 

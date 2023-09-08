@@ -25,6 +25,8 @@ import (
 	"golang.org/x/oauth2"
 )
 
+var log = slog.New(slog.NewTextHandler(os.Stdout, nil))
+
 const (
 	ErrHsm             = Error("hsm unexpected")
 	hostname           = "localhost"
@@ -40,7 +42,7 @@ type IMiddleware interface {
 func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
 	// TODO Use AUDIT_ENABLED env for connection audit_hooks for attributes
 	auditEnabled := os.Getenv("AUDIT_ENABLED")
-	log.Printf("AUDIT_ENABLED: %s", auditEnabled)
+	log.Debug("loadAuditHook", "AUDIT_ENABLED", auditEnabled)
 
 	plug, err := plugin.Open("audit_hooks.so")
 	if err != nil {
@@ -56,8 +58,6 @@ func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
-
 	// version and build information
 	stats := version.GetVersion()
 	log.Info("INIT", "Version", stats.Version, "Version Long", stats.VersionLong, "Build Time", stats.BuildTime)
