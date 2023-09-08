@@ -139,8 +139,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	//////////////// FILTER BASED ON ALGORITHM /////////////////////
 
 	if requestBody.Algorithm == "" {
-		// log warn
-		log.Println("'algorithm' is missing; defaulting to TDF3 rewrap standard, RSA-2048.")
 		requestBody.Algorithm = "rsa:2048"
 	}
 
