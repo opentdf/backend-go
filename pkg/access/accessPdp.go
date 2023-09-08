@@ -14,12 +14,12 @@ const (
 	ErrDecisionUnexpected  = Error("access policy decision unexpected")
 )
 
-func canAccess(entityID string, policy Policy, claims ClaimsObject, attrDefs []attrs.AttributeDefinition) (bool, error) {
+func canAccess(ctx *context.Context, log *slog.Logger, entityID string, policy Policy, claims ClaimsObject, attrDefs []attrs.AttributeDefinition) (bool, error) {
 	dissemAccess, err := checkDissems(policy.Body.Dissem, entityID)
 	if err != nil {
 		return false, err
 	}
-	attrAccess, err := checkAttributes(policy.Body.DataAttributes, claims.Entitlements, attrDefs)
+	attrAccess, err := checkAttributes(ctx, log, policy.Body.DataAttributes, claims.Entitlements, attrDefs)
 	if err != nil {
 		return false, err
 	}
@@ -40,9 +40,7 @@ func checkDissems(dissems []string, entityID string) (bool, error) {
 	return false, nil
 }
 
-func checkAttributes(dataAttrs []Attribute, entitlements []Entitlement, attrDefs []attrs.AttributeDefinition) (bool, error) {
-	zapLog, _ := zap.NewDevelopment()
-
+func checkAttributes(ctx *context.Context, log *slog.Logger, dataAttrs []Attribute, entitlements []Entitlement, attrDefs []attrs.AttributeDefinition) (bool, error) {
 	// convert data and entitty attrs to attrs.AttributeInstance
 	dataAttrInstances, err := convertAttrsToAttrInstances(dataAttrs)
 	if err != nil {
@@ -53,11 +51,11 @@ func checkAttributes(dataAttrs []Attribute, entitlements []Entitlement, attrDefs
 		return false, err
 	}
 
-	accessPDP := accessPdp.NewAccessPDP(zapLog.Sugar())
+	accessPDP := accessPdp.NewAccessPDPWithSlog(log)
 
-	decisions, err := accessPDP.DetermineAccess(dataAttrInstances, entityAttrMap, attrDefs, context.Background())
+	decisions, err := accessPDP.DetermineAccess(dataAttrInstances, entityAttrMap, attrDefs, ctx)
 	if err != nil {
-		log.Printf("Error recieved from accessPDP")
+		log.WarnContext(*ctx, "Error recieved from accessPDP", "err", err)
 		return false, errors.Join(ErrDecisionUnexpected, err)
 	}
 	// check the decisions
@@ -70,13 +68,10 @@ func checkAttributes(dataAttrs []Attribute, entitlements []Entitlement, attrDefs
 }
 
 func convertAttrsToAttrInstances(attributes []Attribute) ([]attrs.AttributeInstance, error) {
-	log.Println("Converting to attr instances")
 	instances := make([]attrs.AttributeInstance, len(attributes))
 	for i, attr := range attributes {
-		log.Printf("%+v", attr)
 		instance, err := attrs.ParseInstanceFromURI(attr.URI)
 		if err != nil {
-			log.Printf("Error parsing AttributeInstance from URI")
 			return nil, errors.Join(ErrPolicyDataAttributeParse, err)
 		}
 		instances[i] = instance
@@ -85,12 +80,10 @@ func convertAttrsToAttrInstances(attributes []Attribute) ([]attrs.AttributeInsta
 }
 
 func convertEntitlementsToEntityAttrMap(entitlements []Entitlement) (map[string][]attrs.AttributeInstance, error) {
-	log.Println("Converting to entity map")
 	entityAttrMap := make(map[string][]attrs.AttributeInstance)
 	for _, entitlement := range entitlements {
 		instances, err := convertAttrsToAttrInstances(entitlement.EntityAttributes)
 		if err != nil {
-			log.Printf("Error converting entity attributes to AttributeInstance")
 			return nil, err
 		}
 		entityAttrMap[entitlement.EntityID] = instances

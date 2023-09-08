@@ -1,7 +1,7 @@
 package access
 
 import (
-	"context"
+	ctx "context"
 	"crypto"
 	"crypto/x509"
 	b64 "encoding/base64"
@@ -50,8 +50,9 @@ type customClaimsHeader struct {
 
 // Handler decrypts and encrypts the symmetric data key
 func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
+	context := r.Context()
 	log := p.Logger
-	log.Debug("REWRAP", "headers", r.Header, "body", r.Body, "ContentLength", r.ContentLength)
+	log.DebugContext(context, "REWRAP", "headers", r.Header, "body", r.Body, "ContentLength", r.ContentLength)
 
 	// preflight
 	if r.ContentLength == 0 {
@@ -65,7 +66,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		_, err := fmt.Fprint(w, "Missing Authorization header")
 		if err != nil {
-			log.Error("Unable to report Unauthorized", err)
+			log.ErrorContext(context, "Unable to report Unauthorized", err)
 			return
 		}
 		return
@@ -77,28 +78,28 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		_, err := fmt.Fprint(w, "Invalid Authorization header format")
 		if err != nil {
-			log.Error("Unable to report invalid auth", err)
+			log.ErrorContext(context, "Unable to report invalid auth", err)
 			return
 		}
 		return
 	}
 
-	log.Debug("Not a 401, probably", "oidcRequestToken", oidcRequestToken)
+	log.DebugContext(context, "Not a 401, probably", "oidcRequestToken", oidcRequestToken)
 
 	// Parse and verify ID Token payload.
-	idToken, err := p.OIDCVerifier.Verify(context.Background(), oidcRequestToken)
+	idToken, err := p.OIDCVerifier.Verify(context, oidcRequestToken)
 	if err != nil {
-		log.Warn("Unable to verify", "err", err)
+		log.WarnContext(context, "Unable to verify", "err", err)
 		panic(err)
 	}
 
 	// Extract custom claims
 	var claims customClaimsHeader
 	if err := idToken.Claims(&claims); err != nil {
-		log.Warn("Unable to load claims", "err", err)
+		log.WarnContext(context, "Unable to load claims", "err", err)
 		panic(err)
 	}
-	log.Debug("verified", "claims", claims)
+	log.DebugContext(context, "verified", "claims", claims)
 
 	//////////////// DECODE REQUEST BODY /////////////////////
 
@@ -107,13 +108,13 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&rewrapRequest)
 	if err != nil {
 		// FIXME handle error. shoudl be 400?
-		log.Warn("Unable decode rewrap request", "err", err)
+		log.WarnContext(context, "Unable decode rewrap request", "err", err)
 		panic(err)
 	}
 	requestToken, err := jwt.ParseSigned(rewrapRequest.SignedRequestToken)
 	if err != nil {
 		// FIXME handle error. mabye 400? IDK???
-		log.Warn("Unable decode parse request", "err", err)
+		log.WarnContext(context, "Unable decode parse request", "err", err)
 		panic(err)
 	}
 	var jwtClaimsBody jwt.Claims
@@ -121,16 +122,16 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	err = requestToken.UnsafeClaimsWithoutVerification(&jwtClaimsBody, &bodyClaims)
 	if err != nil {
 		// FIXME handle error
-		log.Warn("Unable check claims", "err", err)
+		log.WarnContext(context, "Unable check claims", "err", err)
 		panic(err)
 	}
-	log.Debug("okay now we can check", "bodyClaims.RequestBody", bodyClaims.RequestBody)
+	log.DebugContext(context, "okay now we can check", "bodyClaims.RequestBody", bodyClaims.RequestBody)
 	decoder = json.NewDecoder(strings.NewReader(bodyClaims.RequestBody))
 	var requestBody RequestBody
 	err = decoder.Decode(&requestBody)
 	if err != nil {
 		// FIXME handle error
-		log.Warn("Unable decode rewrap request", "err", err)
+		log.WarnContext(context, "Unable decode rewrap request", "err", err)
 		panic(err)
 	}
 
@@ -142,14 +143,14 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 	if requestBody.Algorithm == "ec:secp256r1" {
 		// TODO return 404 or 400
-		log.Warn("Nano not implemented yet")
+		log.WarnContext(context, "Nano not implemented yet")
 		panic(err)
 		// log.Fatal("Nano not implemented yet")
 		// return _nano_tdf_rewrap(requestBody, r.Header, claims)
 	}
 
 	///////////////////// EXTRACT POLICY /////////////////////
-	log.Debug("extracting policy", "requestBody.policy", requestBody.Policy)
+	log.DebugContext(context, "extracting policy", "requestBody.policy", requestBody.Policy)
 	// base 64 decode
 	sDecPolicy, _ := b64.StdEncoding.DecodeString(requestBody.Policy)
 	decoder = json.NewDecoder(strings.NewReader(string(sDecPolicy)))
@@ -157,7 +158,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(&policy)
 	if err != nil {
 		// FIXME handle error
-		log.Warn("Unable to decode policy", "err", err)
+		log.WarnContext(context, "Unable to decode policy", "err", err)
 		panic(err)
 	}
 
@@ -165,74 +166,74 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	namespaces, err := getNamespacesFromAttributes(policy.Body)
 	if err != nil {
 		// logger.Errorf("Could not get namespaces from policy! Error was %s", err)
-		log.Warn("Could not get namespaces from policy!", "err", err)
+		log.WarnContext(context, "Could not get namespaces from policy!", "err", err)
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
 	// this part goes in the plugin?
-	log.Debug("Fetching attributes")
+	log.DebugContext(context, "Fetching attributes")
 
 	// Load the plugin
 	pl, err := plugin.Open("attributes.so") // Replace with the actual path to your plugin file
 	if err != nil {
-		log.Error("Unable to load attributes plugin", "err", err)
+		log.ErrorContext(context, "Unable to load attributes plugin", "err", err)
 		panic(err)
 	}
 	// Look up the exported function
 	fetchAttributesSymbol, err := pl.Lookup("FetchAllAttributes")
 	if err != nil {
-		log.Error("Unable to load attributes fetcher function", "err", err)
+		log.ErrorContext(context, "Unable to load attributes fetcher function", "err", err)
 		panic(err)
 	}
 
 	// Assert the symbol to the correct function type
-	fetchAttributesFn, ok := fetchAttributesSymbol.(func(context.Context, []string) ([]attributes.AttributeDefinition, error))
+	fetchAttributesFn, ok := fetchAttributesSymbol.(func(ctx.Context, []string) ([]attributes.AttributeDefinition, error))
 	if !ok {
-		log.Error("Unable to fetch attributes", "err", err)
+		log.ErrorContext(context, "Unable to fetch attributes", "err", err)
 		panic(err)
 	}
 	// use the module
 	definitions, err := fetchAttributesFn(r.Context(), namespaces)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
-		log.Error("Could not fetch attribute definitions from attributes service!", "err", err)
+		log.ErrorContext(context, "Could not fetch attribute definitions from attributes service!", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Debug("fetch attributes", "definitions", definitions)
+	log.DebugContext(context, "fetch attributes", "definitions", definitions)
 
 	///////////////////// PERFORM ACCESS DECISION /////////////////////
 
-	access, err := canAccess(log, claims.EntityID, policy, claims.TDFClaims, definitions)
+	access, err := canAccess(&context, log, claims.EntityID, policy, claims.TDFClaims, definitions)
 
 	if err != nil {
 		// logger.Errorf("Could not perform access decision! Error was %s", err)
-		log.Warn("Could not perform access decision!", "err", err)
+		log.WarnContext(context, "Could not perform access decision!", "err", err)
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
 	if !access {
-		log.Debug("Access Denied")
+		log.DebugContext(context, "Access Denied")
 		http.Error(w, "Access Denied", http.StatusForbidden)
 		return
 	}
 
 	/////////////////////EXTRACT CLIENT PUBKEY /////////////////////
-	log.Debug("extract public key", "requestBody.ClientPublicKey", requestBody.ClientPublicKey)
+	log.DebugContext(context, "extract public key", "requestBody.ClientPublicKey", requestBody.ClientPublicKey)
 
 	// Decode PEM entity public key
 	block, _ := pem.Decode([]byte(requestBody.ClientPublicKey))
 	if block == nil {
 		// FIXME handle error
-		log.Debug("err missing clientPublicKey")
+		log.DebugContext(context, "err missing clientPublicKey")
 		panic("err missing clientPublicKey")
 	}
 	clientPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		// FIXME handle error
-		log.Debug("parse clientPublicKey fail", "err", err)
+		log.DebugContext(context, "parse clientPublicKey fail", "err", err)
 		panic(err)
 	}
 	// ///////////////////////////////
@@ -264,15 +265,15 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
 	if err != nil {
 		// FIXME handle error
-		log.Panic(err)
-		return
+		log.Warn("decrypt wrapped key failed", "err", err)
+		panic(err)
 	}
 
 	// rewrap
 	rewrappedKey, err := tdf3.EncryptWithPublicKey(symmetricKey, &clientPublicKey)
 	if err != nil {
 		// FIXME handle error
-		log.Error("rewrap: encryptWithPublicKey failed", "err", err)
+		log.ErrorContext(context, "rewrap: encryptWithPublicKey failed", "err", err)
 		panic(err)
 	}
 	// // TODO validate policy
@@ -286,7 +287,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		SchemaVersion:    schemaVersion,
 	})
 	if err != nil {
-		log.Error("rewrap: marshall response failed", "err", err)
+		log.ErrorContext(context, "rewrap: marshall response failed", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

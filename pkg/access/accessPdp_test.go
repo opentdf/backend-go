@@ -1,11 +1,17 @@
 package access
 
 import (
+	"context"
+	"log/slog"
+	"os"
 	"testing"
 
 	uuid "github.com/google/uuid"
 	attrs "github.com/virtru/access-pdp/attributes"
 )
+
+var l = slog.New(slog.NewTextHandler(os.Stdout, nil))
+var c = context.Background()
 
 // ######## Dissem tests ################
 
@@ -29,7 +35,7 @@ func TestWildcardDissemSuccess(t *testing.T) {
 
 	testDefinitions := []attrs.AttributeDefinition{}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -60,7 +66,7 @@ func TestDissemSuccess(t *testing.T) {
 
 	testDefinitions := []attrs.AttributeDefinition{}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,7 +96,7 @@ func TestDissemFailure(t *testing.T) {
 
 	testDefinitions := []attrs.AttributeDefinition{}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -139,7 +145,7 @@ func TestAllOfSuccess(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -187,7 +193,7 @@ func TestAllOfFailure(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -237,7 +243,7 @@ func TestAnyOfSuccess(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -285,7 +291,7 @@ func TestAnyOfFailure(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -334,7 +340,7 @@ func TestHierarchySuccess(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -382,7 +388,7 @@ func TestHierarchyFailure(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -433,7 +439,7 @@ func TestAttrDissemSuccess(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -481,7 +487,7 @@ func TestAttrDissemFailure1(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -531,7 +537,7 @@ func TestAttrDissemFailure2(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(&c, l, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
