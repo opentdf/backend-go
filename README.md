@@ -78,7 +78,7 @@ brew install opensc
 
 ```shell
 # enter two sets of PIN, 12345
-softhsm2-util --init-token --slot 0 --label "development-token"
+softhsm2-util --init-token --slot 0 --label "development-token" --pin 12345 --so-pin 12345
 # verify login
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
 # crease RSA key and cert
@@ -108,13 +108,13 @@ export POSTGRES_HOST=localhost
 export POSTGRES_DATABASE=postgres
 export POSTGRES_USER=postgres
 export POSTGRES_PASSWORD=mysecretpassword
-export PKCS11_MODULE_PATH=/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
+export PKCS11_MODULE_PATH=/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
 export PKCS11_SLOT_INDEX=0
 export PKCS11_PIN=12345
 export PKCS11_LABEL_PUBKEY_RSA=development-rsa-kas
 export PKCS11_LABEL_PUBKEY_EC=development-ec-kas
 export PRIVATE_KEY_RSA_PATH=../../kas-private.pem
-export OIDC_ISSUER=http://localhost:65432/auth/realms/opentdf
+export OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
 ```
 
 #### Analyze
@@ -215,25 +215,39 @@ https://github.com/gbolo/go-util/tree/master/pkcs11-test
 
 https://github.com/psmiraglia/docker-softhsm
 
+### For local running please start backend following instructions
+https://github.com/opentdf/opentdf/tree/main/quickstart
+
 ```shell
-# build
-docker build --file softhsm2.Dockerfile --tag softhsm2:2.5.0 .
+# additional utils commands
+softhsm2-util --delete-token --serial $SERIAL_ID
+softhsm2-util --show-slots
 
-# run
-docker run -ti --rm softhsm2:2.5.0 sh -l
-
-softhsm2-util --init-token --slot 0 --label "development-token"
-
-pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login -t
-
-pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --keypairgen --key-type rsa:2048 --id 100 --label development-rsa
-
-pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --read-object --type pubkey --label development -o development-public.der
-
-openssl rsa -RSAPublicKey_in -in development-public.der -inform DER -outform PEM -out development-public.pem -RSAPublicKey_out
-
-pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --list-objects
+# order of commands to run app
+softhsm2-util --init-token --slot 0 --label "development-token" --pin 12345 --so-pin 12345
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --keypairgen --key-type rsa:2048 --label development-rsa-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --label development-rsa-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-cert.pem --type cert --label development-rsa-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --label development-ec-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --label development-ec-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
 ```
+
+### Following that steps run the "show info" command
+```shell
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
+```
+
+### Example of what you should see
+
+![Alt text](./example-valid-keys.png?raw=true "Title")
+
+### Build plugins and start app
+
+1. `go build -buildmode=plugin ./plugins/audit_hooks.go`
+2. `go build cmd/microservice/main.go`
+4. `./main`
 
 ## Troubleshooting
 

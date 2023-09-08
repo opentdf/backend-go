@@ -17,6 +17,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cg
 RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/revocation_plugin.go
 RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/fetchAttributes.go
 
+
 # tester
 FROM golang:$GO_VERSION as tester
 WORKDIR /test/
@@ -73,5 +74,7 @@ ENV PKCS11_PIN ""
 ENV PKCS11_SLOT_INDEX ""
 ENV PKCS11_LABEL_PUBKEY_RSA ""
 ENV PKCS11_LABEL_PUBKEY_EC ""
+#
+ENV AUDIT_ENABLED=true
 COPY --from=builder /build/microservice /
 COPY --from=builder /etc/passwd /etc/passwd

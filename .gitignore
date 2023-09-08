@@ -1,6 +1,9 @@
 /.idea/
 /data/
 /softhsm-*/
+*.so
+*.pem
+cmd/microservice/log.txt
 
 # binaries
 /build
