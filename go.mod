@@ -8,7 +8,7 @@ require (
 	github.com/kaitai-io/kaitai_struct_go_runtime v0.10.0
 	github.com/lestrrat-go/jwx/v2 v2.0.11
 	github.com/miekg/pkcs11 v1.1.1
-	github.com/virtru/access-pdp v1.6.0
+	github.com/virtru/access-pdp v1.7.0
 	golang.org/x/oauth2 v0.7.0
 	gopkg.in/square/go-jose.v2 v2.6.0
 )

@@ -66,8 +66,8 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.4 h1:CcVxjf3Q8PM0mHUKJCdn+eZZtm5yQwehR5yeSVQQcUk=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
-github.com/virtru/access-pdp v1.6.0 h1:J68uZMZnoP37jKP/kdVU0yoQrRKjJAZi7kTKGhBP9HQ=
-github.com/virtru/access-pdp v1.6.0/go.mod h1:Jr3cnt8gBRb0mDZ8mYDiXK68XBiKr2n9GPciV9GZfZc=
+github.com/virtru/access-pdp v1.7.0 h1:ItJaKJX0rb+Df5585+sRgglSUsvC5yGUAII11NYfXj8=
+github.com/virtru/access-pdp v1.7.0/go.mod h1:Jr3cnt8gBRb0mDZ8mYDiXK68XBiKr2n9GPciV9GZfZc=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
 go.opentelemetry.io/otel v1.12.0 h1:IgfC7kqQrRccIKuB7Cl+SRUmsKbEwSGPr0Eu+/ht1SQ=
