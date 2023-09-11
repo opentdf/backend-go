@@ -144,7 +144,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	if requestBody.Algorithm == "ec:secp256r1" {
 		// TODO return 404 or 400
 		log.WarnContext(context, "Nano not implemented yet")
-		panic(err)
+		panic("nano not implemented yet")
 		// log.Fatal("Nano not implemented yet")
 		// return _nano_tdf_rewrap(requestBody, r.Header, claims)
 	}
@@ -190,8 +190,8 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// Assert the symbol to the correct function type
 	fetchAttributesFn, ok := fetchAttributesSymbol.(func(ctx.Context, []string) ([]attributes.AttributeDefinition, error))
 	if !ok {
-		log.ErrorContext(context, "Unable to fetch attributes", "err", err)
-		panic(err)
+		log.ErrorContext(context, "unable to fetch attributes", "err", err)
+		panic("unable to fetch attributes")
 	}
 	// use the module
 	definitions, err := fetchAttributesFn(r.Context(), namespaces)

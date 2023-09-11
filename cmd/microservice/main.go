@@ -190,7 +190,7 @@ func loadECCert(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, keyID []byte) *ec
 	ecPublicKey, ok := ecCert.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		log.Error("EC PublicKey failure")
-		panic(1)
+		panic("EC PublicKey failure")
 	}
 	return ecPublicKey
 }
