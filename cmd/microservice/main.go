@@ -88,98 +88,9 @@ func configureIdP(kas *access.Provider) {
 	kas.OIDCVerifier = verifier
 }
 
-func main() {
-	// version and build information
-	stats := version.GetVersion()
-	log.Info("INIT", "Version", stats.Version, "Version Long", stats.VersionLong, "Build Time", stats.BuildTime)
-
-	kasURI, _ := url.Parse("https://" + hostname + ":5000")
-	kas := access.Provider{
-		URI:          *kasURI,
-		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
-		Certificate:  x509.Certificate{},
-		Attributes:   nil,
-		Logger:       log,
-		Session:      p11.Pkcs11Session{},
-		OIDCVerifier: nil,
-	}
-
-	configureIdP(&kas)
-
-	// PKCS#11
-	pin := os.Getenv("PKCS11_PIN")
+func loadRSACert(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, keyID []byte) (x509.Certificate, rsa.PublicKey, p11.Pkcs11PrivateKeyRSA) {
 	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") // development-rsa-kas
-	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC")   // development-ec-kas
-	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
-	if err != nil {
-		log.Error("PKCS11_SLOT_INDEX parse error", "err", err)
-		panic(err)
-	}
-	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
-	log.Debug("pkcs11ModulePath", "PKCS11_MODULE_PATH", pkcs11ModulePath)
-	ctx := pkcs11.New(pkcs11ModulePath)
-	if err := ctx.Initialize(); err != nil {
-		log.Error("error initializing pkcs11 module", "err", err)
-		panic(err)
-	}
-	defer ctx.Destroy()
-	defer func(ctx *pkcs11.Ctx) {
-		err := ctx.Finalize()
-		if err != nil {
-			log.Error("error finalizing pkcs11 module", "err", err)
-		}
-	}(ctx)
-	info, err := ctx.GetInfo()
-	if err != nil {
-		log.Error("error inspecting pkcs11 module", "err", err)
-		panic(err)
-	}
-	log.Info("initializing PKCS11 context", "info", info)
-	var keyID []byte
-	slots, err := ctx.GetSlotList(true)
-	if err != nil {
-		log.Error("error getting slots", "err", err)
-		panic(err)
-	}
-	log.Info("acquired PKCS11 slots", "slots", slots)
-	if int(slot) >= len(slots) || slot < 0 {
-		log.Error("fail PKCS11_SLOT_INDEX is invalid")
-		panic("slotfail")
-	}
-	log.Info("Selected slot", "slot", slots[slot])
-	session, err := ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-	if err != nil {
-		log.Error("error opening session", "err", err)
-		panic(err)
-	}
-	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
-		err := ctx.CloseSession(sh)
-		if err != nil {
-			log.Error("error closing session", "err", err)
-		}
-	}(ctx, session)
-
-	err = ctx.Login(session, pkcs11.CKU_USER, pin)
-	if err != nil {
-		log.Error("error logging in", "err", err)
-		panic(err)
-	}
-	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
-		err := ctx.Logout(sh)
-		if err != nil {
-			log.Error("error logging out", "err", err)
-		}
-	}(ctx, session)
-	info, err = ctx.GetInfo()
-	if err != nil {
-		log.Error("error inspecting pkcs11 module", "err", err)
-		panic(err)
-	}
-	log.Info("PKCS11 state after configuration", "info", info)
-
-	log.Info("Finding RSA key to wrap.")
+	log.Info("Finding RSA key to wrap.", "rsaLabel", rsaLabel)
 	keyHandle, err := findKey(ctx, session, pkcs11.CKO_PRIVATE_KEY, keyID, rsaLabel)
 	if err != nil {
 		log.Error("error finding key", "err", err)
@@ -188,10 +99,7 @@ func main() {
 	log.Info("Found key", "handle", keyHandle)
 
 	// set private key
-	kas.PrivateKey = p11.NewPrivateKeyRSA(keyHandle)
-
-	// initialize p11.pkcs11session
-	kas.Session = p11.NewSession(ctx, session)
+	privateKey := p11.NewPrivateKeyRSA(keyHandle)
 
 	// RSA Cert
 	log.Info("Finding RSA certificate", "label", rsaLabel)
@@ -214,6 +122,7 @@ func main() {
 	}
 	log.Info("Got attribute value", "attrs", attrs)
 
+	var cert x509.Certificate
 	for i, a := range attrs {
 		log.Info("verifying", "attr", i, "type", a.Type, "valuelen", len(a.Value))
 		if a.Type == pkcs11.CKA_VALUE {
@@ -222,23 +131,27 @@ func main() {
 				log.Error("Unable to parse attribute cert", "err", err)
 				panic(err)
 			}
-			kas.Certificate = *certRsa
+			cert = *certRsa
 		}
 	}
 
 	// RSA Public key
 	log.Info("Finding RSA public key from cert")
-	rsaPublicKey, ok := kas.Certificate.PublicKey.(*rsa.PublicKey)
+	publicKey, ok := cert.PublicKey.(*rsa.PublicKey)
 	if !ok {
 		log.Error("RSA public key from cert error", "err", err)
-		panic(err)
+		panic("invalid RSA public key")
 	}
-	kas.PublicKeyRsa = *rsaPublicKey
+	return cert, *publicKey, privateKey
+}
 
-	// EC Cert
+func loadECCert(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, keyID []byte) *ecdsa.PublicKey {
 	log.Info("Finding EC cert.")
 	var ecCert x509.Certificate
 
+	// EC Public key
+	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") // development-ec-kas
+	log.Info("Finding EC public key from cert", "ecLabel", ecLabel)
 	certECHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
 		log.Error("EC public key find fail", "err", err)
@@ -279,7 +192,105 @@ func main() {
 		log.Error("EC PublicKey failure")
 		panic(1)
 	}
-	kas.PublicKeyEc = *ecPublicKey
+	return ecPublicKey
+}
+
+func main() {
+	// version and build information
+	stats := version.GetVersion()
+	log.Info("INIT", "Version", stats.Version, "Version Long", stats.VersionLong, "Build Time", stats.BuildTime)
+
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := access.Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa: rsa.PublicKey{},
+		PublicKeyEc:  ecdsa.PublicKey{},
+		Certificate:  x509.Certificate{},
+		Attributes:   nil,
+		Logger:       log,
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	configureIdP(&kas)
+
+	// PKCS#11
+	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
+	log.Debug("pkcs11ModulePath", "PKCS11_MODULE_PATH", pkcs11ModulePath)
+	ctx := pkcs11.New(pkcs11ModulePath)
+	if err := ctx.Initialize(); err != nil {
+		log.Error("error initializing pkcs11 module", "err", err)
+		panic(err)
+	}
+	defer ctx.Destroy()
+	defer func(ctx *pkcs11.Ctx) {
+		err := ctx.Finalize()
+		if err != nil {
+			log.Error("error finalizing pkcs11 module", "err", err)
+		}
+	}(ctx)
+	info, err := ctx.GetInfo()
+	if err != nil {
+		log.Error("error inspecting pkcs11 module", "err", err)
+		panic(err)
+	}
+
+	log.Info("initializing PKCS11 context", "info", info)
+	var keyID []byte
+	slots, err := ctx.GetSlotList(true)
+	if err != nil {
+		log.Error("error getting slots", "err", err)
+		panic(err)
+	}
+	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
+	if err != nil {
+		log.Error("PKCS11_SLOT_INDEX parse error", "err", err)
+		panic(err)
+	}
+	log.Info("acquired PKCS11 slots", "slots", slots)
+	if int(slot) >= len(slots) || slot < 0 {
+		log.Error("fail PKCS11_SLOT_INDEX is invalid")
+		panic("slotfail")
+	}
+	log.Info("Selected slot", "slot", slots[slot])
+	session, err := ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	if err != nil {
+		log.Error("error opening session", "err", err)
+		panic(err)
+	}
+	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
+		err := ctx.CloseSession(sh)
+		if err != nil {
+			log.Error("error closing session", "err", err)
+		}
+	}(ctx, session)
+
+	pin := os.Getenv("PKCS11_PIN")
+	err = ctx.Login(session, pkcs11.CKU_USER, pin)
+	if err != nil {
+		log.Error("error logging in", "err", err)
+		panic(err)
+	}
+	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
+		err := ctx.Logout(sh)
+		if err != nil {
+			log.Error("error logging out", "err", err)
+		}
+	}(ctx, session)
+	info, err = ctx.GetInfo()
+	if err != nil {
+		log.Error("error inspecting pkcs11 module", "err", err)
+		panic(err)
+	}
+	log.Info("PKCS11 state after configuration", "info", info)
+
+	// initialize p11.pkcs11session
+	kas.Session = p11.NewSession(ctx, session)
+
+	kas.Certificate, kas.PublicKeyRsa, kas.PrivateKey = loadRSACert(ctx, session, keyID)
+
+	kas.PublicKeyEc = *loadECCert(ctx, session, keyID)
 
 	// os interrupt
 	stop := make(chan os.Signal, 1)
