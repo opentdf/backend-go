@@ -57,23 +57,7 @@ func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
 	return mid.AuditHook
 }
 
-func main() {
-	// version and build information
-	stats := version.GetVersion()
-	log.Info("INIT", "Version", stats.Version, "Version Long", stats.VersionLong, "Build Time", stats.BuildTime)
-
-	kasURI, _ := url.Parse("https://" + hostname + ":5000")
-	kas := access.Provider{
-		URI:          *kasURI,
-		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
-		Certificate:  x509.Certificate{},
-		Attributes:   nil,
-		Session:      p11.Pkcs11Session{},
-		OIDCVerifier: nil,
-	}
-	// OIDC
+func configureIdP(kas *access.Provider) {
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
 	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {
@@ -103,6 +87,27 @@ func main() {
 	var verifier = provider.Verifier(&oidcConfig)
 
 	kas.OIDCVerifier = verifier
+}
+
+func main() {
+	// version and build information
+	stats := version.GetVersion()
+	log.Info("INIT", "Version", stats.Version, "Version Long", stats.VersionLong, "Build Time", stats.BuildTime)
+
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := access.Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa: rsa.PublicKey{},
+		PublicKeyEc:  ecdsa.PublicKey{},
+		Certificate:  x509.Certificate{},
+		Attributes:   nil,
+		Logger:       log,
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	configureIdP(&kas)
 
 	// PKCS#11
 	pin := os.Getenv("PKCS11_PIN")
@@ -111,14 +116,14 @@ func main() {
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
 		log.Error("PKCS11_SLOT_INDEX parse error", "err", err)
-		os.Exit(1)
+		panic(err)
 	}
 	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
 	log.Debug("pkcs11ModulePath", "PKCS11_MODULE_PATH", pkcs11ModulePath)
 	ctx := pkcs11.New(pkcs11ModulePath)
 	if err := ctx.Initialize(); err != nil {
 		log.Error("error initializing pkcs11 module", "err", err)
-		os.Exit(1)
+		panic(err)
 	}
 	defer ctx.Destroy()
 	defer func(ctx *pkcs11.Ctx) {
@@ -130,7 +135,7 @@ func main() {
 	info, err := ctx.GetInfo()
 	if err != nil {
 		log.Error("error inspecting pkcs11 module", "err", err)
-		os.Exit(1)
+		panic(err)
 	}
 	log.Info("initializing PKCS11 context", "info", info)
 	var keyID []byte
@@ -171,7 +176,7 @@ func main() {
 	info, err = ctx.GetInfo()
 	if err != nil {
 		log.Error("error inspecting pkcs11 module", "err", err)
-		os.Exit(1)
+		panic(err)
 	}
 	log.Info("PKCS11 state after configuration", "info", info)
 
@@ -301,7 +306,7 @@ func main() {
 		log.Info("listening", "addr", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
 			log.Error("ListenAndServe error", "err", err)
-			os.Exit(1)
+			panic(err)
 		}
 	}()
 	<-stop
