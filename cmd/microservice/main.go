@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"plugin"
 	"strconv"
 	"time"
 
@@ -32,28 +31,6 @@ const (
 	timeoutServerWrite = 10 * time.Second
 	timeoutServerIdle  = 120 * time.Second
 )
-
-type IMiddleware interface {
-	AuditHook(f http.HandlerFunc) http.HandlerFunc
-}
-
-func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
-	// TODO Use AUDIT_ENABLED env for connection audit_hooks for attributes
-	auditEnabled := os.Getenv("AUDIT_ENABLED")
-	log.Printf("AUDIT_ENABLED: %s", auditEnabled)
-
-	plug, err := plugin.Open("audit_hooks.so")
-	if err != nil {
-		panic(err)
-	}
-	symMiddleware, err := plug.Lookup("Middleware")
-	if err != nil {
-		panic(err)
-	}
-	mid, _ := symMiddleware.(IMiddleware)
-
-	return mid.AuditHook
-}
 
 func main() {
 	// version and build information
@@ -263,15 +240,9 @@ func main() {
 		WriteTimeout: timeoutServerWrite,
 		IdleTimeout:  timeoutServerIdle,
 	}
-
-	auditHook := loadAuditHook()
-
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
-	// TODO mid.AuditHook should be in attributes module
-	// http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
-	http.HandleFunc("/v2/kas_public_key", auditHook(kas.PublicKeyHandlerV2))
+	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
-
 	go func() {
 		log.Printf("listening on http://%s", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
