@@ -11,19 +11,13 @@ WORKDIR /build/
 COPY . ./
 COPY cmd/ cmd/
 COPY pkg/ pkg/
-RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./cmd/microservice
-COPY plugins/ plugins/
-RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/audit_hooks.go
-RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/revocation_plugin.go
-RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/fetchAttributes.go
-
+RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./...
 
 # tester
 FROM golang:$GO_VERSION as tester
 WORKDIR /test/
 COPY . ./
 COPY cmd/ cmd/
-COPY plugins/ plugins/
 COPY pkg/ pkg/
 # dependency
 RUN go list -m -u all
@@ -32,7 +26,7 @@ RUN go vet ./...
 # test and benchmark
 RUN go test -bench=. -benchmem ./...
 # race condition
-RUN CGO_ENABLED=1 GOOS=linux go build -v -a -race -installsuffix cgo -o . ./cmd/microservice
+RUN CGO_ENABLED=1 GOOS=linux go build -v -a -race -installsuffix cgo -o . ./...
 
 # server-debug - root
 FROM ubuntu:latest as server-debug
@@ -74,7 +68,5 @@ ENV PKCS11_PIN ""
 ENV PKCS11_SLOT_INDEX ""
 ENV PKCS11_LABEL_PUBKEY_RSA ""
 ENV PKCS11_LABEL_PUBKEY_EC ""
-#
-ENV AUDIT_ENABLED=true
 COPY --from=builder /build/microservice /
 COPY --from=builder /etc/passwd /etc/passwd

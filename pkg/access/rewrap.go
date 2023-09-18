@@ -10,16 +10,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"plugin"
 	"strings"
 
 	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/opentdf/backend-go/pkg/tdf3"
-	"github.com/virtru/access-pdp/attributes"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-// RewrapRequest HTTP request body in JSON
 type RewrapRequest struct {
 	SignedRequestToken string `json:"signedRequestToken"`
 }
@@ -120,7 +117,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	var jwtClaimsBody jwt.Claims
 	var bodyClaims customClaimsBody
-	err = requestToken.UnsafeClaimsWithoutVerification(&jwtClaimsBody, &bodyClaims)
+	err = requestToken.UnsafeClaimsWithoutVerification(jwtClaimsBody, bodyClaims)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
@@ -171,28 +168,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 	// this part goes in the plugin?
 	log.Println("Fetching attributes")
-
-	// Load the plugin
-	pl, err := plugin.Open("attributes.so") // Replace with the actual path to your plugin file
-	if err != nil {
-		log.Panic(err)
-		return
-	}
-	// Look up the exported function
-	fetchAttributesSymbol, err := pl.Lookup("FetchAllAttributes")
-	if err != nil {
-		log.Panic(err)
-		return
-	}
-
-	// Assert the symbol to the correct function type
-	fetchAttributesFn, ok := fetchAttributesSymbol.(func(context.Context, []string) ([]attributes.AttributeDefinition, error))
-	if !ok {
-		log.Panic(err)
-		return
-	}
-	// use the module
-	definitions, err := fetchAttributesFn(r.Context(), namespaces)
+	definitions, err := fetchAttributes(r.Context(), namespaces)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
 		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)

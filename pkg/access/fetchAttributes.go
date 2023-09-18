@@ -1,4 +1,4 @@
-package main
+package access
 
 import (
 	"context"
@@ -12,12 +12,27 @@ import (
 	"github.com/virtru/access-pdp/attributes"
 )
 
-var (
-	ErrAttributeDefinitionsUnmarshal   = errors.New("attribute definitions unmarshal")
-	ErrAttributeDefinitionsServiceCall = errors.New("attribute definitions service call unexpected")
+const (
+	ErrAttributeDefinitionsUnmarshal   = Error("attribute definitions unmarshal")
+	ErrAttributeDefinitionsServiceCall = Error("attribute definitions service call unexpected")
 )
 
+// const attributeHost = "http://attributes:4020"
 const attributeHost = "http://localhost:65432/api/attributes"
+
+func fetchAttributes(ctx context.Context, namespaces []string) ([]attributes.AttributeDefinition, error) {
+	var definitions []attributes.AttributeDefinition
+	for _, ns := range namespaces {
+		attrDefs, err := fetchAttributesForNamespace(ctx, ns)
+		if err != nil {
+			// logger.Warn("Error creating http request to attributes service")
+			log.Printf("Error fetching attributes for namespace %s", ns)
+			return nil, err
+		}
+		definitions = append(definitions, attrDefs...)
+	}
+	return definitions, nil
+}
 
 func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attributes.AttributeDefinition, error) {
 	log.Println("Fetching for ", namespace)
@@ -56,19 +71,5 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attri
 		return nil, errors.Join(ErrAttributeDefinitionsUnmarshal, err)
 	}
 
-	return definitions, nil
-}
-
-func FetchAllAttributes(ctx context.Context, namespaces []string) ([]attributes.AttributeDefinition, error) {
-	var definitions []attributes.AttributeDefinition
-	for _, ns := range namespaces {
-		attrDefs, err := fetchAttributesForNamespace(ctx, ns)
-		if err != nil {
-			// logger.Warn("Error creating http request to attributes service")
-			log.Printf("Error fetching attributes for namespace %s", ns)
-			return nil, err
-		}
-		definitions = append(definitions, attrDefs...)
-	}
 	return definitions, nil
 }
