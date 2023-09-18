@@ -15,8 +15,6 @@ RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./cmd/micros
 COPY plugins/ plugins/
 RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/audit_hooks.go
 RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/revocation_plugin.go
-RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/fetchAttributes.go
-
 
 # tester
 FROM golang:$GO_VERSION as tester
