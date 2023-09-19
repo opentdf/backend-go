@@ -15,5 +15,72 @@ on:
 #      - 'docs/*'
 #      - '.vscode/*'
 jobs:
-  sonarcloud_scan:
-    uses: virtru-corp/.github/.github/workflows/golang-sonarcloud.yaml
+  gotest:
+    name: 'Generate Golang Test Reports'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+
+      - name: 'Checkout repo'
+        uses: actions/checkout@v3
+
+      - name: 'Setup Go'
+        uses: actions/setup-go@v3
+        with:
+          go-version: '${{ inputs.go-version }}'
+          cache: true
+
+      - name: 'Generate Golang Test Reports'
+        run: go test -v -coverprofile coverage.out -json ./... | tee coverage.json
+
+      - name: 'Archive Golang Test Results'
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-report
+          path: coverage.*
+          retention-days: 1
+
+  sonarcloud:
+    name: 'SonarCloud'
+    runs-on: ubuntu-latest
+    needs: [gotest]
+    permissions:
+      contents: read
+
+    steps:
+      - name: 'Checkout repo'
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+#      - name: 'Download GolangCI Results'
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: golangci-report
+#
+#      - name: 'Download Code Coverage Report'
+#        uses: actions/download-artifact@v3
+#        with:
+#          name: code-coverage-report
+#
+#      - name: 'Authenticate to Google Cloud'
+#        id: 'gcp-auth'
+#        uses: 'google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033' # v1.1.1 - 5/8/23
+#        with:
+#          workload_identity_provider: 'projects/1053957112592/locations/global/workloadIdentityPools/github-actions-oidc-pool/providers/github-actions-oidc-provider'
+#          service_account: 'github-actions-sa@prj-infra-automation-ktbz.iam.gserviceaccount.com'
+#
+#      - name: 'Output GCP secrets'
+#        id: 'gcp-secrets'
+#        uses: google-github-actions/get-secretmanager-secrets@4d6d3dfd94110800dda8d84109cb6da0f6a5919d # v1.0.1 - 05/08/23
+#        with:
+#          secrets: |-
+#            SONAR_TOKEN:prj-infra-automation-ktbz/platform_ci_sonar_cloud_token
+
+      - name: 'SonarCloud Scan'
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
