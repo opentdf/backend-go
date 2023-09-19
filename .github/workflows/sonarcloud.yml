@@ -16,4 +16,4 @@ on:
 #      - '.vscode/*'
 jobs:
   sonarcloud_scan:
-    uses: virtru-corp/.github/.github/workflows/golang-sonarcloud.yaml@v1
+    uses: virtru-corp/.github/.github/workflows/golang-sonarcloud.yaml
