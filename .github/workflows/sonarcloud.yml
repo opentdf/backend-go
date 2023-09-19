@@ -1,0 +1,19 @@
+name: SonarCloud
+on:
+  push:
+    branches:
+      - plat-2710-sonar-coverage
+#  pull_request:
+#    branches:
+#      - main
+#      - hotfix/*
+#    paths-ignore:
+#      - 'VERSION'
+#      - '.github/workflows/*'
+#      - '.argo/*'
+#      - 'README.md'
+#      - 'docs/*'
+#      - '.vscode/*'
+jobs:
+  sonarcloud_scan:
+    uses: virtru-corp/.github/.github/workflows/golang-sonarcloud.yaml@v1
