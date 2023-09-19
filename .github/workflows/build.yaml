@@ -35,7 +35,7 @@ jobs:
             exit 1
           fi
       - run: |-
-          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_OUTPUT
           echo "SHA=sha-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
         id: info
 
