@@ -1,4 +1,4 @@
-APP_NAME = "go-kas"
+APP_NAME = "access"
 GO_MOD_LINE = $(shell head -n 1 go.mod | cut -c 8-)
 GO_MOD_NAME = ${GO_MOD_LINE}
 CONF_PATH = ${GO_MOD_NAME}/internal/conf
