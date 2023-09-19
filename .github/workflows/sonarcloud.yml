@@ -59,11 +59,11 @@ jobs:
 #        uses: actions/download-artifact@v3
 #        with:
 #          name: golangci-report
-#
-#      - name: 'Download Code Coverage Report'
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: code-coverage-report
+
+      - name: 'Download Code Coverage Report'
+        uses: actions/download-artifact@v3
+        with:
+          name: code-coverage-report
 #
 #      - name: 'Authenticate to Google Cloud'
 #        id: 'gcp-auth'
