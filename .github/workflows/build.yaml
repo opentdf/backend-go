@@ -31,11 +31,11 @@ jobs:
           git fetch origin main:main
           git fetch --all --tags --force
           if ! git merge-base --is-ancestor "$RELEASE_TAG" main; then
-            echo "# Invalid release tag [$RELEASE_TAG] - must be on `main` branch" >> $GITHUB_STEP_SUMMARY
+            echo "# Invalid release tag [$RELEASE_TAG] - must be on main" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
       - run: |-
-          echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+          echo "VERSION=$(cat VERSION)" >> $GITHUB_OUTPUT
           echo "SHA=sha-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
         id: info
 
@@ -63,7 +63,7 @@ jobs:
     needs:
       - ci
       - version
-    if: github.ref == 'refs/heads/main' && github.event.release
+    if: github.event.release
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -88,4 +88,4 @@ jobs:
           context: .
           platforms: "${{ env.CONTAINER_ARCHS }}"
           push: true
-          tags: ghcr.io/opentdf/gokas:${{ steps.version.outputs.VERSION }}
+          tags: ghcr.io/opentdf/gokas:${{ needs.version.outputs.VERSION }}
