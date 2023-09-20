@@ -1,8 +1,14 @@
 # Tiltfile for development
 # https://docs.tilt.dev/api.html
 
-# troubleshoot target='server-debug'
-docker_build('microservice', '.', target='server')
+load("./opentdf.Tiltfile", "backend", "CONTAINER_REGISTRY", "OIDC_CLIENT_SECRET")
 
-# helm
-k8s_yaml(helm('helm', 'ex'))
+# troubleshoot target='server-debug'
+# docker_build('microservice', '.', target='server')
+
+# # helm
+# k8s_yaml(helm('helm', 'ex'))
+
+
+backend(
+)
