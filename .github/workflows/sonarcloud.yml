@@ -3,17 +3,12 @@ on:
   push:
     branches:
       - plat-2710-sonar-coverage
-#  pull_request:
-#    branches:
-#      - main
-#      - hotfix/*
-#    paths-ignore:
-#      - 'VERSION'
-#      - '.github/workflows/*'
-#      - '.argo/*'
-#      - 'README.md'
-#      - 'docs/*'
-#      - '.vscode/*'
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+
 jobs:
   gotest:
     name: 'Generate Golang Test Reports'
@@ -55,29 +50,10 @@ jobs:
         with:
           fetch-depth: 0
 
-#      - name: 'Download GolangCI Results'
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: golangci-report
-
       - name: 'Download Code Coverage Report'
         uses: actions/download-artifact@v3
         with:
           name: code-coverage-report
-#
-#      - name: 'Authenticate to Google Cloud'
-#        id: 'gcp-auth'
-#        uses: 'google-github-actions/auth@35b0e87d162680511bf346c299f71c9c5c379033' # v1.1.1 - 5/8/23
-#        with:
-#          workload_identity_provider: 'projects/1053957112592/locations/global/workloadIdentityPools/github-actions-oidc-pool/providers/github-actions-oidc-provider'
-#          service_account: 'github-actions-sa@prj-infra-automation-ktbz.iam.gserviceaccount.com'
-#
-#      - name: 'Output GCP secrets'
-#        id: 'gcp-secrets'
-#        uses: google-github-actions/get-secretmanager-secrets@4d6d3dfd94110800dda8d84109cb6da0f6a5919d # v1.0.1 - 05/08/23
-#        with:
-#          secrets: |-
-#            SONAR_TOKEN:prj-infra-automation-ktbz/platform_ci_sonar_cloud_token
 
       - name: 'SonarCloud Scan'
         uses: SonarSource/sonarcloud-github-action@master
