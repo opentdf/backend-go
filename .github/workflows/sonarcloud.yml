@@ -2,7 +2,7 @@ name: SonarCloud
 on:
   push:
     branches:
-      - plat-2710-sonar-coverage
+      - main
   pull_request:
     types:
       - opened
