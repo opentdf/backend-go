@@ -1,5 +1,10 @@
 package tdf3
 
+type PolicyBinding struct {
+	Alg  string `json:"alg,omitempty"`
+	Hash string `json:"hash,omitempty"`
+}
+
 type KeyAccess struct {
 	EncryptedMetadata string `json:"encryptedMetadata,omitempty"`
 	PolicyBinding     string `json:"policyBinding,omitempty"`

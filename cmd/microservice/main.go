@@ -17,15 +17,17 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/miekg/pkcs11"
 	"github.com/opentdf/backend-go/pkg/access"
+	"github.com/opentdf/backend-go/pkg/keys"
 	"github.com/opentdf/backend-go/pkg/p11"
+	"github.com/opentdf/backend-go/pkg/wellknown"
 	"golang.org/x/oauth2"
 )
 
 const (
 	ErrHsm             = Error("hsm unexpected")
-	hostname           = "localhost"
 	timeoutServerRead  = 5 * time.Second
 	timeoutServerWrite = 10 * time.Second
 	timeoutServerIdle  = 120 * time.Second
@@ -35,7 +37,7 @@ var Version string
 
 func main() {
 	log.Printf("Version: %s", Version)
-
+	hostname := os.Getenv("SERVER_PUBLIC_NAME")
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
 		URI:          *kasURI,
@@ -232,7 +234,7 @@ func main() {
 
 	// server
 	server := http.Server{
-		Addr:         "127.0.0.1:8080",
+		Addr:         "0.0.0.0:" + os.Getenv("SERVER_PORT"),
 		ReadTimeout:  timeoutServerRead,
 		WriteTimeout: timeoutServerWrite,
 		IdleTimeout:  timeoutServerIdle,
@@ -240,10 +242,69 @@ func main() {
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
 	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
+	// keys
+	keySet := jwk.NewSet()
+	rsaPublicKeyJwk, err := jwk.FromRaw(kas.PublicKeyRsa)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = rsaPublicKeyJwk.Set(jwk.KeyUsageKey, jwk.ForEncryption)
+	if err != nil {
+		return
+	}
+	err = keySet.AddKey(rsaPublicKeyJwk)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = jwk.AssignKeyID(rsaPublicKeyJwk)
+	if err != nil {
+		log.Panic(err)
+	}
+	ecPublicKeyJwk, err := jwk.FromRaw(kas.PublicKeyEc)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = ecPublicKeyJwk.Set(jwk.KeyUsageKey, jwk.ForEncryption)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = keySet.AddKey(ecPublicKeyJwk)
+	if err != nil {
+		log.Panic(err)
+	}
+	err = jwk.AssignKeyID(ecPublicKeyJwk)
+	if err != nil {
+		log.Panic(err)
+	}
+	k := keys.Provider{
+		Set: keySet,
+	}
+	http.HandleFunc("/keys", k.Handler)
+	// .well-known/opentdf-configuration
+	wk := wellknown.Provider{
+		OpenTdfConfiguration: wellknown.OpenTdfConfiguration{
+			JwksUri: "http://localhost:8080/keys",
+			Issuer:  oidcIssuer,
+		},
+	}
+	http.HandleFunc("/.well-known/opentdf-configuration", wk.Handler)
 	go func() {
 		log.Printf("listening on http://%s", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
-			log.Fatal(err)
+			log.Println(err)
+		}
+	}()
+	go func() {
+		if os.Getenv("SERVER_SECURE_PORT") != "" {
+			log.Printf("listening on https://0.0.0.0:%s", os.Getenv("SERVER_SECURE_PORT"))
+			if err := http.ListenAndServeTLS(
+				"0.0.0.0:"+os.Getenv("SERVER_SECURE_PORT"),
+				os.Getenv("SERVER_SECURE_CERTIFICATE_PATH"),
+				os.Getenv("SERVER_SECURE_KEY_PATH"),
+				nil,
+			); err != nil {
+				log.Panic(err)
+			}
 		}
 	}()
 	<-stop

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG GOLANG_VERSION=1.20
+ARG GOLANG_VERSION=1.21
 FROM golang:${GOLANG_VERSION} AS builder
 WORKDIR /build/
 # dependencies
@@ -8,7 +8,6 @@ RUN go mod download
 # copy Go files - add new package to this list
 COPY *.go ./
 COPY /cmd/ ./cmd/
-COPY /internal/ ./internal/
 COPY /pkg/ ./pkg/
 COPY VERSION .
 # build optimized
@@ -37,6 +36,7 @@ ENV SERVER_ROOT_PATH "/"
 ENV OIDC_CLIENT_ID ""
 ENV OIDC_CLIENT_SECRET ""
 ENV OIDC_CONFIGURATION_URL ""
+ENV OIDC_ISSUER ""
 # PKCS#11
 ENV PKCS11_MODULE_PATH ""
 ENV PKCS11_PIN ""

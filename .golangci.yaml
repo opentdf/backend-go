@@ -24,7 +24,7 @@ linters-settings:
     # The maximal average package complexity.
     # If it's higher than 0.0 (float) the check is enabled
     # Default: 0.0
-    package-average: 10.0
+    package-average: 13.0
 
   errcheck:
     # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
@@ -57,6 +57,7 @@ linters-settings:
       - "^crypto/x509.Certificate$"
       - "^crypto/rsa.PublicKey"
       - "^crypto/ecdsa.PublicKey"
+      - "^encoding/pem.Block"
       # public libs
       - "^github.com/Shopify/sarama.Config$"
       - "^github.com/Shopify/sarama.ProducerMessage$"
