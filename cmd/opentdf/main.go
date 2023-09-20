@@ -12,17 +12,18 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"flag"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/opentdf/backend-go/pkg/archive/manifest"
 	"github.com/opentdf/backend-go/pkg/tdf3"
 	"github.com/opentdf/backend-go/pkg/wellknown"
 	"golang.org/x/oauth2/clientcredentials"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"strings"
 )
 
 func main() {
