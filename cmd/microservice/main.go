@@ -26,7 +26,6 @@ import (
 
 const (
 	ErrHsm             = Error("hsm unexpected")
-	hostname           = "localhost"
 	timeoutServerRead  = 5 * time.Second
 	timeoutServerWrite = 10 * time.Second
 	timeoutServerIdle  = 120 * time.Second
@@ -39,7 +38,14 @@ func main() {
 	log.Printf("Version Long: %s", stats.VersionLong)
 	log.Printf("Build Time: %s", stats.BuildTime)
 
-	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	hostStr, hostDefined := os.LookupEnv("HOST")
+	if !hostDefined {
+		hostStr = "https://localhost:8000/"
+	}
+	kasURI, err := url.Parse(hostStr)
+	if err != nil {
+		log.Panic("Invalid host", os.Getenv("HOST"), err)
+	}
 	kas := access.Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
@@ -51,6 +57,8 @@ func main() {
 		OIDCVerifier: nil,
 	}
 	// OIDC
+	// XXX(dmihalcik) Why is this here? This should be handled in access-pdp
+	// AFAICT this is unused
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
 	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {
@@ -235,7 +243,7 @@ func main() {
 
 	// server
 	server := http.Server{
-		Addr:         "127.0.0.1:8080",
+		Addr:         kas.URI.Host,
 		ReadTimeout:  timeoutServerRead,
 		WriteTimeout: timeoutServerWrite,
 		IdleTimeout:  timeoutServerIdle,
