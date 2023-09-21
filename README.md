@@ -77,14 +77,17 @@ brew install opensc
 #### SoftHSM Keys
 
 ```shell
-# enter two sets of PIN, 12345
-softhsm2-util --init-token --slot 0 --label "development-token"
+# enter two sets of PIN
+softhsm2-util --init-token --slot 1 --label "development-token"
+
 # verify login
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
+pkcs11-tool --login --show-info --list-objects
+
+
 # crease RSA key and cert
-openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pem -out kas-cert.pem -days 365
+# openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pem -out kas-cert.pem -days 365
 # crease EC key and cert
-openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
+# openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
 # import RSA key to PKCS
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --id 100 --label development-rsa-kas
 # import RSA cert to PKCS
