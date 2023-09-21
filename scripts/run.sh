@@ -1,7 +1,7 @@
 #! /bin/bash
 # Use ./scripts/run.sh [host]
 # Parameters:
-#   Optional parameter: port or host to expose. Defaults to 8000 
+#   Optional parameter: port or host to expose. Defaults to 8000
 #
 # Environment variables:
 #   PKCS11_PIN
@@ -35,7 +35,7 @@
 #     - required for nanoTDF
 #   AUDIT_ENABLED
 #   CA_CERT_PATH
-#     - 
+#     -
 #
 #   Maybe will not implement?
 #   USE_OIDC
