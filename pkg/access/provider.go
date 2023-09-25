@@ -17,6 +17,7 @@ type Provider struct {
 	PublicKeyRsa rsa.PublicKey `json:"publicKey"`
 	PublicKeyEc  ecdsa.PublicKey
 	Certificate  x509.Certificate `json:"certificate"`
+	CertificateEc x509.Certificate `json:"certificateEc"`
 	Attributes   []Attribute      `json:"attributes"`
 	Session      p11.Pkcs11Session
 	OIDCVerifier *oidc.IDTokenVerifier
