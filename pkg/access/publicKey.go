@@ -22,11 +22,18 @@ const (
 func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 	algorithm := r.URL.Query().Get("algorithm")
 	if algorithm == algorithmEc256 {
-		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
+		ecCertPem, err := exportCertificateAsPemStr(&p.CertificateEc)
 		if err != nil {
 			log.Fatalf("error EC public key from PKCS11: %v", err)
 		}
-		_, _ = w.Write([]byte(ecPublicKeyPem))
+		log.Println(ecCertPem)
+		jData, err := json.Marshal(ecCertPem)
+		if err != nil {
+			log.Printf("error json certificate Marshal: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jData)
+		_, _ = w.Write([]byte("\n")) // added so that /kas_public_key matches opentdf response exactly
 		return
 	}
 	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)

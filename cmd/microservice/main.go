@@ -46,6 +46,7 @@ func main() {
 		PublicKeyRsa: rsa.PublicKey{},
 		PublicKeyEc:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
+		CertificateEc: x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
@@ -216,14 +217,14 @@ func main() {
 			if err != nil {
 				log.Panic(err)
 			}
-			ecCert = *certEC
+			kas.CertificateEc = *certEC
 		}
 	}
 
 	// EC Public Key
 	log.Println("Finding EC public key from cert.")
-	log.Println(ecCert.PublicKeyAlgorithm)
-	ecPublicKey, ok := ecCert.PublicKey.(*ecdsa.PublicKey)
+	log.Println(kas.CertificateEc.PublicKeyAlgorithm)
+	ecPublicKey, ok := kas.CertificateEc.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		log.Panic("EC public key from cert error")
 	}
