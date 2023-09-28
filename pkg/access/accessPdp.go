@@ -60,8 +60,8 @@ func checkAttributes(dataAttrs []Attribute, entitlements []Entitlement, attrDefs
 	}
 
 	accessPDP := accessPdp.NewAccessPDP(zapLog.Sugar())
-
-	decisions, err := accessPDP.DetermineAccess(dataAttrInstances, entityAttrMap, attrDefs, context.Background())
+	ctx := context.Background()
+	decisions, err := accessPDP.DetermineAccess(dataAttrInstances, entityAttrMap, attrDefs, &ctx)
 	if err != nil {
 		log.Printf("Error recieved from accessPDP")
 		return false, errors.Join(ErrDecisionUnexpected, err)
