@@ -179,8 +179,8 @@ func main() {
 	// manifest
 	var keyAccess []tdf3.KeyAccess
 	keyAccess = append(keyAccess, tdf3.KeyAccess{
-		EncryptedMetadata: "",
-		PolicyBinding:     "ZGMwNGExZjg0ODFjNDEzZTk5NjdkZmI5MWFjN2Y1MzI0MTliNjM5MmRlMTlhYWM0NjNjN2VjYTVkOTJlODcwNA",
+		EncryptedMetadata: []byte(""),
+		PolicyBinding:     []byte("ZGMwNGExZjg0ODFjNDEzZTk5NjdkZmI5MWFjN2Y1MzI0MTliNjM5MmRlMTlhYWM0NjNjN2VjYTVkOTJlODcwNA"),
 		Protocol:          "kas",
 		Type:              "wrapped",
 		URL:               "http://localhost:65432/api/kas",
@@ -198,7 +198,7 @@ func main() {
 				IV:         iv,
 			},
 			// FIXME policy
-			Policy: "eyJ1dWlkIjoiNjEzMzM0NjYtNGYwYS00YTEyLTk1ZmItYjZkOGJkMGI4YjI2IiwiYm9keSI6eyJhdHRyaWJ1dGVzIjpbXSwiZGlzc2VtIjpbInVzZXJAdmlydHJ1LmNvbSJdfX0",
+			Policy: []byte("eyJ1dWlkIjoiNjEzMzM0NjYtNGYwYS00YTEyLTk1ZmItYjZkOGJkMGI4YjI2IiwiYm9keSI6eyJhdHRyaWJ1dGVzIjpbXSwiZGlzc2VtIjpbInVzZXJAdmlydHJ1LmNvbSJdfX0"),
 			Type:   "split",
 		},
 		Payload: manifest.Payload{

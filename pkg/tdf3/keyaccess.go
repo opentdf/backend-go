@@ -1,17 +1,18 @@
 package tdf3
 
-type PolicyBinding struct {
-	Alg  string `json:"alg,omitempty"`
-	Hash string `json:"hash,omitempty"`
-}
-
 type KeyAccess struct {
-	EncryptedMetadata string `json:"encryptedMetadata,omitempty"`
-	PolicyBinding     string `json:"policyBinding,omitempty"`
+	EncryptedMetadata []byte `json:"encryptedMetadata,omitempty"`
+	PolicyBinding     []byte `json:"policyBinding"`
 	Protocol          string `json:"protocol"`
 	Type              string `json:"type"`
 	URL               string `json:"url"`
 	WrappedKey        []byte `json:"wrappedKey,omitempty"`
 	Header            []byte `json:"header,omitempty"`
 	Algorithm         string `json:"algorithm,omitempty"`
+}
+
+type Metadata struct {
+	Algorithm  string `json:"algorithm"`
+	IV         []byte `json:"iv"`
+	CipherText []byte `json:"ciphertext"`
 }

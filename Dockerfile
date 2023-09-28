@@ -9,6 +9,7 @@ RUN go mod download
 COPY *.go ./
 COPY /cmd/ ./cmd/
 COPY /pkg/ ./pkg/
+COPY /internal/ ./internal/
 COPY VERSION .
 # build optimized
 RUN CGO_ENABLED=1 GOOS=linux go build \
