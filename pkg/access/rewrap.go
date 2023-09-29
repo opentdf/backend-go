@@ -9,11 +9,12 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
-	"github.com/opentdf/backend-go/pkg/nanotdf"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
+	"github.com/opentdf/backend-go/pkg/nanotdf"
 
 	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/opentdf/backend-go/pkg/tdf3"

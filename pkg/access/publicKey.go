@@ -7,10 +7,11 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"github.com/lestrrat-go/jwx/v2/jwk"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/lestrrat-go/jwx/v2/jwk"
 )
 
 const (
