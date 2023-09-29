@@ -41,14 +41,15 @@ func main() {
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
-		URI:          *kasURI,
-		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
-		Certificate:  x509.Certificate{},
-		Attributes:   nil,
-		Session:      p11.Pkcs11Session{},
-		OIDCVerifier: nil,
+		URI:           *kasURI,
+		PrivateKey:    p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa:  rsa.PublicKey{},
+		PublicKeyEc:   ecdsa.PublicKey{},
+		Certificate:   x509.Certificate{},
+		CertificateEc: x509.Certificate{},
+		Attributes:    nil,
+		Session:       p11.Pkcs11Session{},
+		OIDCVerifier:  nil,
 	}
 	// OIDC
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
