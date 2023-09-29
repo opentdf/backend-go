@@ -12,12 +12,13 @@ import (
 )
 
 type Provider struct {
-	URI          url.URL `json:"uri"`
-	PrivateKey   p11.Pkcs11PrivateKeyRSA
-	PublicKeyRsa rsa.PublicKey `json:"publicKey"`
-	PublicKeyEc  ecdsa.PublicKey
-	Certificate  x509.Certificate `json:"certificate"`
-	Attributes   []Attribute      `json:"attributes"`
-	Session      p11.Pkcs11Session
-	OIDCVerifier *oidc.IDTokenVerifier
+	URI           url.URL `json:"uri"`
+	PrivateKey    p11.Pkcs11PrivateKeyRSA
+	PublicKeyRsa  rsa.PublicKey `json:"publicKey"`
+	PublicKeyEc   ecdsa.PublicKey
+	Certificate   x509.Certificate `json:"certificate"`
+	CertificateEc x509.Certificate `json:"certificateEc"`
+	Attributes    []Attribute      `json:"attributes"`
+	Session       p11.Pkcs11Session
+	OIDCVerifier  *oidc.IDTokenVerifier
 }

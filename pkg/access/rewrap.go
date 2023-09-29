@@ -1,6 +1,7 @@
 package access
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
@@ -8,6 +9,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"github.com/kaitai-io/kaitai_struct_go_runtime/kaitai"
+	"github.com/opentdf/backend-go/pkg/nanotdf"
 	"log"
 	"net/http"
 	"strings"
@@ -213,15 +216,15 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// ///////////////////////////////
 
 	// nano header
-	// log.Println(requestBody.KeyAccess.Header)
-	// log.Println(len(requestBody.KeyAccess.Header))
-	// s := kaitai.NewStream(bytes.NewReader(requestBody.KeyAccess.Header))
-	// n := tdf3.new
-	// err = n.Read(s, n, n)
-	// if err != nil {
-	// 	log.Panic(err)
-	// }
-	// log.Print(n.Header.Length)
+	log.Println(requestBody.KeyAccess.Header)
+	log.Println(len(requestBody.KeyAccess.Header))
+	s := kaitai.NewStream(bytes.NewReader(requestBody.KeyAccess.Header))
+	n := nanotdf.NewNanotdf()
+	err = n.Read(s, n, n)
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Print(n.Header.Length)
 
 	// unwrap using a key from file
 	// ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)

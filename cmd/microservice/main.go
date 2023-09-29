@@ -188,7 +188,6 @@ func main() {
 
 	// EC Cert
 	log.Println("Finding EC cert.")
-	var ecCert x509.Certificate
 
 	certECHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
@@ -216,14 +215,14 @@ func main() {
 			if err != nil {
 				log.Panic(err)
 			}
-			ecCert = *certEC
+			kas.CertificateEc = *certEC
 		}
 	}
 
 	// EC Public Key
 	log.Println("Finding EC public key from cert.")
-	log.Println(ecCert.PublicKeyAlgorithm)
-	ecPublicKey, ok := ecCert.PublicKey.(*ecdsa.PublicKey)
+	log.Println(kas.CertificateEc.PublicKeyAlgorithm)
+	ecPublicKey, ok := kas.CertificateEc.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		log.Panic("EC public key from cert error")
 	}

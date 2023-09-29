@@ -7,10 +7,10 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"log"
 	"net/http"
-
-	"github.com/lestrrat-go/jwx/v2/jwk"
+	"strings"
 )
 
 const (
@@ -22,11 +22,18 @@ const (
 func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 	algorithm := r.URL.Query().Get("algorithm")
 	if algorithm == algorithmEc256 {
-		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
+		ecCertPem, err := exportCertificateAsPemStr(&p.CertificateEc)
+		log.Println(ecCertPem)
 		if err != nil {
 			log.Fatalf("error EC public key from PKCS11: %v", err)
 		}
-		_, _ = w.Write([]byte(ecPublicKeyPem))
+		jData, err := json.Marshal(ecCertPem)
+		if err != nil {
+			log.Printf("error json EC certificate Marshal: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jData)
+		_, _ = w.Write([]byte("\n"))
 		return
 	}
 	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
@@ -116,17 +123,17 @@ func exportEcPublicKeyAsPemStr(pubkey *ecdsa.PublicKey) (string, error) {
 
 func exportCertificateAsPemStr(cert *x509.Certificate) (string, error) {
 	certBytes := cert.Raw
-	certPem := pem.EncodeToMemory(
+	certPem := strings.TrimSpace(string(pem.EncodeToMemory(
 		&pem.Block{
 			Type:    "CERTIFICATE",
 			Headers: nil,
 			Bytes:   certBytes,
 		},
-	)
-	if certPem == nil {
+	)))
+	if certPem == "" {
 		return "", ErrCertificateEncode
 	}
-	return string(certPem), nil
+	return certPem, nil
 }
 
 type Error string
