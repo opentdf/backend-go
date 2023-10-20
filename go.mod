@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/hashicorp/vault v1.14.3
 	github.com/kaitai-io/kaitai_struct_go_runtime v0.10.0
-	github.com/lestrrat-go/jwx/v2 v2.0.13
+	github.com/lestrrat-go/jwx/v2 v2.0.15
 	github.com/miekg/pkcs11 v1.1.1
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/spf13/cobra v1.7.0
