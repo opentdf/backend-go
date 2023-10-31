@@ -1,6 +1,6 @@
 module github.com/opentdf/backend-go
 
-go 1.19
+go 1.21
 
 require (
 	github.com/coreos/go-oidc/v3 v3.5.0
