@@ -72,9 +72,6 @@ func TestFetchAttributesFailure(t *testing.T) {
 
 	output, err := fetchAttributes(ctx, namespaces)
 
-	t.Log("output", output)
-	t.Log("err", err.Error())
-
 	if err == nil {
 		t.Error("Should throw an error")
 	}
