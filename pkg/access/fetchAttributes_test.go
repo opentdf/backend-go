@@ -22,9 +22,6 @@ func TestFetchAttributes(t *testing.T) {
 			Rule:      "rule1",
 			State:     "active",
 			Order:     []string{"value1", "value2", "value3"},
-			//GroupBy: &AttributeInstance{
-			//	// Populate the fields of AttributeInstance as needed
-			//},
 		},
 		{
 			Authority: "namespace2",
@@ -36,7 +33,15 @@ func TestFetchAttributes(t *testing.T) {
 
 	httpmock.RegisterResponder("GET", "http://localhost:65432/api/attributes/v1/attrName",
 		func(req *http.Request) (*http.Response, error) {
-			resp, err := httpmock.NewJsonResponse(200, mockDefinitions)
+			authority := req.URL.Query().Get("authority")
+
+			if authority == "namespace1" {
+				resp, err := httpmock.NewJsonResponse(200, mockDefinitions[:1])
+				return resp, err
+			}
+
+			// namespace2
+			resp, err := httpmock.NewJsonResponse(200, mockDefinitions[1:])
 			return resp, err
 		},
 	)
@@ -47,7 +52,7 @@ func TestFetchAttributes(t *testing.T) {
 		t.Error(err)
 	}
 
-	if len(output) == 0 {
+	if len(output) != len(mockDefinitions) {
 		t.Errorf("Output %v not equal to expected %v", output, mockDefinitions)
 	}
 }
