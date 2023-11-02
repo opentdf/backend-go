@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestFetchAttributes(t *testing.T) {
+func TestFetchAttributesSuccess(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
@@ -54,5 +54,32 @@ func TestFetchAttributes(t *testing.T) {
 
 	if len(output) != len(mockDefinitions) {
 		t.Errorf("Output %v not equal to expected %v", output, mockDefinitions)
+	}
+}
+
+func TestFetchAttributesFailure(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	ctx := context.Background()
+	namespaces := []string{"namespace1", "namespace2"}
+
+	httpmock.RegisterResponder("GET", "http://localhost:65432/api/attributes/v1/attrName",
+		func(req *http.Request) (*http.Response, error) {
+			return httpmock.NewStringResponse(500, ""), nil
+		},
+	)
+
+	output, err := fetchAttributes(ctx, namespaces)
+
+	t.Log("output", output)
+	t.Log("err", err.Error())
+
+	if err == nil {
+		t.Error("Should throw an error")
+	}
+
+	if len(output) != 0 {
+		t.Errorf("Output %v not equal to expected %v", len(output), 0)
 	}
 }
