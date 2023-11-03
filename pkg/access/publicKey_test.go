@@ -27,7 +27,7 @@ func (mockKey *MockRSAPublicKey) Public() *rsa.PublicKey {
 	}
 }
 
-func TestExportRsaPublicKeyAsPemStr(t *testing.T) {
+func TestExportRsaPublicKeyAsPemStrSuccess(t *testing.T) {
 	mockKey := &MockRSAPublicKey{
 		N: big.NewInt(123),
 		E: 65537,
@@ -48,7 +48,7 @@ func TestExportRsaPublicKeyAsPemStr(t *testing.T) {
 	}
 }
 
-func TestExportEcPublicKeyAsPemStr(t *testing.T) {
+func TestExportEcPublicKeyAsPemStrSuccess(t *testing.T) {
 	curve := elliptic.P256()
 	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
 	if err != nil {
@@ -69,8 +69,8 @@ func TestExportEcPublicKeyAsPemStr(t *testing.T) {
 	}
 }
 
-func TestExportCertificateAsPemStr(t *testing.T) {
-	certBytes, err := os.ReadFile("./mock-keys/cert.der")
+func TestExportCertificateAsPemStrSuccess(t *testing.T) {
+	certBytes, err := os.ReadFile("./testdata/cert.der")
 	if err != nil {
 		t.Errorf("Failed to read certificate file in test: %v", err)
 	}
@@ -99,5 +99,22 @@ func TestExportCertificateAsPemStr(t *testing.T) {
 	// Compare the decoded certificate bytes with the original mock certificate bytes
 	if !bytes.Equal(pemBlock.Bytes, certBytes) {
 		t.Error("Certificate bytes mismatch")
+	}
+}
+
+func TestExportCertificateAsPemStrFailure(t *testing.T) {
+
+}
+
+func TestError(t *testing.T) {
+	expectedResult := "certificate encode error"
+	output := Error.Error(ErrCertificateEncode)
+
+	if reflect.TypeOf(output).String() != "string" {
+		t.Error("Expected string")
+	}
+
+	if output != expectedResult {
+		t.Errorf("Output %v not equal to expected %v", output, expectedResult)
 	}
 }
