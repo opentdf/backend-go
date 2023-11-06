@@ -102,10 +102,6 @@ func TestExportCertificateAsPemStrSuccess(t *testing.T) {
 	}
 }
 
-func TestExportCertificateAsPemStrFailure(t *testing.T) {
-
-}
-
 func TestError(t *testing.T) {
 	expectedResult := "certificate encode error"
 	output := Error.Error(ErrCertificateEncode)
