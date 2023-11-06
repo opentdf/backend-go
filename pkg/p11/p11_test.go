@@ -57,6 +57,27 @@ func TestHashToPKCS11Success(t *testing.T) {
 	}
 }
 
+func TestDecryptOAEP(t *testing.T) {
+	handle1 := pkcs11.ObjectHandle(2)
+	privateKey := NewPrivateKeyRSA(handle1)
+
+	ctx := &pkcs11.Ctx{}
+	handle := pkcs11.SessionHandle(1)
+
+	session := NewSession(ctx, handle)
+
+	ciphertext := []byte("YourCiphertextDataHere")
+	label := []byte("YourLabelDataHere")
+
+	decrypted, err := DecryptOAEP(&session, &privateKey, ciphertext, crypto.SHA256, label)
+
+	t.Log(decrypted)
+
+	if err != nil {
+		t.Errorf("Error: %v", err)
+	}
+}
+
 func TestError(t *testing.T) {
 	expectedResult := "hsm decrypt error"
 	output := Error.Error(ErrHsmDecrypt)
