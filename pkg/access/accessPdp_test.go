@@ -539,3 +539,53 @@ func TestAttrDissemFailure2(t *testing.T) {
 		t.Errorf("Output %v not equal to expected %v", output, false)
 	}
 }
+
+func TestAttrDissemFailure3(t *testing.T) {
+	var entityID string = ""
+
+	testPolicy := Policy{
+		UUID: uuid.New(),
+		Body: Body{
+			DataAttributes: []Attribute{
+				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				Attribute{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
+			},
+			Dissem: []string{"email1@example.com",
+				"email2@example.com",
+				"email3@example.com"},
+		},
+	}
+
+	testClaims := ClaimsObject{
+		PublicKey:              "test-public-key",
+		ClientPublicSigningKey: "test-client-public-signing-key",
+		SchemaVersion:          "test-schema",
+		Entitlements: []Entitlement{
+			Entitlement{
+				EntityID: "email2@example.com",
+				EntityAttributes: []Attribute{
+					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+				},
+			},
+		},
+	}
+
+	testDefinitions := []attrs.AttributeDefinition{
+		attrs.AttributeDefinition{
+			Authority: "https://example.com",
+			Name:      "Test1",
+			Rule:      "allOf",
+			Order:     []string{"A", "B", "C"},
+		},
+	}
+
+	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+	if err != ErrPolicyDissemInvalid {
+		t.Errorf("Output %v not equal to expected %v", output, ErrPolicyDissemInvalid)
+	}
+	if output {
+		t.Errorf("Output %v not equal to expected %v", output, false)
+	}
+}

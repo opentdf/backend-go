@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/coreos/go-oidc/v3 v3.5.0
 	github.com/google/uuid v1.3.0
+	github.com/jarcoal/httpmock v1.3.1
 	github.com/kaitai-io/kaitai_struct_go_runtime v0.10.0
 	github.com/lestrrat-go/jwx/v2 v2.0.11
 	github.com/miekg/pkcs11 v1.1.1
