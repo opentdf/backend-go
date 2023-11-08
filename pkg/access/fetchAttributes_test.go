@@ -8,6 +8,13 @@ import (
 	"testing"
 )
 
+type WrongAttributeDefinition struct {
+	Wrong    string `json:"wrong"`
+	Type     string `json:"type"`
+	Of       string `json:"of"`
+	Response string `json:"response"`
+}
+
 func TestFetchAttributesSuccess(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -64,6 +71,41 @@ func TestFetchAttributesFailure(t *testing.T) {
 	ctx := context.Background()
 	namespaces := []string{"namespace1", "namespace2"}
 
+	mockWrongResponse := WrongAttributeDefinition{
+		Wrong:    "mock",
+		Type:     "mock",
+		Of:       "mock",
+		Response: "mock",
+	}
+
+	httpmock.RegisterResponder("GET", "http://localhost:65432/api/attributes/v1/attrName",
+		func(req *http.Request) (*http.Response, error) {
+			resp, err := httpmock.NewJsonResponse(200, mockWrongResponse)
+			return resp, err
+		},
+	)
+
+	output, err := fetchAttributes(ctx, namespaces)
+
+	t.Log(err)
+	t.Log(output)
+
+	if len(output) != 0 {
+		t.Errorf("Output %v not equal to expected %v", len(output), 0)
+	}
+
+	if err == nil {
+		t.Errorf("Error expected, but got %v", err)
+	}
+}
+
+func TestFetchAttributesFailure1(t *testing.T) {
+	httpmock.Activate()
+	defer httpmock.DeactivateAndReset()
+
+	ctx := context.Background()
+	namespaces := []string{"namespace1", "namespace2"}
+
 	httpmock.RegisterResponder("GET", "http://localhost:65432/api/attributes/v1/attrName",
 		func(req *http.Request) (*http.Response, error) {
 			return httpmock.NewStringResponse(500, ""), nil
@@ -81,7 +123,7 @@ func TestFetchAttributesFailure(t *testing.T) {
 	}
 }
 
-func TestFetchAttributesFailure1(t *testing.T) {
+func TestFetchAttributesFailure2(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
