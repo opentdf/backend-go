@@ -689,3 +689,45 @@ func TestAttrDissemFailure5(t *testing.T) {
 		t.Errorf("Expected error, but got %v", err)
 	}
 }
+
+func TestAttrDissemFailure6(t *testing.T) {
+	var entityID string = "email2@example.com"
+
+	testPolicy := Policy{
+		UUID: uuid.New(),
+		Body: Body{
+			DataAttributes: []Attribute{
+				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+			},
+			Dissem: []string{"email1@example.com",
+				"email2@example.com",
+				"email3@example.com"},
+		},
+	}
+
+	testClaims := ClaimsObject{
+		PublicKey:              "test-public-key",
+		ClientPublicSigningKey: "test-client-public-signing-key",
+		SchemaVersion:          "test-schema",
+		Entitlements: []Entitlement{
+			Entitlement{
+				EntityID: "email2@example.com",
+				EntityAttributes: []Attribute{
+					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				},
+			},
+		},
+	}
+
+	testDefinitions := []attrs.AttributeDefinition{}
+
+	output, err := canAccess(entityID, testPolicy, testClaims, testDefinitions)
+
+	if output != false {
+		t.Errorf("Expected false, but got %v", err)
+	}
+
+	if err == nil {
+		t.Errorf("Expected error, but got %v", err)
+	}
+}
