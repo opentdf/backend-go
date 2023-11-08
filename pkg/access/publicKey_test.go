@@ -14,26 +14,14 @@ import (
 	"testing"
 )
 
-// MockRSAPublicKey is a mock implementation of the rsa.PublicKey interface for testing.
-type MockRSAPublicKey struct {
-	N *big.Int
-	E int
-}
-
-func (mockKey *MockRSAPublicKey) Public() *rsa.PublicKey {
-	return &rsa.PublicKey{
-		N: mockKey.N,
-		E: mockKey.E,
-	}
-}
 
 func TestExportRsaPublicKeyAsPemStrSuccess(t *testing.T) {
-	mockKey := &MockRSAPublicKey{
+	mockKey := &rsa.PublicKey{
 		N: big.NewInt(123),
 		E: 65537,
 	}
 
-	output, err := exportRsaPublicKeyAsPemStr(mockKey.Public())
+	output, err := exportRsaPublicKeyAsPemStr(mockKey)
 
 	if err != nil {
 		t.Errorf("Expected no error, but got: %v", err)
@@ -45,6 +33,18 @@ func TestExportRsaPublicKeyAsPemStrSuccess(t *testing.T) {
 
 	if reflect.TypeOf(output).String() != "string" {
 		t.Errorf("Output %v not equal to expected %v", reflect.TypeOf(output).String(), "string")
+	}
+}
+
+func TestExportRsaPublicKeyAsPemStrFailure(t *testing.T) {
+	output, err := exportRsaPublicKeyAsPemStr(&rsa.PublicKey{})
+
+	if output != "" {
+		t.Errorf("Expected empty string, but got: %v", output)
+	}
+
+	if err == nil {
+		t.Errorf("Expected error, but got: %v", err)
 	}
 }
 
@@ -66,6 +66,18 @@ func TestExportEcPublicKeyAsPemStrSuccess(t *testing.T) {
 
 	if reflect.TypeOf(output).String() != "string" {
 		t.Errorf("Output %v not equal to expected %v", reflect.TypeOf(output).String(), "string")
+	}
+}
+
+func TestExportEcPublicKeyAsPemStrFailure(t *testing.T) {
+	output, err := exportEcPublicKeyAsPemStr(&ecdsa.PublicKey{})
+
+	if output != "" {
+		t.Errorf("Expected empty string, but got: %v", output)
+	}
+
+	if err == nil {
+		t.Errorf("Expected error, but got: %v", err)
 	}
 }
 
