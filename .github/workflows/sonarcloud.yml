@@ -56,21 +56,32 @@ jobs:
         with:
           name: code-coverage-report
 
-#      - name: 'SonarCloud Scan'
-#        uses: SonarSource/sonarcloud-github-action@master
-#        with:
-#          args: >
-#            -sonar.organization=opentdf
-#            -sonar.projectKey=opentdf_backend-go
-#            -sonar.go.coverage.reportPaths=coverage.out
-#            -sonar.go.tests.reportPaths=coverage.json
-#            -sonar.sources=.
-#            -sonar.test.exclusions=**/*_test.go,**/mock_*.go,cmd/*.go
-#            -sonar.tests=.
-#            -sonar.verbose=true
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: 'SonarCloud Scan'
+        uses: SonarSource/sonarcloud-github-action@master
+        with:
+          args: >
+            -sonar.organization=opentdf
+            -sonar.projectKey=opentdf_backend-go
+            -sonar.go.coverage.reportPaths=coverage.out
+            -sonar.go.tests.reportPaths=coverage.json
+            -sonar.sources=.
+            -sonar.test.exclusions=**/*_test.go,**/mock_*.go,cmd/*.go
+            -sonar.tests=.
+            -sonar.verbose=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  coverage:
+    name: 'Coverage'
+    runs-on: ubuntu-latest
+    needs: [ gotest ]
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
 
       - name: generate test coverage
         run: go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
@@ -84,7 +95,7 @@ jobs:
           # Configure action by specifying input parameters individually (option 2).
           # If you are using config file you shouldn't use these parameters.
           profile: cover.out
-          local-prefix: github.com/opentdf/backend-go
+          local-prefix: github.com/org/project
           threshold-file: 80
           threshold-package: 80
           threshold-total: 95
