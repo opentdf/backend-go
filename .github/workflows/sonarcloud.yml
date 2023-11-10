@@ -58,16 +58,16 @@ jobs:
 
       - name: 'SonarCloud Scan'
         uses: SonarSource/sonarcloud-github-action@v2.0.2
-        with:
-          args: >
-            -Dsonar.organization=opentdf
-            -Dsonar.projectKey=opentdf_backend-go
-            -Dsonar.go.coverage.reportPaths=coverage.out
-            -Dsonar.go.tests.reportPaths=coverage.json
-            -Dsonar.sources=.
-            -Dsonar.test.exclusions=**/*_test.go,**/mock_*.go,cmd/*.go
-            -Dsonar.tests=.
-            -Dsonar.verbose=true
+#        with:
+#          args: >
+#            -Dsonar.organization=opentdf
+#            -Dsonar.projectKey=opentdf_backend-go
+#            -Dsonar.go.coverage.reportPaths=coverage.out
+#            -Dsonar.go.tests.reportPaths=coverage.json
+#            -Dsonar.sources=.
+#            -Dsonar.test.exclusions=**/*_test.go,**/mock_*.go,cmd/*.go
+#            -Dsonar.tests=.
+#            -Dsonar.verbose=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
