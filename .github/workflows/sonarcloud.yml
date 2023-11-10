@@ -28,8 +28,8 @@ jobs:
           go-version: '${{ inputs.go-version }}'
           cache: true
 
-      - name: 'Fetch Main Branch'
-        run: git fetch origin main:main
+#      - name: 'Fetch Main Branch'
+#        run: git fetch origin main:main
 
       - name: 'Generate Golang Test Reports'
         run: go test -v -coverprofile coverage.out -json ./... | tee coverage.json && ls -l
