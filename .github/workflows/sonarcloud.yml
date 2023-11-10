@@ -62,7 +62,7 @@ jobs:
             -Dsonar.organization=opentdf
             -Dsonar.projectKey=opentdf_backend-go
             -Dsonar.go.coverage.reportPaths=coverage.out
-            -Dsonar.go.tests.reportPaths=coverage.out
+            -Dsonar.go.tests.reportPaths=coverage.json
             -Dsonar.sources=.
             -Dsonar.test.exclusions=**/*_test.go,**/mock_*.go,cmd/*.go
             -Dsonar.tests=.
