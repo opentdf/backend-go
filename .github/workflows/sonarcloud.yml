@@ -59,14 +59,14 @@ jobs:
         uses: SonarSource/sonarcloud-github-action@master
         with:
           args: >
-            -Dsonar.organization=opentdf
-            -Dsonar.projectKey=opentdf_backend-go
-            -Dsonar.go.coverage.reportPaths=coverage.out
-            -Dsonar.go.tests.reportPaths=coverage.json
-            -Dsonar.sources=.
-            -Dsonar.test.exclusions=**/*_test.go,**/mock_*.go,cmd/*.go
-            -Dsonar.tests=.
-            -Dsonar.verbose=true
+            -D sonar.organization=opentdf
+            -D sonar.projectKey=opentdf_backend-go
+            -D sonar.go.coverage.reportPaths=coverage.out
+            -D sonar.go.tests.reportPaths=coverage.json
+            -D sonar.sources=.
+            -D sonar.test.exclusions=**/*_test.go,**/mock_*.go,cmd/*.go
+            -D sonar.tests=.
+            -D sonar.verbose=true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
