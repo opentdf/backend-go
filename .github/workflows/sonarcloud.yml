@@ -75,7 +75,7 @@ jobs:
   coverage:
     name: 'Coverage'
     runs-on: ubuntu-latest
-    needs: [ gotest ]
+    needs: [sonarcloud]
     permissions:
       contents: read
 
