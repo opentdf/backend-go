@@ -34,6 +34,9 @@ jobs:
       - name: 'Generate Golang Test Reports'
         run: go test -v -coverprofile coverage.out -json ./... | tee coverage.json && ls -l
 
+      - name: 'Move files'
+        run: ls -l && mv coverage.* /pkg
+
       - name: 'SonarCloud Scan'
         uses: SonarSource/sonarcloud-github-action@v2.0.2
         env:
