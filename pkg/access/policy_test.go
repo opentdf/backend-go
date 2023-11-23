@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-func TestGetNamespacesFromAttributes(t *testing.T) {
+func TestGetNamespacesFromAttributesSuccess(t *testing.T) {
 	testBody := Body{
 		DataAttributes: []Attribute{
 			Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "TestAttr1"},
@@ -20,6 +20,24 @@ func TestGetNamespacesFromAttributes(t *testing.T) {
 	}
 	if !sameStringSlice(output, expectedResult) {
 		t.Errorf("Output %q not equal to expected %q", output, expectedResult)
+	}
+}
+
+func TestGetNamespacesFromAttributesFailure(t *testing.T) {
+	testBody := Body{
+		DataAttributes: []Attribute{
+			Attribute{URI: "", Name: "TestAttr1"},
+		},
+		Dissem: []string{},
+	}
+	output, err := getNamespacesFromAttributes(testBody)
+
+	if len(output) != 0 {
+		t.Errorf("Output %v not equal to expected %v", len(output), 0)
+	}
+
+	if err == nil {
+		t.Errorf("Should throw an error, but got %v", err)
 	}
 }
 
