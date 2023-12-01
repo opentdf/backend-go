@@ -21,7 +21,7 @@ COPY go.mod ./
 COPY go.sum ./
 COPY makefile ./
 COPY cmd/ cmd/
-COPY mock/ mock/
+COPY mocks/ mocks/
 COPY pkg/ pkg/
 # dependency
 RUN go list -m -u all
