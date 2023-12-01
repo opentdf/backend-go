@@ -9,7 +9,7 @@ _wait-for() {
   echo "[INFO] In retry loop for quickstarted opentdf backend..."
   limit=5
   for i in $(seq 1 $limit); do
-    if curl --show-error --fail --insecure http://localhost:65432/api/kas; then
+    if curl --show-error --fail --insecure http://localhost:65432/api/gokas; then
       return 0
     fi
     if [[ $i == "$limit" ]]; then
