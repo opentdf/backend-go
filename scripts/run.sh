@@ -58,6 +58,10 @@ l() {
   echo INFO "${@}"
 }
 
+w() {
+  echo WARNING "${@}"
+}
+
 # Configure and validate HOST variable
 # This should be of the form [port] or [https://host:port/], for example
 if [ -z $1]; then
@@ -78,7 +82,7 @@ export HOST
 l "Configuring ${HOST}..."
 
 if [ -z $OIDC_SERVER_URL ]; then
-  : "${OIDC_ISSUER:=${OIDC_SERVER_URL}/auth/realms/tdf}"
+  : "${OIDC_ISSUER:=${OIDC_SERVER_URL}/realms/tdf}"
 else
   : "${OIDC_ISSUER:=https://localhost:65432/auth/realms/tdf}"
 fi
@@ -123,7 +127,7 @@ if [ -z ${KAS_PRIVATE_KEY}]; then
     pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object kas-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_RSA}"
     pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object kas-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_RSA}"
   else
-    l "Creating new KAS private key - missing parameter KAS_PRIVATE_KEY"
+    w "Creating new KAS private key - missing parameter KAS_PRIVATE_KEY"
     openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pem -out kas-cert.pem -days 365
     pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object kas-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_RSA}"
     pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object kas-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_RSA}"
@@ -147,7 +151,7 @@ if [ -z ${KAS_EC_SECP256R1_PRIVATE_KEY}]; then
     # import EC cert to PKCS
     pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object kas-ec-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
   else
-    l "Creating new KAS private key - missing parameter KAS_EC_SECP256R1_PRIVATE_KEY"
+    w "Creating new KAS private key - missing parameter KAS_EC_SECP256R1_PRIVATE_KEY"
     # create EC key and cert
     openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
     # import EC key to PKCS

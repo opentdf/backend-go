@@ -9,8 +9,6 @@ load('ext://restart_process', 'docker_build_with_restart')
 
 min_tilt_version("0.31")
 
-EXTERNAL_URL = "http://localhost:65432"
-
 # Versions of things backend to pull (attributes, kas, etc)
 BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "1.4.2")
 FRONTEND_CHART_TAG = os.environ.get("FRONTEND_LATEST_VERSION", "1.4.1")
@@ -149,7 +147,7 @@ def opentdf_cluster_with_ingress(start_frontend=True):
                 "fullnameOverride": "abacus",
                 "oidc.clientId": "dcr-test",
                 "oidc.queryRealms": "tdf",
-                "oidc.serverUrl": "http://localhost:65432/auth/"
+                "oidc.serverUrl": "http://host.docker.internal:65432/auth/"
             },
             values=[TESTS_DIR + "/mocks/frontend-ingress-values.yaml"],
             resource_deps=["backend"],
