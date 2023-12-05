@@ -1,24 +1,28 @@
 # Tiltfile for development
 # https://docs.tilt.dev/api.html
 
-load("./opentdf.Tiltfile", "backend",
-     "dict_to_helm_set_list", "BACKEND_CHART_TAG", "all_secrets")
+load("ext://helm_resource", "helm_resource", "helm_repo")
 
+load("./opentdf.Tiltfile", "backend",
+     "dict_to_helm_set_list", "BACKEND_CHART_TAG", "all_secrets", "CONTAINER_REGISTRY")
+
+# backend(values=["mocks/gokas-values.yaml"])
 backend()
 
 GOKAS_DIR = os.getcwd()
-# BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "1.4.2")
 
 docker_build(
-    CONTAINER_REGISTRY + "/opentdf/gokas",
-    context=GOKAS_DIR
+  CONTAINER_REGISTRY + "/opentdf/gokas",
+  '.',
+  target='server',
 )
 
 set_values = {
-    "kas.envConfig.ecCert": all_secrets["KAS_EC_SECP256R1_CERTIFICATE"],
-    "kas.envConfig.cert": all_secrets["KAS_CERTIFICATE"],
-    "kas.envConfig.ecPrivKey": all_secrets["KAS_EC_SECP256R1_PRIVATE_KEY"],
-    "kas.envConfig.privKey": all_secrets["KAS_PRIVATE_KEY"],
+    "envConfig.ecCert": all_secrets["KAS_EC_SECP256R1_CERTIFICATE"],
+    "envConfig.cert": all_secrets["KAS_CERTIFICATE"],
+    "envConfig.ecPrivKey": all_secrets["KAS_EC_SECP256R1_PRIVATE_KEY"],
+    "envConfig.privKey": all_secrets["KAS_PRIVATE_KEY"],
+    "nameOverride": "gokas",
 }
 
 helm_resource(
@@ -28,8 +32,8 @@ helm_resource(
         CONTAINER_REGISTRY + "/opentdf/gokas",
     ],
     image_keys=[
-        ("kas.image.repo", "kas.image.tag"),
-    ]
+        ("image.repo", "image.tag"),
+    ],
     flags=[
         "--version",
         BACKEND_CHART_TAG,
@@ -38,7 +42,7 @@ helm_resource(
         "--wait",
         "--dependency-update",
     ] + dict_to_helm_set_list(set_values),
-    labels="backend",
+    labels="gokas",
     resource_deps=["attributes", "keycloak"],
 )
 

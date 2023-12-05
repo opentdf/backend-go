@@ -42,11 +42,11 @@ def dict_to_helm_set_list(dict):
     combined = dict_to_equals_list(dict)
     return prefix_list("--set", combined)
 
-docker_build(
-  CONTAINER_REGISTRY + "/opentdf/gokas",
-  '.',
-  target='server',
-)
+# docker_build(
+#   CONTAINER_REGISTRY + "/opentdf/gokas",
+#   '.',
+#   target='server',
+# )
 
 def ingress():
     helm_repo(
@@ -102,12 +102,12 @@ def backend(values=[], set={}, resource_deps=[]):
         ]
         + dict_to_helm_set_list(set_values)
         + prefix_list("-f", values),
-        image_deps=[
-            CONTAINER_REGISTRY + "/opentdf/gokas",
-        ],
-        image_keys=[
-            ("kas.image.repo", "kas.image.tag"),
-        ],
+        # image_deps=[
+        #     CONTAINER_REGISTRY + "/opentdf/gokas",
+        # ],
+        # image_keys=[
+        #     ("kas.image.repo", "kas.image.tag"),
+        # ],
         labels="opentdf",
         resource_deps=resource_deps,
     )

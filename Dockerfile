@@ -61,6 +61,6 @@ ENV PKCS11_LABEL_PUBKEY_RSA ""
 ENV PKCS11_LABEL_PUBKEY_EC ""
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 
-COPY --from=builder /build/gokas /
+COPY --from=builder /build/gokas /gokas
 COPY scripts/ /scripts/
 ENTRYPOINT ["/scripts/run.sh"]

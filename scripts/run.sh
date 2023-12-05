@@ -81,45 +81,51 @@ l "Configuring ${HOST}..."
 : "${PKCS11_LABEL_PUBKEY_RSA:=development-rsa-kas}"
 : "${PKCS11_LABEL_PUBKEY_EC:=development-ec-kas}"
 
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects ||
-  e "Unable to list objects with pkcs11-tool before init"
+
+if pkcs11-tool --module "${PKCS11_MODULE_PATH}" --show-info --list-objects; then
+  e "pkcs11-tool indicates softhsm already inited; run 'softhsm2-util --delete-token --token ${PKCS11_TOKEN_LABEL}' or similar to delete"
+fi
+l "Unable to list objects with pkcs11-tool before init"
 
 # Configure softhsm. This is used to store secrets in an HSM compatible way
 # softhsm2-util --init-token --slot 0 --label "development-token" --pin $PKCS11_PIN --so-pin $HSM_SO_PIN
-echo $PKCS11_PIN | softhsm2-util --init-token --slot "${PKCS11_SLOT_INDEX}" --label "${PKCS11_TOKEN_LABEL}" ||
+softhsm2-util --init-token --slot "${PKCS11_SLOT_INDEX}" --label "${PKCS11_TOKEN_LABEL}" --pin "${PKCS11_PIN}" --so-pin "${PKCS11_SO_PIN}" ||
   e "Unable to use softhsm to init [--slot ${PKCS11_SLOT_INDEX} --label ${PKCS11_TOKEN_LABEL}]"
+
 # verify login
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects ||
+# echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects ||
+#   e "Unable to list objects with pkcs11-tool"
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects --pin $PKCS11_PIN ||
   e "Unable to list objects with pkcs11-tool"
 
-if [ -z ${KAS_PRIVATE_KEY}]; then
+if [ -z "${KAS_PRIVATE_KEY}" ]; then
   l "Creating new KAS private key - missing parameter KAS_PRIVATE_KEY"
   openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pem -out kas-cert.pem -days 365
-  echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --id 100 --label "${PKCS11_LABEL_PUBKEY_RSA}"
-  echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-cert.pem --type cert --id 100 --label "${PKCS11_LABEL_PUBKEY_RSA}"
-elif [ -z ${KAS_CERTIFICATE}]; then
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --id 100 --label "${PKCS11_LABEL_PUBKEY_RSA}" --pin $PKCS11_PIN
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-cert.pem --type cert --id 100 --label "${PKCS11_LABEL_PUBKEY_RSA}" --pin $PKCS11_PIN
+elif [ -z "${KAS_CERTIFICATE}" ]; then
   e "Missing KAS_CERTIFICATE"
 else
   l "Importing KAS private key (RSA)"
-  echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo ${KAS_PRIVATE_KEY}) --type privkey --id 100 --label "${PKCS11_LABEL_PUBKEY_RSA}"
-  echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo ${KAS_CERTIFICATE}) --type cert --id 100 --label "${PKCS11_LABEL_PUBKEY_RSA}"
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo "${KAS_PRIVATE_KEY}") --type privkey --id 100 --label "${PKCS11_LABEL_PUBKEY_RSA}" --pin $PKCS11_PIN
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo "${KAS_CERTIFICATE}") --type cert --id 100 --label "${PKCS11_LABEL_PUBKEY_RSA}" --pin $PKCS11_PIN
 fi
 
-if [ -z ${KAS_EC_SECP256R1_PRIVATE_KEY}]; then
+if [ -z "${KAS_EC_SECP256R1_PRIVATE_KEY}" ]; then
   l "Creating new KAS private key - missing parameter KAS_EC_SECP256R1_PRIVATE_KEY"
   # create EC key and cert
   openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
   # import EC key to PKCS
-  echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}"
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}" --pin $PKCS11_PIN
   # import EC cert to PKCS
-  echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}"
-elif [ -z ${KAS_EC_SECP256R1_CERTIFICATE}]; then
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}" --pin $PKCS11_PIN
+elif [ -z "${KAS_EC_SECP256R1_CERTIFICATE}" ]; then
   e "Missing KAS_EC_SECP256R1_CERTIFICATE"
 else
   l "Importing KAS private key (EC)"
-  echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo $KAS_EC_SECP256R1_PRIVATE_KEY) --type privkey --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}"
-  echo $PKCS11_PIN | pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo $KAS_EC_SECP256R1_CERTIFICATE) --type cert --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}"
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo "$KAS_EC_SECP256R1_PRIVATE_KEY") --type privkey --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}" --pin $PKCS11_PIN
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo "$KAS_EC_SECP256R1_CERTIFICATE") --type cert --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}" --pin $PKCS11_PIN
 fi
 
 l "Starting..."
-/build/gokas
+/gokas
