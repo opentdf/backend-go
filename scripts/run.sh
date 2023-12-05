@@ -116,15 +116,15 @@ if [ -z "${KAS_EC_SECP256R1_PRIVATE_KEY}" ]; then
   # create EC key and cert
   openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
   # import EC key to PKCS
-  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}" --pin $PKCS11_PIN
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --id 200 --label "${PKCS11_LABEL_PUBKEY_EC}" --pin $PKCS11_PIN
   # import EC cert to PKCS
-  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}" --pin $PKCS11_PIN
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --id 200 --label "${PKCS11_LABEL_PUBKEY_EC}" --pin $PKCS11_PIN
 elif [ -z "${KAS_EC_SECP256R1_CERTIFICATE}" ]; then
   e "Missing KAS_EC_SECP256R1_CERTIFICATE"
 else
   l "Importing KAS private key (EC)"
-  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo "$KAS_EC_SECP256R1_PRIVATE_KEY") --type privkey --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}" --pin $PKCS11_PIN
-  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo "$KAS_EC_SECP256R1_CERTIFICATE") --type cert --id 200 --label "${PKCS11_LABEL_PUBKEY_ec}" --pin $PKCS11_PIN
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo "$KAS_EC_SECP256R1_PRIVATE_KEY") --type privkey --id 200 --label "${PKCS11_LABEL_PUBKEY_EC}" --pin $PKCS11_PIN
+  pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object <(echo "$KAS_EC_SECP256R1_CERTIFICATE") --type cert --id 200 --label "${PKCS11_LABEL_PUBKEY_EC}" --pin $PKCS11_PIN
 fi
 
 l "Starting..."
