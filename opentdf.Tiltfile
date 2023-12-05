@@ -42,11 +42,6 @@ def dict_to_helm_set_list(dict):
     combined = dict_to_equals_list(dict)
     return prefix_list("--set", combined)
 
-# docker_build(
-#   CONTAINER_REGISTRY + "/opentdf/gokas",
-#   '.',
-#   target='server',
-# )
 
 def ingress():
     helm_repo(
@@ -76,7 +71,7 @@ def ingress():
 # values: list of values files
 # set: dictionary of value_name: value pairs
 # extra_helm_parameters: only valid when devmode=False; passed to underlying `helm update` command
-def backend(values=[], set={}, resource_deps=[]):
+def backend(values=[], set={}, resource_deps=[], gokas=True):
     set_values = {
         "entity-resolution.secret.keycloak.clientSecret": "123-456",
         "secrets.opaPolicyPullSecret": opaPolicyPullSecret,
@@ -102,12 +97,12 @@ def backend(values=[], set={}, resource_deps=[]):
         ]
         + dict_to_helm_set_list(set_values)
         + prefix_list("-f", values),
-        # image_deps=[
-        #     CONTAINER_REGISTRY + "/opentdf/gokas",
-        # ],
-        # image_keys=[
-        #     ("kas.image.repo", "kas.image.tag"),
-        # ],
+        image_deps=[
+            CONTAINER_REGISTRY + "/opentdf/gokas",
+        ] if gokas else [],
+        image_keys=[
+            ("kas.image.repo", "kas.image.tag"),
+        ] if gokas else [],
         labels="opentdf",
         resource_deps=resource_deps,
     )
@@ -131,8 +126,15 @@ def frontend(values=[], set={}, resource_deps=[]):
     )
 
 
-def opentdf_cluster_with_ingress(start_frontend=True):
+def opentdf_cluster_with_ingress(start_frontend=True, values=[], gokas=True):
     ingress()
+
+    if gokas:
+        docker_build(
+          CONTAINER_REGISTRY + "/opentdf/gokas",
+          '.',
+          target='server',
+        )
 
     backend(
         set={
@@ -140,6 +142,8 @@ def opentdf_cluster_with_ingress(start_frontend=True):
             for s in ["attributes", "entitlements", "kas", "keycloak", "entitlement-store"]
         },
         resource_deps=["ingress-nginx"],
+        values=values,
+        gokas=gokas
     )
 
     if start_frontend:
