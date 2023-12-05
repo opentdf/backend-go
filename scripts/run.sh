@@ -1,4 +1,4 @@
-#! /bin/bash
+#!/usr/bin/env bash
 # Use ./scripts/run.sh [host]
 # Parameters:
 #   Optional parameter: port or host to expose. Defaults to 8000
@@ -64,7 +64,7 @@ w() {
 
 # Configure and validate HOST variable
 # This should be of the form [port] or [https://host:port/], for example
-if [ -z $1]; then
+if [ -z "$1" ]; then
   HOST=https://localhost:8000/
 elif [[ $1 == *" "* ]]; then
   e "Invalid hostname: [$1]"
@@ -81,7 +81,7 @@ export HOST
 
 l "Configuring ${HOST}..."
 
-if [ -z $OIDC_SERVER_URL ]; then
+if [ -z "$OIDC_SERVER_URL" ]; then
   : "${OIDC_ISSUER:=${OIDC_SERVER_URL}/realms/tdf}"
 else
   : "${OIDC_ISSUER:=https://localhost:65432/auth/realms/tdf}"
@@ -107,8 +107,11 @@ fi
 export OIDC_ISSUER
 l "{host: '${HOST}', issuer: '${OIDC_ISSUER}', slot: ${PKCS11_SLOT_INDEX}, tokenLabel: '${PKCS11_TOKEN_LABEL}', modulePath: '${PKCS11_MODULE_PATH}'}"
 
-pkcs11-tool --module "${PKCS11_MODULE_PATH}" --show-info --list-objects && e "pkcs11-tool indicates softhsm already inited; run 'softhsm2-util --delete-token --token ${PLCS11_TOKEN_LABEL}' or similar to delete" ||
-  l "Unable to list objects with pkcs11-tool before init"
+if pkcs11-tool --module "${PKCS11_MODULE_PATH}" --show-info --list-objects; then
+  e "pkcs11-tool indicates softhsm already inited; run 'softhsm2-util --delete-token --token ${PKCS11_TOKEN_LABEL}' or similar to delete"
+fi
+l "Unable to list objects with pkcs11-tool before init"
+  
 
 # Configure softhsm. This is used to store secrets in an HSM compatible way
 # softhsm2-util --init-token --slot 0 --label "development-token" --pin $PKCS11_PIN --so-pin $HSM_SO_PIN
@@ -118,7 +121,7 @@ softhsm2-util --init-token --slot "${PKCS11_SLOT_INDEX}" --label "${PKCS11_TOKEN
 pkcs11-tool --module "${PKCS11_MODULE_PATH}" --show-info --list-objects ||
   e "Unable to list objects with pkcs11-tool"
 
-if [ -z ${KAS_PRIVATE_KEY}]; then
+if [ -z "${KAS_PRIVATE_KEY}" ]; then
   if [ -f kas-private.pem ]; then
     if [ ! -f kas-cert.pem ]; then
       e "Missing kas-cert.pem"
@@ -132,15 +135,15 @@ if [ -z ${KAS_PRIVATE_KEY}]; then
     pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object kas-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_RSA}"
     pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object kas-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_RSA}"
   fi
-elif [ -z ${KAS_CERTIFICATE}]; then
+elif [ -z "${KAS_CERTIFICATE}" ]; then
   e "Missing KAS_CERTIFICATE"
 else
   l "Importing KAS private key (RSA)"
-  pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object <(echo ${KAS_PRIVATE_KEY}) --type privkey --label "${PKCS11_LABEL_PUBKEY_RSA}"
-  pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object <(echo ${KAS_CERTIFICATE}) --type cert --label "${PKCS11_LABEL_PUBKEY_RSA}"
+  pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object <(echo "${KAS_PRIVATE_KEY}") --type privkey --label "${PKCS11_LABEL_PUBKEY_RSA}"
+  pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object <(echo "${KAS_CERTIFICATE}") --type cert --label "${PKCS11_LABEL_PUBKEY_RSA}"
 fi
 
-if [ -z ${KAS_EC_SECP256R1_PRIVATE_KEY}]; then
+if [ -z "${KAS_EC_SECP256R1_PRIVATE_KEY}" ]; then
   if [ -f kas-ec-private.pem ]; then
     if [ ! -f kas-ec-cert.pem ]; then
       e "Missing kas-ec-cert.pem"
@@ -159,12 +162,12 @@ if [ -z ${KAS_EC_SECP256R1_PRIVATE_KEY}]; then
     # import EC cert to PKCS
     pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object kas-ec-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
   fi
-elif [ -z ${KAS_EC_SECP256R1_CERTIFICATE}]; then
+elif [ -z "${KAS_EC_SECP256R1_CERTIFICATE}" ]; then
   e "Missing KAS_EC_SECP256R1_CERTIFICATE"
 else
   l "Importing KAS private key (EC)"
-  pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object <(echo $KAS_EC_SECP256R1_PRIVATE_KEY) --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}"
-  pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object <(echo $KAS_EC_SECP256R1_CERTIFICATE) --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
+  pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object <(echo "$KAS_EC_SECP256R1_PRIVATE_KEY") --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}"
+  pkcs11-tool --pin "${PKCS11_PIN}" --module "${PKCS11_MODULE_PATH}" --write-object <(echo "$KAS_EC_SECP256R1_CERTIFICATE") --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
 fi
 
 l "Starting..."

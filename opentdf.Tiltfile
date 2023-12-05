@@ -9,8 +9,10 @@ load('ext://restart_process', 'docker_build_with_restart')
 
 min_tilt_version("0.31")
 
+EXTERNAL_URL = "http://localhost:65432"
+
 # Versions of things backend to pull (attributes, kas, etc)
-BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "1.4.2")
+BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "1.5.0")
 FRONTEND_CHART_TAG = os.environ.get("FRONTEND_LATEST_VERSION", "1.4.1")
 
 CONTAINER_REGISTRY = os.environ.get("CONTAINER_REGISTRY", "ghcr.io")
@@ -41,9 +43,9 @@ def dict_to_helm_set_list(dict):
     return prefix_list("--set", combined)
 
 docker_build(
-  CONTAINER_REGISTRY + "/opentdf/gokas",
-  '.',
-  target='server',
+  "gokas",
+  context='.',
+  target='server-debug',
 )
 
 def ingress():
@@ -84,6 +86,7 @@ def backend(values=[], set={}, resource_deps=[]):
         "kas.envConfig.cert": all_secrets["KAS_CERTIFICATE"],
         "kas.envConfig.ecPrivKey": all_secrets["KAS_EC_SECP256R1_PRIVATE_KEY"],
         "kas.envConfig.privKey": all_secrets["KAS_PRIVATE_KEY"],
+        "kas.image.repo": "gokas",
     }
     set_values.update(set)
 
@@ -101,7 +104,7 @@ def backend(values=[], set={}, resource_deps=[]):
         + dict_to_helm_set_list(set_values)
         + prefix_list("-f", values),
         image_deps=[
-            CONTAINER_REGISTRY + "/opentdf/gokas",
+            "gokas",
         ],
         image_keys=[
             ("kas.image.repo", "kas.image.tag"),
@@ -152,4 +155,3 @@ def opentdf_cluster_with_ingress(start_frontend=True):
             values=[TESTS_DIR + "/mocks/frontend-ingress-values.yaml"],
             resource_deps=["backend"],
         )
- 
