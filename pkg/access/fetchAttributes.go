@@ -18,7 +18,7 @@ const (
 	ErrAttributeDefinitionsServiceCall = Error("attribute definitions service call unexpected")
 )
 
-attributeHost, attrHostDefined := os.LookupEnv("ATTR_AUTHORITY_HOST")
+var attributeHost, attrHostDefined = os.LookupEnv("ATTR_AUTHORITY_HOST")
 if !attrHostDefined {
 	attributeHost = "http://attributes:4020"
 }

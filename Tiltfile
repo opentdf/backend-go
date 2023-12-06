@@ -5,8 +5,6 @@ load("ext://helm_resource", "helm_resource", "helm_repo")
 
 load("./opentdf.Tiltfile", "opentdf_cluster_with_ingress", "seperate_gokas")
 
-os.environ.get("GOKAS_SEPARATE")
-
 GOKAS_SEPARATE=os.environ.get("GOKAS_SEPARATE", True)
 
 if not GOKAS_SEPARATE:
