@@ -159,3 +159,38 @@ def opentdf_cluster_with_ingress(start_frontend=True, values=[], gokas=True):
             resource_deps=["backend"],
         )
  
+def seperate_gokas():
+    docker_build(
+    CONTAINER_REGISTRY + "/opentdf/gokas",
+    '.',
+    target='server',
+    )
+
+    set_values = {
+        "envConfig.ecCert": all_secrets["KAS_EC_SECP256R1_CERTIFICATE"],
+        "envConfig.cert": all_secrets["KAS_CERTIFICATE"],
+        "envConfig.ecPrivKey": all_secrets["KAS_EC_SECP256R1_PRIVATE_KEY"],
+        "envConfig.privKey": all_secrets["KAS_PRIVATE_KEY"],
+        "nameOverride": "gokas",
+    }
+
+    helm_resource(
+        "gokas",
+        "oci://ghcr.io/opentdf/charts/kas",
+        image_deps=[
+            CONTAINER_REGISTRY + "/opentdf/gokas",
+        ],
+        image_keys=[
+            ("image.repo", "image.tag"),
+        ],
+        flags=[
+            "--version",
+            BACKEND_CHART_TAG,
+            "-f",
+            "mocks/gokas-values.yaml",
+            "--wait",
+            "--dependency-update",
+        ] + dict_to_helm_set_list(set_values),
+        labels="gokas",
+        resource_deps=["attributes", "keycloak"],
+    )

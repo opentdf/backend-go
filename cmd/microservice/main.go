@@ -21,7 +21,6 @@ import (
 	"github.com/opentdf/backend-go/internal/version"
 	"github.com/opentdf/backend-go/pkg/access"
 	"github.com/opentdf/backend-go/pkg/p11"
-	"golang.org/x/oauth2"
 )
 
 const (
@@ -59,23 +58,12 @@ func main() {
 	// OIDC
 	// XXX(dmihalcik) Why is this here? This should be handled in access-pdp
 	// AFAICT this is unused
-	oidcIssuer := os.Getenv("OIDC_ISSUER")
+	oidcIssuer := os.Getenv("OIDC_SERVER_URL")
 	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {
 		// handle error
 		log.Panic(err)
 	}
-	// Configure an OpenID Connect aware OAuth2 client.
-	oauth2Config := oauth2.Config{
-		ClientID:     "",
-		ClientSecret: "",
-		RedirectURL:  "",
-		// Discovery returns the OAuth2 endpoints.
-		Endpoint: provider.Endpoint(),
-		// "openid" is a required scope for OpenID Connect flows.
-		Scopes: []string{oidc.ScopeOpenID},
-	}
-	log.Println(oauth2Config)
 	oidcConfig := oidc.Config{
 		ClientID:                   "",
 		SupportedSigningAlgs:       nil,

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"log"
 	"net/http"
 
@@ -17,8 +18,10 @@ const (
 	ErrAttributeDefinitionsServiceCall = Error("attribute definitions service call unexpected")
 )
 
-// const attributeHost = "http://attributes:4020"
-const attributeHost = "http://localhost:65432/api/attributes"
+attributeHost, attrHostDefined := os.LookupEnv("ATTR_AUTHORITY_HOST")
+if !attrHostDefined {
+	attributeHost = "http://attributes:4020"
+}
 
 func fetchAttributes(ctx context.Context, namespaces []string) ([]attributes.AttributeDefinition, error) {
 	var definitions []attributes.AttributeDefinition
