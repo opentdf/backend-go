@@ -54,6 +54,15 @@
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPTS_DIR}/../" >/dev/null && pwd | sed 's:/*$::')"
 
+set -x
+uname -m
+arch
+whoami
+ls -l "/etc/softhsm/secrets"
+cat "/etc/softhsm/softhsm2.conf"
+ls -l "${PROJECT_ROOT}/secrets"
+find "${PROJECT_ROOT}/secrets"
+
 e() {
   echo ERROR "${@}"
   exit 1
