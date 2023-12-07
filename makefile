@@ -1,4 +1,7 @@
-APP_NAME = "go-kas"
+.PHONY: all clean
+
+all: gokas
+
 GO_MOD_LINE = $(shell head -n 1 go.mod | cut -c 8-)
 GO_MOD_NAME = ${GO_MOD_LINE}
 CONF_PATH = ${GO_MOD_NAME}/internal/conf
@@ -7,10 +10,10 @@ BUILD_TIME = $(shell date +'%Y-%m-%d_%T')
 SHA1 = $(shell git rev-parse HEAD)
 MAIN_FILE = cmd/microservice/main.go
 
-BUILD_DIR=build
-update-doc: 
-	swag init -d api
-build:
-	go build -ldflags '-X ${CONF_PATH}.Version=${VERSION} -X ${CONF_PATH}.Sha1=${SHA1} -X ${CONF_PATH}.BuildTime=${BUILD_TIME}' -o ${BUILD_DIR}/${APP_NAME} ${MAIN_FILE}
+# TODO: Fix swagger generation
+# update-doc: 
+# 	swag init -d api
+gokas:
+	go build -ldflags '-X ${CONF_PATH}.Version=${VERSION} -X ${CONF_PATH}.Sha1=${SHA1} -X ${CONF_PATH}.BuildTime=${BUILD_TIME}' -o gokas ${MAIN_FILE}
 clean:
-	rm -rf ${BUILD_DIR}
+	rm -f gokas
