@@ -1,4 +1,4 @@
-.PHONY: all clean
+.PHONY: all clean test
 
 all: gokas
 
@@ -17,3 +17,6 @@ gokas:
 	go build -ldflags '-X ${CONF_PATH}.Version=${VERSION} -X ${CONF_PATH}.Sha1=${SHA1} -X ${CONF_PATH}.BuildTime=${BUILD_TIME}' -o gokas ${MAIN_FILE}
 clean:
 	rm -f gokas
+test: gokas
+	go vet ./...
+	go test -bench=. -benchmem ./...

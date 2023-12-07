@@ -21,16 +21,11 @@ COPY go.mod ./
 COPY go.sum ./
 COPY makefile ./
 COPY cmd/ cmd/
+COPY internal/ internal/
 COPY mocks/ mocks/
 COPY pkg/ pkg/
-# dependency
 RUN go list -m -u all
-#  static analysis
-RUN go vet ./...
-# test and benchmark
-RUN go test -bench=. -benchmem ./...
-# race condition
-RUN make gokas
+RUN make test
 
 # server-debug - root
 FROM ubuntu:latest as server-debug
