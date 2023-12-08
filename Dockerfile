@@ -22,7 +22,6 @@ COPY go.sum ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
-COPY mocks/ mocks/
 COPY pkg/ pkg/
 RUN go list -m -u all
 RUN make test
@@ -33,6 +32,10 @@ ENV SERVICE "default"
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 COPY --from=builder /build/gokas /
 COPY scripts/ scripts/
+COPY softhsm2-debug.conf /etc/softhsm/softhsm2.conf
+RUN chmod +x /etc/softhsm
+RUN mkdir -p /secrets
+RUN chown 10001 /secrets
 ENTRYPOINT ["/scripts/run.sh"]
 
 # server - production
@@ -59,4 +62,8 @@ RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 
 COPY --from=builder /build/gokas /
 COPY scripts/ /scripts/
+COPY softhsm2-prod.conf /etc/softhsm/softhsm2.conf
+RUN chmod +x /etc/softhsm
+RUN mkdir -p /secrets
+RUN chown 10001 /secrets
 ENTRYPOINT ["/scripts/run.sh"]

@@ -50,7 +50,7 @@
 #   LEGACY_NANOTDF_IV
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPTS_DIR}/../" >/dev/null && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPTS_DIR}/../" >/dev/null && pwd | sed 's:/*$::')"
 
 e() {
   echo ERROR "${@}"
@@ -107,11 +107,11 @@ else
   exit 1
 fi
 
-MODULE_ARG="--allow-sw"
+MODULE_ARGS=("--allow-sw")
 
 if [ -f "${PKCS11_MODULE_PATH}" ]; then
   l "Using PKCS11 module ${PKCS11_MODULE_PATH}"
-  MODULE_ARG="--module=${PKCS11_MODULE_PATH}"
+  MODULE_ARGS=(--module "${PKCS11_MODULE_PATH}")
 else
   l "Using PKCS11 with default --allow-sw"
 fi
@@ -119,24 +119,26 @@ fi
 export OIDC_ISSUER
 l "{host: '${HOST}', issuer: '${OIDC_ISSUER}', slot: ${PKCS11_SLOT_INDEX}, tokenLabel: '${PKCS11_TOKEN_LABEL}', modulePath: '${PKCS11_MODULE_PATH}'}"
 
-if pkcs11-tool "${MODULE_ARG}" --show-info --list-objects; then
+mkdir -p "${PROJECT_ROOT}/secrets/tokens"
+
+if pkcs11-tool "${MODULE_ARGS[@]}" --show-info --list-objects; then
   e "pkcs11-tool indicates softhsm already inited; run 'softhsm2-util --delete-token --token ${PKCS11_TOKEN_LABEL}' or similar to delete"
 fi
 l "Unable to list objects with pkcs11-tool before init"
 
 # Configure softhsm. This is used to store secrets in an HSM compatible way
 # softhsm2-util --init-token --slot 0 --label "development-token" --pin $PKCS11_PIN --so-pin $HSM_SO_PIN
-softhsm2-util --init-token --slot="${PKCS11_SLOT_INDEX}" --label="${PKCS11_TOKEN_LABEL}" --pin="${PKCS11_PIN}" --so-pin="${PKCS11_SO_PIN}" ||
+softhsm2-util --init-token --slot "${PKCS11_SLOT_INDEX}" --label "${PKCS11_TOKEN_LABEL}" --pin "${PKCS11_PIN}" --so-pin "${PKCS11_SO_PIN}" ||
   e "Unable to use softhsm to init [--slot ${PKCS11_SLOT_INDEX} --label ${PKCS11_TOKEN_LABEL}]"
 
 # verify login
-pkcs11-tool "${MODULE_ARG}" --show-info --list-objects ||
+pkcs11-tool "${MODULE_ARGS[@]}" --show-info --list-objects ||
   e "Unable to list objects with pkcs11-tool; continuing"
 
 
 
 
-ptool=(pkcs11-tool "${MODULE_ARG}" --login --pin="${PKCS11_PIN}")
+ptool=(pkcs11-tool "${MODULE_ARGS[@]}" --login --pin "${PKCS11_PIN}")
 
 if [ -z "${KAS_PRIVATE_KEY}" ]; then
   if [ -f kas-private.pem ]; then
