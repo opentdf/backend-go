@@ -5,7 +5,7 @@
 #
 # Environment variables:
 #   OIDC_ISSUER
-#     - 
+#     -
 #   PKCS11_PIN
 #     - SECRET
 #     - local PIN for pkcs11. will be generated if not present
@@ -98,9 +98,9 @@ fi
 : "${PKCS11_LABEL_PUBKEY_RSA:=development-rsa-kas}"
 : "${PKCS11_LABEL_PUBKEY_EC:=development-ec-kas}"
 
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+if [[ $OSTYPE == "linux-gnu"* ]]; then
   : "${PKCS11_MODULE_PATH:=/lib/softhsm/libsofthsm2.so}"
-elif [[ "$OSTYPE" == "darwin"* ]]; then
+elif [[ $OSTYPE == "darwin"* ]]; then
   : "${PKCS11_MODULE_PATH:=$(brew --prefix)/lib/softhsm/libsofthsm2.so}"
 else
   monolog ERROR "Unknown OS [${OSTYPE}]"
@@ -135,9 +135,6 @@ softhsm2-util --init-token --slot "${PKCS11_SLOT_INDEX}" --label "${PKCS11_TOKEN
 pkcs11-tool "${MODULE_ARGS[@]}" --show-info --list-objects ||
   e "Unable to list objects with pkcs11-tool; continuing"
 
-
-
-
 ptool=(pkcs11-tool "${MODULE_ARGS[@]}" --login --pin "${PKCS11_PIN}")
 
 if [ -z "${KAS_PRIVATE_KEY}" ]; then
@@ -147,12 +144,12 @@ if [ -z "${KAS_PRIVATE_KEY}" ]; then
     fi
     l "Importing KAS private key from files kas-{cert,private}.pem"
     "${ptool[@]}" --write-object kas-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_RSA}"
-    "${ptool[@]}" --write-object kas-cert.pem    --type cert    --label "${PKCS11_LABEL_PUBKEY_RSA}"
+    "${ptool[@]}" --write-object kas-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_RSA}"
   else
     w "Creating new KAS private key - missing parameter KAS_PRIVATE_KEY"
     openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pem -out kas-cert.pem -days 365
     "${ptool[@]}" --write-object kas-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_RSA}"
-    "${ptool[@]}" --write-object kas-cert.pem    --type cert    --label "${PKCS11_LABEL_PUBKEY_RSA}"
+    "${ptool[@]}" --write-object kas-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_RSA}"
   fi
 elif [ -z "${KAS_CERTIFICATE}" ]; then
   e "Missing KAS_CERTIFICATE"
