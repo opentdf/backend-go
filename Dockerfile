@@ -5,59 +5,49 @@ ARG GO_VERSION=latest
 # builder - executable for deployment
 # reference https://hub.docker.com/_/golang
 FROM golang:$GO_VERSION as builder
-# reference https://medium.com/@lizrice/non-privileged-containers-based-on-the-scratch-image-a80105d6d341
-RUN useradd -u 10001 scratchuser
 WORKDIR /build/
-COPY . ./
+COPY go.mod ./
+COPY go.sum ./
+COPY makefile ./
 COPY cmd/ cmd/
+COPY internal/ internal/
 COPY pkg/ pkg/
-RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./...
+RUN make gokas
 
 # tester
 FROM golang:$GO_VERSION as tester
 WORKDIR /test/
-COPY . ./
+COPY go.mod ./
+COPY go.sum ./
+COPY makefile ./
 COPY cmd/ cmd/
+COPY internal/ internal/
 COPY pkg/ pkg/
-# dependency
 RUN go list -m -u all
-#  static analysis
-RUN go vet ./...
-# test and benchmark
-RUN go test -bench=. -benchmem ./...
-# race condition
-RUN CGO_ENABLED=1 GOOS=linux go build -v -a -race -installsuffix cgo -o . ./...
+RUN make test
 
 # server-debug - root
 FROM ubuntu:latest as server-debug
-EXPOSE 8080
-ENTRYPOINT ["/microservice"]
 ENV SERVICE "default"
-COPY --from=builder /build/microservice /
+RUN apt-get update -y && apt-get install -y softhsm opensc openssl
+COPY --from=builder /build/gokas /
+COPY scripts/ scripts/
+COPY softhsm2-debug.conf /etc/softhsm/softhsm2.conf
+RUN chmod +x /etc/softhsm
+RUN mkdir -p /secrets
+RUN chown 10001 /secrets
+ENTRYPOINT ["/scripts/run.sh"]
 
 # server - production
-FROM scratch as server
-USER scratchuser
-EXPOSE 8080
-ENTRYPOINT ["/microservice"]
+FROM ubuntu:latest as server
 ENV SERVICE "default"
 # Server
 ENV SERVER_ROOT_PATH "/"
 ENV SERVER_PORT "4020"
 ENV SERVER_PUBLIC_NAME ""
 ENV SERVER_LOG_LEVEL "INFO"
-# Postgres
-ENV POSTGRES_HOST ""
-ENV POSTGRES_PORT "5432"
-ENV POSTGRES_USER ""
-ENV POSTGRES_PASSWORD ""
-ENV POSTGRES_DATABASE ""
-ENV POSTGRES_SCHEMA "tdf_attribute"
-# OIDC
-ENV OIDC_CLIENT_ID ""
-ENV OIDC_CLIENT_SECRET ""
-ENV OIDC_REALM ""
 ## trailing / is required
+ENV OIDC_ISSUER ""
 ENV OIDC_SERVER_URL ""
 ENV OIDC_AUTHORIZATION_URL ""
 ENV OIDC_TOKEN_URL ""
@@ -68,5 +58,12 @@ ENV PKCS11_PIN ""
 ENV PKCS11_SLOT_INDEX ""
 ENV PKCS11_LABEL_PUBKEY_RSA ""
 ENV PKCS11_LABEL_PUBKEY_EC ""
-COPY --from=builder /build/microservice /
-COPY --from=builder /etc/passwd /etc/passwd
+RUN apt-get update -y && apt-get install -y softhsm opensc openssl
+
+COPY --from=builder /build/gokas /
+COPY scripts/ /scripts/
+COPY softhsm2-prod.conf /etc/softhsm/softhsm2.conf
+RUN chmod +x /etc/softhsm
+RUN mkdir -p /secrets
+RUN chown 10001 /secrets
+ENTRYPOINT ["/scripts/run.sh"]
