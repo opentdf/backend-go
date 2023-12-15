@@ -1,14 +1,11 @@
 package access
 
 import (
-	"context"
 	"crypto"
 	"crypto/x509"
 	b64 "encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -49,12 +46,14 @@ type customClaimsHeader struct {
 
 // Handler decrypts and encrypts the symmetric data key
 func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
-	log.Println("REWRAP")
-	log.Printf("headers %s", r.Header)
-	log.Printf("body %s", r.Body)
-	log.Printf("ContentLength %d", r.ContentLength)
+	context := r.Context()
+	log := p.Logger
+	log.DebugContext(context, "REWRAP", "headers", r.Header, "body", r.Body, "ContentLength", r.ContentLength)
+
 	// preflight
 	if r.ContentLength == 0 {
+		// TODO: What is this doing here?
+		// If there is an empty body, should we return 400?
 		return
 	}
 
@@ -62,53 +61,42 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	// Check if Authorization header is present
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		w.WriteHeader(http.StatusUnauthorized)
-		_, err := fmt.Fprint(w, "Missing Authorization header")
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		log.InfoContext(context, "no authorization header")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	// Extract OIDC token from the Authorization header
 	oidcRequestToken := strings.TrimPrefix(authHeader, "Bearer ")
 	if oidcRequestToken == authHeader {
-		w.WriteHeader(http.StatusBadRequest)
-		_, err := fmt.Fprint(w, "Invalid Authorization header format")
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		log.InfoContext(context, "bearer token missing prefix")
+		http.Error(w, "invalid authorization header format", http.StatusBadRequest)
 		return
 	}
-
-	log.Println(oidcRequestToken)
+	log.DebugContext(context, "not a 401, probably", "oidcRequestToken", oidcRequestToken)
 
 	// Parse and verify ID Token payload.
-	idToken, err := p.OIDCVerifier.Verify(context.Background(), oidcRequestToken)
+	idToken, err := p.OIDCVerifier.Verify(context, oidcRequestToken)
 	if err != nil {
-		log.Panic(err)
+		http.Error(w, "forbidden", http.StatusBadRequest)
+		log.WarnContext(context, "Unable to verify", "err", err)
 		return
 	}
 
 	if !strings.HasPrefix(os.Getenv("OIDC_ISSUER"), idToken.Issuer) {
-		w.WriteHeader(http.StatusForbidden)
-		_, err := fmt.Fprint(w, "Invalid token issuer")
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		http.Error(w, "forbidden", http.StatusForbidden)
+		log.WarnContext(context, "Invalid token issuer", "issuer", idToken.Issuer)
 		return
 	}
 
 	// Extract custom claims
 	var claims customClaimsHeader
 	if err := idToken.Claims(&claims); err != nil {
-		log.Panic(err)
+		http.Error(w, "forbidden", http.StatusForbidden)
+		log.WarnContext(context, "unable to load claims", "err", err)
 		return
 	}
-	log.Println(claims)
+	log.DebugContext(context, "verified", "claims", claims)
 
 	//////////////// DECODE REQUEST BODY /////////////////////
 
@@ -116,41 +104,37 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	var rewrapRequest RewrapRequest
 	err = decoder.Decode(&rewrapRequest)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		http.Error(w, "bad request", http.StatusBadRequest)
+		log.WarnContext(context, "unable decode rewrap request", "err", err)
 		return
 	}
 	requestToken, err := jwt.ParseSigned(rewrapRequest.SignedRequestToken)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		http.Error(w, "bad request", http.StatusBadRequest)
+		log.WarnContext(context, "unable parse request", "err", err)
 		return
 	}
 	var jwtClaimsBody jwt.Claims
 	var bodyClaims customClaimsBody
 	err = requestToken.UnsafeClaimsWithoutVerification(&jwtClaimsBody, &bodyClaims)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		http.Error(w, "bad request", http.StatusBadRequest)
+		log.WarnContext(context, "unable decode request", "err", err)
 		return
 	}
-	log.Println(bodyClaims.RequestBody)
+	log.DebugContext(context, "okay now we can check", "bodyClaims.RequestBody", bodyClaims.RequestBody)
 	decoder = json.NewDecoder(strings.NewReader(bodyClaims.RequestBody))
 	var requestBody RequestBody
 	err = decoder.Decode(&requestBody)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		http.Error(w, "bad request", http.StatusBadRequest)
+		log.WarnContext(context, "unable decode request body", "err", err)
 		return
 	}
 
 	if !strings.HasPrefix(os.Getenv("OIDC_ISSUER"), requestBody.KeyAccess.URL) {
-		w.WriteHeader(http.StatusForbidden)
-		_, err := fmt.Fprint(w, "Invalid key access url")
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		http.Error(w, "forbidden", http.StatusForbidden)
+		log.WarnContext(context, "invalid key access url", "keyAccessURL", requestBody.KeyAccess.URL)
 		return
 	}
 
@@ -161,74 +145,74 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if requestBody.Algorithm == "ec:secp256r1" {
-		log.Fatal("Nano not implemented yet")
-		// return _nano_tdf_rewrap(requestBody, r.Header, claims)
+		http.Error(w, "Unsupported Algorithm", http.StatusBadRequest)
+		log.WarnContext(context, "Nano not implemented yet")
+		return
 	}
 
 	///////////////////// EXTRACT POLICY /////////////////////
-	log.Println(requestBody.Policy)
+	log.DebugContext(context, "extracting policy", "requestBody.policy", requestBody.Policy)
 	// base 64 decode
 	sDecPolicy, _ := b64.StdEncoding.DecodeString(requestBody.Policy)
 	decoder = json.NewDecoder(strings.NewReader(string(sDecPolicy)))
 	var policy Policy
 	err = decoder.Decode(&policy)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		http.Error(w, "Invalid policy", http.StatusBadRequest)
+		log.WarnContext(context, "unable to decode policy", "err", err)
 		return
 	}
 
 	///////////////////// RETRIEVE ATTR DEFS /////////////////////
 	namespaces, err := getNamespacesFromAttributes(policy.Body)
 	if err != nil {
-		// logger.Errorf("Could not get namespaces from policy! Error was %s", err)
-		log.Printf("Could not get namespaces from policy! Error was %s", err)
-		w.WriteHeader(http.StatusForbidden)
+		http.Error(w, "Access Denied", http.StatusForbidden)
+		log.WarnContext(context, "Could not get namespaces from policy!", "err", err)
 		return
 	}
 
 	// this part goes in the plugin?
-	log.Println("Fetching attributes")
-	definitions, err := fetchAttributes(r.Context(), namespaces)
+	log.DebugContext(context, "Fetching attributes")
+	definitions, err := fetchAttributes(context, *log, namespaces)
 	if err != nil {
 		// logger.Errorf("Could not fetch attribute definitions from attributes service! Error was %s", err)
-		log.Printf("Could not fetch attribute definitions from attributes service! Error was %s", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		log.ErrorContext(context, "Could not fetch attribute definitions from attributes service!", "err", err)
+		http.Error(w, "attribute server request failure", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("%+v", definitions)
+	log.DebugContext(context, "fetch attributes", "definitions", definitions)
 
 	///////////////////// PERFORM ACCESS DECISION /////////////////////
 
-	access, err := canAccess(claims.EntityID, policy, claims.TDFClaims, definitions)
+	access, err := canAccess(&context, log, claims.EntityID, policy, claims.TDFClaims, definitions)
 
 	if err != nil {
 		// logger.Errorf("Could not perform access decision! Error was %s", err)
-		log.Printf("Could not perform access decision! Error was %s", err)
-		w.WriteHeader(http.StatusForbidden)
+		log.WarnContext(context, "Could not perform access decision!", "err", err)
+		http.Error(w, "Access Denied", http.StatusForbidden)
 		return
 	}
 
 	if !access {
-		log.Println("not authorized")
+		log.WarnContext(context, "Access Denied; no reason given")
 		http.Error(w, "Access Denied", http.StatusForbidden)
 		return
 	}
 
 	/////////////////////EXTRACT CLIENT PUBKEY /////////////////////
-	log.Println(requestBody.ClientPublicKey)
+	log.DebugContext(context, "extract public key", "requestBody.ClientPublicKey", requestBody.ClientPublicKey)
 
 	// Decode PEM entity public key
 	block, _ := pem.Decode([]byte(requestBody.ClientPublicKey))
 	if block == nil {
-		// FIXME handle error
-		log.Panic("err missing clientPublicKey")
+		log.WarnContext(context, "missing clientPublicKey")
+		http.Error(w, "clientPublicKey failure", http.StatusBadRequest)
 		return
 	}
 	clientPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		log.WarnContext(context, "failure to parse clientPublicKey", "err", err)
+		http.Error(w, "clientPublicKey parse failure", http.StatusBadRequest)
 		return
 	}
 	// ///////////////////////////////
@@ -259,19 +243,20 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
 		requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		log.WarnContext(context, "failure to decrypt dek", "err", err)
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 
 	// rewrap
 	rewrappedKey, err := tdf3.EncryptWithPublicKey(symmetricKey, &clientPublicKey)
 	if err != nil {
-		// FIXME handle error
-		log.Panic(err)
+		log.WarnContext(context, "rewrap: encryptWithPublicKey failed", "err", err, "clientPublicKey", &clientPublicKey)
+		http.Error(w, "bad key for rewrap", http.StatusBadRequest)
 		return
 	}
 	// // TODO validate policy
+	// TODO: Yikes
 	// log.Println()
 
 	// // TODO store policy
@@ -282,7 +267,13 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		SchemaVersion:    schemaVersion,
 	})
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.ErrorContext(context, "rewrap: marshall response failed", "err", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
 	}
-	_, _ = w.Write(responseBytes)
+	_, err = w.Write(responseBytes)
+	if err != nil {
+		// FIXME Yikes what can we do?
+		log.ErrorContext(context, "rewrap: marshall response failed", "err", err)
+	}
 }

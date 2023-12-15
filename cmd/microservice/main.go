@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -32,30 +32,12 @@ const (
 	timeoutServerIdle  = 120 * time.Second
 )
 
-func main() {
-	// version and build information
-	stats := version.GetVersion()
-	log.Printf("Version: %s", stats.Version)
-	log.Printf("Version Long: %s", stats.VersionLong)
-	log.Printf("Build Time: %s", stats.BuildTime)
-
-	kasURI, _ := url.Parse("https://" + hostname + ":5000")
-	kas := access.Provider{
-		URI:          *kasURI,
-		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
-		Certificate:  x509.Certificate{},
-		Attributes:   nil,
-		Session:      p11.Pkcs11Session{},
-		OIDCVerifier: nil,
-	}
-	// OIDC
+func loadIdentityProvider(log *slog.Logger) oidc.IDTokenVerifier {
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
 	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {
-		// handle error
-		log.Panic(err)
+		log.Error("OIDC_ISSUER provider fail", "err", err, "OIDC_ISSUER", oidcIssuer)
+		panic(err)
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
 	oauth2Config := oauth2.Config{
@@ -67,7 +49,7 @@ func main() {
 		// "openid" is a required scope for OpenID Connect flows.
 		Scopes: []string{oidc.ScopeOpenID},
 	}
-	log.Println(oauth2Config)
+	log.Debug("oauth configuring", "oauth2Config", oauth2Config)
 	oidcConfig := oidc.Config{
 		ClientID:                   "",
 		SupportedSigningAlgs:       nil,
@@ -77,9 +59,42 @@ func main() {
 		Now:                        nil,
 		InsecureSkipSignatureCheck: false,
 	}
-	var verifier = provider.Verifier(&oidcConfig)
+	return *provider.Verifier(&oidcConfig)
+}
 
-	kas.OIDCVerifier = verifier
+func main() {
+	// version and build information
+	stats := version.GetVersion()
+
+	format := os.Getenv("LOG_FORMAT")
+
+	var logHandler slog.Handler
+	switch format {
+	case "json":
+		logHandler = slog.NewJSONHandler(os.Stderr, nil)
+	default:
+		logHandler = slog.NewTextHandler(os.Stderr, nil)
+	}
+
+	log := slog.New(logHandler)
+
+	log.Info("gokas-info", "version", stats.Version, "version_long", stats.VersionLong, "build_time", stats.BuildTime)
+
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := access.Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa: rsa.PublicKey{},
+		PublicKeyEc:  ecdsa.PublicKey{},
+		Certificate:  x509.Certificate{},
+		Attributes:   nil,
+		Logger:       log,
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	oidcVerifier := loadIdentityProvider(log)
+	kas.OIDCVerifier = &oidcVerifier
 
 	// PKCS#11
 	pin := os.Getenv("PKCS11_PIN")
@@ -87,60 +102,77 @@ func main() {
 	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC")   // development-ec-kas
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
-		log.Fatalf("PKCS11_SLOT parse error: %v", err)
+		log.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
+		panic(err)
 	}
 	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
-	log.Println(pkcs11ModulePath)
+	log.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
 	ctx := pkcs11.New(pkcs11ModulePath)
 	if err := ctx.Initialize(); err != nil {
-		log.Fatalf("error initializing module: %v", err)
+		log.Error("pkcs11 error initializing module", "err", err)
+		panic(err)
 	}
 	defer ctx.Destroy()
 	defer func(ctx *pkcs11.Ctx) {
 		err := ctx.Finalize()
 		if err != nil {
-			log.Println(err)
+			log.Error("pkcs11 error finalizing module", "err", err)
 		}
 	}(ctx)
-	log.Println(ctx.GetInfo())
+	info, err := ctx.GetInfo()
+	if err != nil {
+		log.Error("pkcs11 error querying module info", "err", err)
+		panic(err)
+	}
+	log.Info("pkcs11 module", "pkcs11info", info)
+
 	var keyID []byte
 	slots, err := ctx.GetSlotList(true)
 	if err != nil {
-		log.Panicf("error getting slots: %v", err)
+		log.Error("pkcs11 error getting slots", "err", err)
+		panic(err)
 	}
-	log.Println(slots)
 	if int(slot) >= len(slots) || slot < 0 {
-		log.Panicf("fail PKCS11_SLOT_INDEX is invalid")
+		log.Error("pkcs11 PKCS11_SLOT_INDEX is invalid", "slot_index", slot, "slots", slots)
+		panic("pkcs11 slot index")
 	}
-	log.Println(slots[slot])
 	session, err := ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
-		log.Panicf("error opening session: %v", err)
+		log.Error("pkcs11 error opening session", "slot_index", slot, "slots", slots)
+		panic(err)
 	}
 	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
 		err := ctx.CloseSession(sh)
 		if err != nil {
-			log.Println(err)
+			log.Error("pkcs11 error closing session", "err", err)
 		}
 	}(ctx, session)
 
 	err = ctx.Login(session, pkcs11.CKU_USER, pin)
 	if err != nil {
-		log.Panicf("error logging in: %v", err)
+		log.Error("pkcs11 error logging in as CKU USER", "err", err)
+		panic(err)
 	}
 	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
 		err := ctx.Logout(sh)
 		if err != nil {
-			log.Println(err)
+			log.Error("pkcs11 error logging out", "err", err)
 		}
 	}(ctx, session)
-	log.Println(ctx.GetInfo())
-	log.Println("Finding RSA key to wrap.")
+
+	info, err = ctx.GetInfo()
+	if err != nil {
+		log.Error("pkcs11 error querying module info", "err", err)
+		panic(err)
+	}
+	log.Info("pkcs11 module info after initialization", "pkcs11info", info)
+
+	log.Debug("Finding RSA key to wrap.")
 	keyHandle, err := findKey(ctx, session, pkcs11.CKO_PRIVATE_KEY, keyID, rsaLabel)
 	if err != nil {
-		log.Panicf("error finding key: %v", err)
+		log.Error("pkcs11 error finding key", "err", err)
+		panic(err)
 	}
-	log.Println(keyHandle)
 
 	// set private key
 	kas.PrivateKey = p11.NewPrivateKeyRSA(keyHandle)
@@ -149,7 +181,7 @@ func main() {
 	kas.Session = p11.NewSession(ctx, session)
 
 	// RSA Cert
-	log.Printf("Finding RSA certificate: %s", rsaLabel)
+	log.Debug("Finding RSA certificate", "rsaLabel", rsaLabel)
 	certHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
 	certTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
@@ -159,40 +191,41 @@ func main() {
 		pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
 	}
 	if err != nil {
-		log.Panic(err)
+		log.Error("pkcs11 error finding RSA cert", "err", err)
+		panic(err)
 	}
 	attrs, err := ctx.GetAttributeValue(session, certHandle, certTemplate)
 	if err != nil {
-		log.Panic(err)
+		log.Error("pkcs11 error getting attribute from cert", "err", err)
+		panic(err)
 	}
-	log.Println(attrs)
 
-	for i, a := range attrs {
-		log.Printf("attr %d, type %d, valuelen %d\n", i, a.Type, len(a.Value))
+	for _, a := range attrs {
 		if a.Type == pkcs11.CKA_VALUE {
 			certRsa, err := x509.ParseCertificate(a.Value)
 			if err != nil {
-				log.Panic(err)
+				log.Error("x509 parse error", "err", err)
+				panic(err)
 			}
 			kas.Certificate = *certRsa
 		}
 	}
 
 	// RSA Public key
-	log.Println("Finding RSA public key from cert.")
 	rsaPublicKey, ok := kas.Certificate.PublicKey.(*rsa.PublicKey)
 	if !ok {
-		log.Panic("RSA public key from cert error")
+		log.Error("public key RSA cert error")
+		panic("public key RSA cert error")
 	}
 	kas.PublicKeyRsa = *rsaPublicKey
 
 	// EC Cert
-	log.Println("Finding EC cert.")
 	var ecCert x509.Certificate
 
 	certECHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
-		log.Panic(err)
+		log.Error("public key EC cert error")
+		panic("public key EC cert error")
 	}
 	certECTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
@@ -203,29 +236,28 @@ func main() {
 	}
 	ecCertAttrs, err := ctx.GetAttributeValue(session, certECHandle, certECTemplate)
 	if err != nil {
-		log.Panic(err)
+		log.Error("public key EC cert error", "err", err)
+		panic(err)
 	}
-	log.Println(ecCertAttrs)
 
-	for i, a := range ecCertAttrs {
-		log.Printf("attr %d, type %d, valuelen %d\n", i, a.Type, len(a.Value))
+	for _, a := range ecCertAttrs {
 		if a.Type == pkcs11.CKA_VALUE {
 			// exponent := big.NewInt(0)
 			// exponent.SetBytes(a.Value)
 			certEC, err := x509.ParseCertificate(a.Value)
 			if err != nil {
-				log.Panic(err)
+				log.Error("x509 parse error", "err", err)
+				panic(err)
 			}
 			ecCert = *certEC
 		}
 	}
 
 	// EC Public Key
-	log.Println("Finding EC public key from cert.")
-	log.Println(ecCert.PublicKeyAlgorithm)
 	ecPublicKey, ok := ecCert.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
-		log.Panic("EC public key from cert error")
+		log.Error("public key from cert fail for EC")
+		panic("EC parse fail")
 	}
 	kas.PublicKeyEc = *ecPublicKey
 
@@ -244,15 +276,16 @@ func main() {
 	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
 	go func() {
-		log.Printf("listening on http://%s", server.Addr)
+		log.Info("listening", "host", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
-			log.Fatal(err)
+			log.Error("server failure")
+			panic(err)
 		}
 	}()
 	<-stop
 	err = server.Shutdown(context.Background())
 	if err != nil {
-		log.Println(err)
+		log.Error("server shutdown failure", "err", err)
 	}
 }
 
