@@ -6,7 +6,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -25,7 +24,6 @@ import (
 )
 
 const (
-	ErrHsm             = Error("hsm unexpected")
 	hostname           = "localhost"
 	timeoutServerRead  = 5 * time.Second
 	timeoutServerWrite = 10 * time.Second
@@ -60,6 +58,75 @@ func loadIdentityProvider(log *slog.Logger) oidc.IDTokenVerifier {
 		InsecureSkipSignatureCheck: false,
 	}
 	return *provider.Verifier(&oidcConfig)
+}
+
+type hsmContext struct {
+	pin string
+	ctx *pkcs11.Ctx
+}
+
+type hsmSession struct {
+	c       *hsmContext
+	session pkcs11.SessionHandle
+}
+
+func newHSMContext(log *slog.Logger) (hc *hsmContext, err error) {
+	pin := os.Getenv("PKCS11_PIN")
+	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
+	log.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
+	ctx := pkcs11.New(pkcs11ModulePath)
+	if err := ctx.Initialize(); err != nil {
+		return nil, err
+	}
+
+	hc = new(hsmContext)
+	hc.pin = pin
+	hc.ctx = ctx
+	return hc, nil
+}
+
+func destroyHSMContext(log *slog.Logger, hc *hsmContext) {
+	defer hc.ctx.Destroy()
+	err := hc.ctx.Finalize()
+	if err != nil {
+		log.Error("pkcs11 error finalizing module", "err", err)
+	}
+}
+
+func newHSMSession(log *slog.Logger, hc *hsmContext) (hs *hsmSession, err error) {
+	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
+	if err != nil {
+		log.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
+		return nil, err
+	}
+
+	slots, err := hc.ctx.GetSlotList(true)
+	if err != nil {
+		log.Error("pkcs11 error getting slots", "err", err)
+		return nil, err
+	}
+	if int(slot) >= len(slots) || slot < 0 {
+		log.Error("pkcs11 PKCS11_SLOT_INDEX is invalid", "slot_index", slot, "slots", slots)
+		return nil, err
+	}
+
+	session, err := hc.ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	if err != nil {
+		log.Error("pkcs11 error opening session", "slot_index", slot, "slots", slots)
+		return nil, err
+	}
+
+	hs = new(hsmSession)
+	hs.c = hc
+	hs.session = session
+	return hs, nil
+}
+
+func destroyHSMSession(log *slog.Logger, hs *hsmSession) {
+	err := hs.c.ctx.CloseSession(hs.session)
+	if err != nil {
+		log.Error("pkcs11 error closing session", "err", err)
+	}
 }
 
 func main() {
@@ -97,58 +164,29 @@ func main() {
 	kas.OIDCVerifier = &oidcVerifier
 
 	// PKCS#11
-	pin := os.Getenv("PKCS11_PIN")
-	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") // development-rsa-kas
-	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC")   // development-ec-kas
-	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
+	hc, err := newHSMContext(log)
 	if err != nil {
-		log.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
+		log.Error("pkcs11 error initializing hsm", "err", err)
 		panic(err)
 	}
-	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
-	log.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
-	ctx := pkcs11.New(pkcs11ModulePath)
-	if err := ctx.Initialize(); err != nil {
-		log.Error("pkcs11 error initializing module", "err", err)
-		panic(err)
-	}
-	defer ctx.Destroy()
-	defer func(ctx *pkcs11.Ctx) {
-		err := ctx.Finalize()
-		if err != nil {
-			log.Error("pkcs11 error finalizing module", "err", err)
-		}
-	}(ctx)
-	info, err := ctx.GetInfo()
+	defer destroyHSMContext(log, hc)
+
+	info, err := hc.ctx.GetInfo()
 	if err != nil {
 		log.Error("pkcs11 error querying module info", "err", err)
 		panic(err)
 	}
 	log.Info("pkcs11 module", "pkcs11info", info)
 
-	var keyID []byte
-	slots, err := ctx.GetSlotList(true)
+	hs, err := newHSMSession(log, hc)
 	if err != nil {
-		log.Error("pkcs11 error getting slots", "err", err)
 		panic(err)
 	}
-	if int(slot) >= len(slots) || slot < 0 {
-		log.Error("pkcs11 PKCS11_SLOT_INDEX is invalid", "slot_index", slot, "slots", slots)
-		panic("pkcs11 slot index")
-	}
-	session, err := ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
-	if err != nil {
-		log.Error("pkcs11 error opening session", "slot_index", slot, "slots", slots)
-		panic(err)
-	}
-	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
-		err := ctx.CloseSession(sh)
-		if err != nil {
-			log.Error("pkcs11 error closing session", "err", err)
-		}
-	}(ctx, session)
+	defer destroyHSMSession(log, hs)
 
-	err = ctx.Login(session, pkcs11.CKU_USER, pin)
+	var keyID []byte
+
+	err = hc.ctx.Login(hs.session, pkcs11.CKU_USER, hc.pin)
 	if err != nil {
 		log.Error("pkcs11 error logging in as CKU USER", "err", err)
 		panic(err)
@@ -158,9 +196,9 @@ func main() {
 		if err != nil {
 			log.Error("pkcs11 error logging out", "err", err)
 		}
-	}(ctx, session)
+	}(hc.ctx, hs.session)
 
-	info, err = ctx.GetInfo()
+	info, err = hc.ctx.GetInfo()
 	if err != nil {
 		log.Error("pkcs11 error querying module info", "err", err)
 		panic(err)
@@ -168,7 +206,8 @@ func main() {
 	log.Info("pkcs11 module info after initialization", "pkcs11info", info)
 
 	log.Debug("Finding RSA key to wrap.")
-	keyHandle, err := findKey(ctx, session, pkcs11.CKO_PRIVATE_KEY, keyID, rsaLabel)
+	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") // development-rsa-kas
+	keyHandle, err := findKey(hs, pkcs11.CKO_PRIVATE_KEY, keyID, rsaLabel)
 	if err != nil {
 		log.Error("pkcs11 error finding key", "err", err)
 		panic(err)
@@ -178,11 +217,11 @@ func main() {
 	kas.PrivateKey = p11.NewPrivateKeyRSA(keyHandle)
 
 	// initialize p11.pkcs11session
-	kas.Session = p11.NewSession(ctx, session)
+	kas.Session = p11.NewSession(hs.c.ctx, hs.session)
 
 	// RSA Cert
 	log.Debug("Finding RSA certificate", "rsaLabel", rsaLabel)
-	certHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
+	certHandle, err := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
 	certTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
 		pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
@@ -194,7 +233,7 @@ func main() {
 		log.Error("pkcs11 error finding RSA cert", "err", err)
 		panic(err)
 	}
-	attrs, err := ctx.GetAttributeValue(session, certHandle, certTemplate)
+	attrs, err := hs.c.ctx.GetAttributeValue(hs.session, certHandle, certTemplate)
 	if err != nil {
 		log.Error("pkcs11 error getting attribute from cert", "err", err)
 		panic(err)
@@ -221,8 +260,8 @@ func main() {
 
 	// EC Cert
 	var ecCert x509.Certificate
-
-	certECHandle, err := findKey(ctx, session, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
+	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") // development-ec-kas
+	certECHandle, err := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
 		log.Error("public key EC cert error")
 		panic("public key EC cert error")
@@ -234,7 +273,7 @@ func main() {
 		pkcs11.NewAttribute(pkcs11.CKA_VALUE, []byte("")),
 		pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
 	}
-	ecCertAttrs, err := ctx.GetAttributeValue(session, certECHandle, certECTemplate)
+	ecCertAttrs, err := hs.c.ctx.GetAttributeValue(hs.session, certECHandle, certECTemplate)
 	if err != nil {
 		log.Error("public key EC cert error", "err", err)
 		panic(err)
@@ -289,7 +328,7 @@ func main() {
 	}
 }
 
-func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byte, label string) (pkcs11.ObjectHandle, error) {
+func findKey(hs *hsmSession, class uint, id []byte, label string) (pkcs11.ObjectHandle, error) {
 	template := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, class),
 	}
@@ -306,11 +345,11 @@ func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byt
 	}
 	var handle pkcs11.ObjectHandle
 	var err error
-	if err = ctx.FindObjectsInit(session, template); err != nil {
-		return handle, errors.Join(ErrHsm, err)
+	if err = hs.c.ctx.FindObjectsInit(hs.session, template); err != nil {
+		return handle, err
 	}
 	defer func() {
-		finalErr := ctx.FindObjectsFinal(session)
+		finalErr := hs.c.ctx.FindObjectsFinal(hs.session)
 		if err == nil {
 			err = finalErr
 		}
@@ -318,9 +357,9 @@ func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byt
 
 	var handles []pkcs11.ObjectHandle
 	const maxHandles = 20
-	handles, _, err = ctx.FindObjects(session, maxHandles)
+	handles, _, err = hs.c.ctx.FindObjects(hs.session, maxHandles)
 	if err != nil {
-		return handle, errors.Join(ErrHsm, err)
+		return handle, err
 	}
 
 	switch len(handles) {
@@ -333,10 +372,4 @@ func findKey(ctx *pkcs11.Ctx, session pkcs11.SessionHandle, class uint, id []byt
 	}
 
 	return handle, err
-}
-
-type Error string
-
-func (e Error) Error() string {
-	return string(e)
 }
