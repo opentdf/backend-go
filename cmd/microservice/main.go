@@ -72,7 +72,7 @@ type hsmSession struct {
 	session pkcs11.SessionHandle
 }
 
-func newHSMContext(log *slog.Logger) (*hsmContext, error) {
+func newHSMContext() (*hsmContext, error) {
 	pin := os.Getenv("PKCS11_PIN")
 	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
 	slog.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
@@ -87,7 +87,7 @@ func newHSMContext(log *slog.Logger) (*hsmContext, error) {
 	return hc, nil
 }
 
-func destroyHSMContext(log *slog.Logger, hc *hsmContext) {
+func destroyHSMContext(hc *hsmContext) {
 	defer hc.ctx.Destroy()
 	err := hc.ctx.Finalize()
 	if err != nil {
@@ -95,7 +95,7 @@ func destroyHSMContext(log *slog.Logger, hc *hsmContext) {
 	}
 }
 
-func newHSMSession(log *slog.Logger, hc *hsmContext) (*hsmSession, error) {
+func newHSMSession(hc *hsmContext) (*hsmSession, error) {
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
 		slog.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
@@ -124,7 +124,7 @@ func newHSMSession(log *slog.Logger, hc *hsmContext) (*hsmSession, error) {
 	return hs, nil
 }
 
-func destroyHSMSession(log *slog.Logger, hs *hsmSession) {
+func destroyHSMSession(hs *hsmSession) {
 	err := hs.c.ctx.CloseSession(hs.session)
 	if err != nil {
 		slog.Error("pkcs11 error closing session", "err", err)
@@ -166,12 +166,12 @@ func main() {
 	kas.OIDCVerifier = &oidcVerifier
 
 	// PKCS#11
-	hc, err := newHSMContext(log)
+	hc, err := newHSMContext()
 	if err != nil {
 		slog.Error("pkcs11 error initializing hsm", "err", err)
 		panic(err)
 	}
-	defer destroyHSMContext(log, hc)
+	defer destroyHSMContext(hc)
 
 	info, err := hc.ctx.GetInfo()
 	if err != nil {
@@ -180,11 +180,11 @@ func main() {
 	}
 	slog.Info("pkcs11 module", "pkcs11info", info)
 
-	hs, err := newHSMSession(log, hc)
+	hs, err := newHSMSession(hc)
 	if err != nil {
 		panic(err)
 	}
-	defer destroyHSMSession(log, hs)
+	defer destroyHSMSession(hs)
 
 	var keyID []byte
 
@@ -209,7 +209,7 @@ func main() {
 
 	slog.Debug("Finding RSA key to wrap.")
 	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") // development-rsa-kas
-	keyHandle, err := findKey(log, hs, pkcs11.CKO_PRIVATE_KEY, keyID, rsaLabel)
+	keyHandle, err := findKey(hs, pkcs11.CKO_PRIVATE_KEY, keyID, rsaLabel)
 	if err != nil {
 		slog.Error("pkcs11 error finding key", "err", err)
 		panic(err)
@@ -223,7 +223,7 @@ func main() {
 
 	// RSA Cert
 	slog.Debug("Finding RSA certificate", "rsaLabel", rsaLabel)
-	certHandle, err := findKey(log, hs, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
+	certHandle, err := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
 	certTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
 		pkcs11.NewAttribute(pkcs11.CKA_CERTIFICATE_TYPE, pkcs11.CKC_X_509),
@@ -263,7 +263,7 @@ func main() {
 	// EC Cert
 	var ecCert x509.Certificate
 	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") // development-ec-kas
-	certECHandle, err := findKey(log, hs, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
+	certECHandle, err := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
 		slog.Error("public key EC cert error")
 		panic("public key EC cert error")
@@ -330,7 +330,7 @@ func main() {
 	}
 }
 
-func findKey(log *slog.Logger, hs *hsmSession, class uint, id []byte, label string) (pkcs11.ObjectHandle, error) {
+func findKey(hs *hsmSession, class uint, id []byte, label string) (pkcs11.ObjectHandle, error) {
 	template := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, class),
 	}
