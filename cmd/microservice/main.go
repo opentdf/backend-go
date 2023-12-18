@@ -157,7 +157,6 @@ func main() {
 		PublicKeyEc:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
-		Logger:       slog.Default(),
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
