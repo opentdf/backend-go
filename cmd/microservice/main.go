@@ -32,11 +32,11 @@ const (
 	timeoutServerIdle  = 120 * time.Second
 )
 
-func loadIdentityProvider(log *slog.Logger) oidc.IDTokenVerifier {
+func loadIdentityProvider() oidc.IDTokenVerifier {
 	oidcIssuer := os.Getenv("OIDC_ISSUER")
 	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
 	if err != nil {
-		log.Error("OIDC_ISSUER provider fail", "err", err, "OIDC_ISSUER", oidcIssuer)
+		slog.Error("OIDC_ISSUER provider fail", "err", err, "OIDC_ISSUER", oidcIssuer)
 		panic(err)
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
@@ -49,7 +49,7 @@ func loadIdentityProvider(log *slog.Logger) oidc.IDTokenVerifier {
 		// "openid" is a required scope for OpenID Connect flows.
 		Scopes: []string{oidc.ScopeOpenID},
 	}
-	log.Debug("oauth configuring", "oauth2Config", oauth2Config)
+	slog.Debug("oauth configuring", "oauth2Config", oauth2Config)
 	oidcConfig := oidc.Config{
 		ClientID:                   "",
 		SupportedSigningAlgs:       nil,
@@ -75,7 +75,7 @@ type hsmSession struct {
 func newHSMContext(log *slog.Logger) (*hsmContext, error) {
 	pin := os.Getenv("PKCS11_PIN")
 	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
-	log.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
+	slog.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
 	ctx := pkcs11.New(pkcs11ModulePath)
 	if err := ctx.Initialize(); err != nil {
 		return nil, errors.Join(ErrHsm, err)
@@ -91,30 +91,30 @@ func destroyHSMContext(log *slog.Logger, hc *hsmContext) {
 	defer hc.ctx.Destroy()
 	err := hc.ctx.Finalize()
 	if err != nil {
-		log.Error("pkcs11 error finalizing module", "err", err)
+		slog.Error("pkcs11 error finalizing module", "err", err)
 	}
 }
 
 func newHSMSession(log *slog.Logger, hc *hsmContext) (*hsmSession, error) {
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
-		log.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
+		slog.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
 		return nil, errors.Join(ErrHsm, err)
 	}
 
 	slots, err := hc.ctx.GetSlotList(true)
 	if err != nil {
-		log.Error("pkcs11 error getting slots", "err", err)
+		slog.Error("pkcs11 error getting slots", "err", err)
 		return nil, errors.Join(ErrHsm, err)
 	}
 	if int(slot) >= len(slots) || slot < 0 {
-		log.Error("pkcs11 PKCS11_SLOT_INDEX is invalid", "slot_index", slot, "slots", slots)
+		slog.Error("pkcs11 PKCS11_SLOT_INDEX is invalid", "slot_index", slot, "slots", slots)
 		return nil, errors.Join(ErrHsm, err)
 	}
 
 	session, err := hc.ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
-		log.Error("pkcs11 error opening session", "slot_index", slot, "slots", slots)
+		slog.Error("pkcs11 error opening session", "slot_index", slot, "slots", slots)
 		return nil, errors.Join(ErrHsm, err)
 	}
 
@@ -127,7 +127,7 @@ func newHSMSession(log *slog.Logger, hc *hsmContext) (*hsmSession, error) {
 func destroyHSMSession(log *slog.Logger, hs *hsmSession) {
 	err := hs.c.ctx.CloseSession(hs.session)
 	if err != nil {
-		log.Error("pkcs11 error closing session", "err", err)
+		slog.Error("pkcs11 error closing session", "err", err)
 	}
 }
 
@@ -147,7 +147,7 @@ func main() {
 
 	log := slog.New(logHandler)
 
-	log.Info("gokas-info", "version", stats.Version, "version_long", stats.VersionLong, "build_time", stats.BuildTime)
+	slog.Info("gokas-info", "version", stats.Version, "version_long", stats.VersionLong, "build_time", stats.BuildTime)
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := access.Provider{
@@ -162,23 +162,23 @@ func main() {
 		OIDCVerifier: nil,
 	}
 
-	oidcVerifier := loadIdentityProvider(log)
+	oidcVerifier := loadIdentityProvider()
 	kas.OIDCVerifier = &oidcVerifier
 
 	// PKCS#11
 	hc, err := newHSMContext(log)
 	if err != nil {
-		log.Error("pkcs11 error initializing hsm", "err", err)
+		slog.Error("pkcs11 error initializing hsm", "err", err)
 		panic(err)
 	}
 	defer destroyHSMContext(log, hc)
 
 	info, err := hc.ctx.GetInfo()
 	if err != nil {
-		log.Error("pkcs11 error querying module info", "err", err)
+		slog.Error("pkcs11 error querying module info", "err", err)
 		panic(err)
 	}
-	log.Info("pkcs11 module", "pkcs11info", info)
+	slog.Info("pkcs11 module", "pkcs11info", info)
 
 	hs, err := newHSMSession(log, hc)
 	if err != nil {
@@ -190,28 +190,28 @@ func main() {
 
 	err = hc.ctx.Login(hs.session, pkcs11.CKU_USER, hc.pin)
 	if err != nil {
-		log.Error("pkcs11 error logging in as CKU USER", "err", err)
+		slog.Error("pkcs11 error logging in as CKU USER", "err", err)
 		panic(err)
 	}
 	defer func(ctx *pkcs11.Ctx, sh pkcs11.SessionHandle) {
 		err := ctx.Logout(sh)
 		if err != nil {
-			log.Error("pkcs11 error logging out", "err", err)
+			slog.Error("pkcs11 error logging out", "err", err)
 		}
 	}(hc.ctx, hs.session)
 
 	info, err = hc.ctx.GetInfo()
 	if err != nil {
-		log.Error("pkcs11 error querying module info", "err", err)
+		slog.Error("pkcs11 error querying module info", "err", err)
 		panic(err)
 	}
-	log.Info("pkcs11 module info after initialization", "pkcs11info", info)
+	slog.Info("pkcs11 module info after initialization", "pkcs11info", info)
 
-	log.Debug("Finding RSA key to wrap.")
+	slog.Debug("Finding RSA key to wrap.")
 	rsaLabel := os.Getenv("PKCS11_LABEL_PUBKEY_RSA") // development-rsa-kas
 	keyHandle, err := findKey(log, hs, pkcs11.CKO_PRIVATE_KEY, keyID, rsaLabel)
 	if err != nil {
-		log.Error("pkcs11 error finding key", "err", err)
+		slog.Error("pkcs11 error finding key", "err", err)
 		panic(err)
 	}
 
@@ -222,7 +222,7 @@ func main() {
 	kas.Session = p11.NewSession(hs.c.ctx, hs.session)
 
 	// RSA Cert
-	log.Debug("Finding RSA certificate", "rsaLabel", rsaLabel)
+	slog.Debug("Finding RSA certificate", "rsaLabel", rsaLabel)
 	certHandle, err := findKey(log, hs, pkcs11.CKO_CERTIFICATE, keyID, rsaLabel)
 	certTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_CERTIFICATE),
@@ -232,12 +232,12 @@ func main() {
 		pkcs11.NewAttribute(pkcs11.CKA_SUBJECT, []byte("")),
 	}
 	if err != nil {
-		log.Error("pkcs11 error finding RSA cert", "err", err)
+		slog.Error("pkcs11 error finding RSA cert", "err", err)
 		panic(err)
 	}
 	attrs, err := hs.c.ctx.GetAttributeValue(hs.session, certHandle, certTemplate)
 	if err != nil {
-		log.Error("pkcs11 error getting attribute from cert", "err", err)
+		slog.Error("pkcs11 error getting attribute from cert", "err", err)
 		panic(err)
 	}
 
@@ -245,7 +245,7 @@ func main() {
 		if a.Type == pkcs11.CKA_VALUE {
 			certRsa, err := x509.ParseCertificate(a.Value)
 			if err != nil {
-				log.Error("x509 parse error", "err", err)
+				slog.Error("x509 parse error", "err", err)
 				panic(err)
 			}
 			kas.Certificate = *certRsa
@@ -255,7 +255,7 @@ func main() {
 	// RSA Public key
 	rsaPublicKey, ok := kas.Certificate.PublicKey.(*rsa.PublicKey)
 	if !ok {
-		log.Error("public key RSA cert error")
+		slog.Error("public key RSA cert error")
 		panic("public key RSA cert error")
 	}
 	kas.PublicKeyRsa = *rsaPublicKey
@@ -265,7 +265,7 @@ func main() {
 	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") // development-ec-kas
 	certECHandle, err := findKey(log, hs, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
-		log.Error("public key EC cert error")
+		slog.Error("public key EC cert error")
 		panic("public key EC cert error")
 	}
 	certECTemplate := []*pkcs11.Attribute{
@@ -277,7 +277,7 @@ func main() {
 	}
 	ecCertAttrs, err := hs.c.ctx.GetAttributeValue(hs.session, certECHandle, certECTemplate)
 	if err != nil {
-		log.Error("public key EC cert error", "err", err)
+		slog.Error("public key EC cert error", "err", err)
 		panic(err)
 	}
 
@@ -287,7 +287,7 @@ func main() {
 			// exponent.SetBytes(a.Value)
 			certEC, err := x509.ParseCertificate(a.Value)
 			if err != nil {
-				log.Error("x509 parse error", "err", err)
+				slog.Error("x509 parse error", "err", err)
 				panic(err)
 			}
 			ecCert = *certEC
@@ -297,7 +297,7 @@ func main() {
 	// EC Public Key
 	ecPublicKey, ok := ecCert.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
-		log.Error("public key from cert fail for EC")
+		slog.Error("public key from cert fail for EC")
 		panic("EC parse fail")
 	}
 	kas.PublicKeyEc = *ecPublicKey
@@ -317,16 +317,16 @@ func main() {
 	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
 	go func() {
-		log.Info("listening", "host", server.Addr)
+		slog.Info("listening", "host", server.Addr)
 		if err := server.ListenAndServe(); err != nil {
-			log.Error("server failure")
+			slog.Error("server failure")
 			panic(err)
 		}
 	}()
 	<-stop
 	err = server.Shutdown(context.Background())
 	if err != nil {
-		log.Error("server shutdown failure", "err", err)
+		slog.Error("server shutdown failure", "err", err)
 	}
 }
 
@@ -354,7 +354,7 @@ func findKey(log *slog.Logger, hs *hsmSession, class uint, id []byte, label stri
 		finalErr := hs.c.ctx.FindObjectsFinal(hs.session)
 		if err == nil {
 			err = finalErr
-			log.Error("server shutdown failure", "err", err)
+			slog.Error("server shutdown failure", "err", err)
 		}
 	}()
 

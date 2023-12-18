@@ -2,9 +2,7 @@ package access
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
@@ -19,7 +17,6 @@ type WrongAttributeDefinition struct {
 }
 
 func TestFetchAttributesSuccess(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
@@ -57,7 +54,7 @@ func TestFetchAttributesSuccess(t *testing.T) {
 		},
 	)
 
-	output, err := fetchAttributes(ctx, *logger, namespaces)
+	output, err := fetchAttributes(ctx, namespaces)
 
 	if err != nil {
 		t.Error(err)
@@ -69,7 +66,6 @@ func TestFetchAttributesSuccess(t *testing.T) {
 }
 
 func TestFetchAttributesFailure(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
@@ -90,7 +86,7 @@ func TestFetchAttributesFailure(t *testing.T) {
 		},
 	)
 
-	output, err := fetchAttributes(ctx, *logger, namespaces)
+	output, err := fetchAttributes(ctx, namespaces)
 
 	t.Log(err)
 	t.Log(output)
@@ -105,7 +101,6 @@ func TestFetchAttributesFailure(t *testing.T) {
 }
 
 func TestFetchAttributesFailure1(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
@@ -118,7 +113,7 @@ func TestFetchAttributesFailure1(t *testing.T) {
 		},
 	)
 
-	output, err := fetchAttributes(ctx, *logger, namespaces)
+	output, err := fetchAttributes(ctx, namespaces)
 
 	if err == nil {
 		t.Error("Should throw an error")
@@ -130,7 +125,6 @@ func TestFetchAttributesFailure1(t *testing.T) {
 }
 
 func TestFetchAttributesFailure2(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
@@ -143,7 +137,7 @@ func TestFetchAttributesFailure2(t *testing.T) {
 		},
 	)
 
-	output, err := fetchAttributes(ctx, *logger, namespaces)
+	output, err := fetchAttributes(ctx, namespaces)
 
 	if err == nil {
 		t.Error("Should throw an error")
@@ -155,10 +149,9 @@ func TestFetchAttributesFailure2(t *testing.T) {
 }
 
 func TestFetchAttributesForNamespaceFailure(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	namespaces := []string{"namespace1", "namespace2"}
 
-	output, err := fetchAttributes(nil, *logger, namespaces)
+	output, err := fetchAttributes(nil, namespaces)
 
 	if err == nil {
 		t.Error("Should throw an error")

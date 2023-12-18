@@ -14,12 +14,12 @@ const (
 	ErrDecisionUnexpected  = Error("access policy decision unexpected")
 )
 
-func canAccess(ctx *context.Context, log *slog.Logger, entityID string, policy Policy, claims ClaimsObject, attrDefs []attrs.AttributeDefinition) (bool, error) {
+func canAccess(ctx *context.Context, entityID string, policy Policy, claims ClaimsObject, attrDefs []attrs.AttributeDefinition) (bool, error) {
 	dissemAccess, err := checkDissems(policy.Body.Dissem, entityID)
 	if err != nil {
 		return false, err
 	}
-	attrAccess, err := checkAttributes(ctx, log, policy.Body.DataAttributes, claims.Entitlements, attrDefs)
+	attrAccess, err := checkAttributes(ctx, policy.Body.DataAttributes, claims.Entitlements, attrDefs)
 	if err != nil {
 		return false, err
 	}
@@ -40,7 +40,7 @@ func checkDissems(dissems []string, entityID string) (bool, error) {
 	return false, nil
 }
 
-func checkAttributes(ctx *context.Context, log *slog.Logger, dataAttrs []Attribute, entitlements []Entitlement, attrDefs []attrs.AttributeDefinition) (bool, error) {
+func checkAttributes(ctx *context.Context, dataAttrs []Attribute, entitlements []Entitlement, attrDefs []attrs.AttributeDefinition) (bool, error) {
 	// convert data and entitty attrs to attrs.AttributeInstance
 	dataAttrInstances, err := convertAttrsToAttrInstances(dataAttrs)
 	if err != nil {
@@ -51,11 +51,11 @@ func checkAttributes(ctx *context.Context, log *slog.Logger, dataAttrs []Attribu
 		return false, err
 	}
 
-	accessPDP := accessPdp.NewAccessPDPWithSlog(log)
+	accessPDP := accessPdp.NewAccessPDPWithSlog(slog.Default())
 
 	decisions, err := accessPDP.DetermineAccess(dataAttrInstances, entityAttrMap, attrDefs, ctx)
 	if err != nil {
-		log.WarnContext(*ctx, "Error recieved from accessPDP", "err", err)
+		slog.WarnContext(*ctx, "Error recieved from accessPDP", "err", err)
 		return false, errors.Join(ErrDecisionUnexpected, err)
 	}
 	// check the decisions
