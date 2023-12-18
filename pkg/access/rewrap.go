@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/opentdf/backend-go/pkg/p11"
@@ -91,6 +92,16 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !strings.HasPrefix(os.Getenv("OIDC_ISSUER"), idToken.Issuer) {
+		w.WriteHeader(http.StatusForbidden)
+		_, err := fmt.Fprint(w, "Invalid token issuer")
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		return
+	}
+
 	// Extract custom claims
 	var claims customClaimsHeader
 	if err := idToken.Claims(&claims); err != nil {
@@ -117,7 +128,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	var jwtClaimsBody jwt.Claims
 	var bodyClaims customClaimsBody
-	err = requestToken.UnsafeClaimsWithoutVerification(jwtClaimsBody, bodyClaims)
+	err = requestToken.UnsafeClaimsWithoutVerification(&jwtClaimsBody, &bodyClaims)
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
@@ -130,6 +141,16 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// FIXME handle error
 		log.Panic(err)
+		return
+	}
+
+	if !strings.HasPrefix(os.Getenv("OIDC_ISSUER"), requestBody.KeyAccess.URL) {
+		w.WriteHeader(http.StatusForbidden)
+		_, err := fmt.Fprint(w, "Invalid key access url")
+		if err != nil {
+			log.Println(err)
+			return
+		}
 		return
 	}
 
