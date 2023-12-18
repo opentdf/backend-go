@@ -78,7 +78,7 @@ func newHSMContext(log *slog.Logger) (*hsmContext, error) {
 	log.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
 	ctx := pkcs11.New(pkcs11ModulePath)
 	if err := ctx.Initialize(); err != nil {
-		return nil, err
+		return nil, errors.Join(ErrHsm, err)
 	}
 
 	hc := new(hsmContext)
@@ -99,23 +99,23 @@ func newHSMSession(log *slog.Logger, hc *hsmContext) (*hsmSession, error) {
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
 		log.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
-		return nil, err
+		return nil, errors.Join(ErrHsm, err)
 	}
 
 	slots, err := hc.ctx.GetSlotList(true)
 	if err != nil {
 		log.Error("pkcs11 error getting slots", "err", err)
-		return nil, err
+		return nil, errors.Join(ErrHsm, err)
 	}
 	if int(slot) >= len(slots) || slot < 0 {
 		log.Error("pkcs11 PKCS11_SLOT_INDEX is invalid", "slot_index", slot, "slots", slots)
-		return nil, err
+		return nil, errors.Join(ErrHsm, err)
 	}
 
 	session, err := hc.ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		log.Error("pkcs11 error opening session", "slot_index", slot, "slots", slots)
-		return nil, err
+		return nil, errors.Join(ErrHsm, err)
 	}
 
 	hs := new(hsmSession)
