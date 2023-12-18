@@ -145,7 +145,7 @@ func main() {
 		logHandler = slog.NewTextHandler(os.Stderr, nil)
 	}
 
-	log := slog.New(logHandler)
+	slog.SetDefault(slog.New(logHandler))
 
 	slog.Info("gokas-info", "version", stats.Version, "version_long", stats.VersionLong, "build_time", stats.BuildTime)
 
@@ -157,7 +157,7 @@ func main() {
 		PublicKeyEc:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
-		Logger:       log,
+		Logger:       slog.Default(),
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
