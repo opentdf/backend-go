@@ -8,6 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"github.com/opentdf/backend-go/pkg/p11"
 	"math/big"
 	"net/http"
@@ -188,32 +189,112 @@ func TestCertificateHandler(t *testing.T) {
 	}
 }
 
-// TODO
-//func TestPublicKeyHandlerV2(t *testing.T) {
-//	// ?algorithm=ec:secp256r1
-//
-//	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key", nil)
-//	response := httptest.NewRecorder()
-//
-//	kasURI, _ := url.Parse("https://" + hostname + ":5000")
-//	kas := Provider{
-//		URI:          *kasURI,
-//		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-//		PublicKeyRsa: rsa.PublicKey{},
-//		PublicKeyEc:  ecdsa.PublicKey{},
-//		Certificate:  x509.Certificate{},
-//		Attributes:   nil,
-//		Session:      p11.Pkcs11Session{},
-//		OIDCVerifier: nil,
-//	}
-//
-//	kas.PublicKeyHandlerV2(response, request)
-//	result := response.Body.String()
-//
-//	fmt.Println("result", result)
-//
-//	// TODO Pass mocked pub key ?
-//	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
-//		t.Errorf("got %s, but should be certificate", result)
-//	}
-//}
+func TestPublicKeyHandlerV2(t *testing.T) {
+	mockPublicKeyRsa := rsa.PublicKey{
+		N: big.NewInt(123),
+		E: 65537,
+	}
+
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		t.Errorf("Failed to generate a private key: %v", err)
+	}
+	// ?algorithm=ec:secp256r1
+	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key", nil)
+	response := httptest.NewRecorder()
+
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa: mockPublicKeyRsa,
+		PublicKeyEc:  privateKey.PublicKey,
+		Certificate:  x509.Certificate{},
+		Attributes:   nil,
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	kas.PublicKeyHandlerV2(response, request)
+	result := response.Body.String()
+
+	fmt.Println("result", result)
+
+	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
+		t.Errorf("got %s, but should be certificate", result)
+	}
+}
+
+func TestPublicKeyHandlerV2WithEc256(t *testing.T) {
+	mockPublicKeyRsa := rsa.PublicKey{
+		N: big.NewInt(123),
+		E: 65537,
+	}
+
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		t.Errorf("Failed to generate a private key: %v", err)
+	}
+	// &format=jwk
+	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key?algorithm=ec:secp256r1", nil)
+	response := httptest.NewRecorder()
+
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa: mockPublicKeyRsa,
+		PublicKeyEc:  privateKey.PublicKey,
+		Certificate:  x509.Certificate{},
+		Attributes:   nil,
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	kas.PublicKeyHandlerV2(response, request)
+	result := response.Body.String()
+
+	fmt.Println("result", result)
+
+	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
+		t.Errorf("got %s, but should be certificate", result)
+	}
+}
+
+func TestPublicKeyHandlerV2WithJwk(t *testing.T) {
+	mockPublicKeyRsa := rsa.PublicKey{
+		N: big.NewInt(123),
+		E: 65537,
+	}
+
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		t.Errorf("Failed to generate a private key: %v", err)
+	}
+	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key?format=jwk", nil)
+	response := httptest.NewRecorder()
+
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa: mockPublicKeyRsa,
+		PublicKeyEc:  privateKey.PublicKey,
+		Certificate:  x509.Certificate{},
+		Attributes:   nil,
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	kas.PublicKeyHandlerV2(response, request)
+	result := response.Body.String()
+
+	fmt.Println("result", result)
+
+	if !strings.Contains(result, "\"kty\":\"RSA\"") {
+		t.Errorf("got %s, but should be JSON Web Key", result)
+	}
+}
