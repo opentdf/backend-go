@@ -35,7 +35,7 @@ func TestWildcardDissemSuccess(t *testing.T) {
 
 	testDefinitions := []attrs.AttributeDefinition{}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -66,7 +66,7 @@ func TestDissemSuccess(t *testing.T) {
 
 	testDefinitions := []attrs.AttributeDefinition{}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -96,7 +96,7 @@ func TestDissemFailure(t *testing.T) {
 
 	testDefinitions := []attrs.AttributeDefinition{}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -145,7 +145,7 @@ func TestAllOfSuccess(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -193,7 +193,7 @@ func TestAllOfFailure(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -243,7 +243,7 @@ func TestAnyOfSuccess(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -291,7 +291,7 @@ func TestAnyOfFailure(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -340,7 +340,7 @@ func TestHierarchySuccess(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -388,7 +388,7 @@ func TestHierarchyFailure(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -439,7 +439,7 @@ func TestAttrDissemSuccess(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -487,7 +487,7 @@ func TestAttrDissemFailure1(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -537,7 +537,7 @@ func TestAttrDissemFailure2(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != nil {
 		t.Error(err)
 	}
@@ -587,7 +587,7 @@ func TestAttrDissemFailure3(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 	if err != ErrPolicyDissemInvalid {
 		t.Errorf("Output %v not equal to expected %v", output, ErrPolicyDissemInvalid)
 	}
@@ -636,7 +636,7 @@ func TestAttrDissemFailure4(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 
 	if output != false {
 		t.Errorf("Expected false, but got %v", err)
@@ -685,7 +685,7 @@ func TestAttrDissemFailure5(t *testing.T) {
 		},
 	}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 
 	if output != false {
 		t.Errorf("Expected false, but got %v", err)
@@ -727,7 +727,7 @@ func TestAttrDissemFailure6(t *testing.T) {
 
 	testDefinitions := []attrs.AttributeDefinition{}
 
-	output, err := canAccess(&c, entityID, testPolicy, testClaims, testDefinitions)
+	output, err := canAccess(c, entityID, testPolicy, testClaims, testDefinitions)
 
 	if output != false {
 		t.Errorf("Expected false, but got %v", err)
