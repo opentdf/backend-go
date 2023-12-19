@@ -133,8 +133,37 @@ func TestError(t *testing.T) {
 
 const hostname = "localhost"
 
+func TestCertificateHandlerWithEc256(t *testing.T) {
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		t.Errorf("Failed to generate a private key: %v", err)
+	}
+
+	request, _ := http.NewRequest(http.MethodGet, "/kas_public_key?algorithm=ec:secp256r1", nil)
+	response := httptest.NewRecorder()
+
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa: rsa.PublicKey{},
+		PublicKeyEc:  privateKey.PublicKey,
+		Certificate:  x509.Certificate{},
+		Attributes:   nil,
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	kas.CertificateHandler(response, request)
+	result := response.Body.String()
+
+	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
+		t.Errorf("got %s, but should be certificate", result)
+	}
+}
+
 func TestCertificateHandler(t *testing.T) {
-	// ?algorithm=ec:secp256r1
 	request, _ := http.NewRequest(http.MethodGet, "/kas_public_key", nil)
 	response := httptest.NewRecorder()
 
