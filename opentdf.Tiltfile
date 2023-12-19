@@ -13,7 +13,7 @@ min_tilt_version("0.31")
 EXTERNAL_URL = "http://localhost:65432"
 
 # Versions of things backend to pull (attributes, kas, etc)
-BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "1.5.0")
+BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "0.0.0-sha-27d776c")
 FRONTEND_CHART_TAG = os.environ.get("FRONTEND_LATEST_VERSION", "1.4.1")
 
 CONTAINER_REGISTRY = os.environ.get("CONTAINER_REGISTRY", "ghcr.io")
@@ -86,6 +86,7 @@ def backend(values=[], set={}, resource_deps=[]):
         "secrets.opaPolicyPullSecret": opaPolicyPullSecret,
         "secrets.oidcClientSecret": OIDC_CLIENT_SECRET,
         "secrets.postgres.dbPassword": POSTGRES_PASSWORD,
+        "kas.auth.http://localhost:65432/auth/realms/tdf.discoveryBaseUrl": "http://keycloak-http/auth/realms/tdf",
         "kas.envConfig.ecCert": all_secrets["KAS_EC_SECP256R1_CERTIFICATE"],
         "kas.envConfig.cert": all_secrets["KAS_CERTIFICATE"],
         "kas.envConfig.ecPrivKey": all_secrets["KAS_EC_SECP256R1_PRIVATE_KEY"],
@@ -129,6 +130,7 @@ def opentdf_cluster_with_ingress(start_frontend=True):
                 "entitlement-store",
             ]
         },
+        # values=[TESTS_DIR + "/mocks/values.yaml"],
         resource_deps=["ingress-nginx"],
     )
 
