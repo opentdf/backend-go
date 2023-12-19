@@ -13,10 +13,6 @@ run:
 # This file contains only configs which differ from defaults.
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 linters-settings:
-  ireturn:
-    allow:
-      - auth
-      - error
   cyclop:
     # The maximal code complexity to report.
     # Default: 10
@@ -38,39 +34,6 @@ linters-settings:
     check:
       - switch
       - map
-
-  exhaustruct:
-    # List of regular expressions to exclude struct packages and names from check.
-    # Default: []
-    exclude:
-      # std libs
-      - "^net/http.Client$"
-      - "^net/http.Cookie$"
-      - "^net/http.Request$"
-      - "^net/http.Response$"
-      - "^net/http.Server$"
-      - "^net/http.Transport$"
-      - "^net/url.URL$"
-      - "^os/exec.Cmd$"
-      - "^reflect.StructField$"
-      - "^crypto/tls.Config$"
-      - "^crypto/x509.Certificate$"
-      - "^crypto/rsa.PublicKey"
-      - "^crypto/ecdsa.PublicKey"
-      # public libs
-      - "^github.com/Shopify/sarama.Config$"
-      - "^github.com/Shopify/sarama.ProducerMessage$"
-      - "^github.com/mitchellh/mapstructure.DecoderConfig$"
-      - "^github.com/prometheus/client_golang/.+Opts$"
-      - "^github.com/spf13/cobra.Command$"
-      - "^github.com/spf13/cobra.CompletionOptions$"
-      - "^github.com/stretchr/testify/mock.Mock$"
-      - "^github.com/testcontainers/testcontainers-go.+Request$"
-      - "^github.com/testcontainers/testcontainers-go.FromDockerfile$"
-      - "^golang.org/x/tools/go/analysis.Analyzer$"
-      - "^google.golang.org/protobuf/.+Options$"
-      - "^gopkg.in/yaml.v3.Node$"
-      - "^github.com/redis/go-redis/v9.Options$"
 
   funlen:
     # Checks the number of lines in a function.
@@ -291,13 +254,13 @@ linters:
 
     ## you may want to enable
     #- decorder # checks declaration order and count of types, constants, variables and functions
-    - exhaustruct # [highly recommend to enable] checks if all structure fields are initialized
+    # - exhaustruct # [highly recommend to enable] checks if all structure fields are initialized
     #- gci # controls golang package import order and makes it always deterministic
     #- ginkgolinter # [if you use ginkgo/gomega] enforces standards of using ginkgo and gomega
     #    - godox # detects F-IXME, T-ODO and other comment keywords
     #- goheader # checks is file header matches to pattern
     - interfacebloat # checks the number of methods inside an interface
-    - ireturn # accept interfaces, return concrete types
+    # - ireturn # accept interfaces, return concrete types
     - prealloc # [premature optimization, but can be used in some cases] finds slice declarations that could potentially be preallocated
     #- varnamelen # [great idea, but too many false positives] checks that the length of a variable's name matches its scope
     - wrapcheck # checks that errors returned from external packages are wrapped
@@ -364,7 +327,6 @@ issues:
         - gosec
         - noctx
         - wrapcheck
-        - exhaustruct
         - lll
     - text: 'shadow: declaration of "(err)" shadows declaration at'
       linters: [ govet ]

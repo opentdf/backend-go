@@ -22,15 +22,17 @@
 #     - OpenTDF Attribute service host, or other compliant authority
 #   ATTR_AUTHORITY_CERTIFICATE
 #     - The public key used to validate responses from ATTR_AUTHORITY_HOST.
-
+#   LOG_LEVEL
+#     - `slog` level. Defaults to `info`. Other options include
+#         `debug` (more verbose) and `warn` (less verbose)
+#     - For compatiblity, LOGLEVEL is an acceptible alias
+#   LOG_FORMAT
+#     - Set to `json` to enable JSON loglines
+#     - For compatiblity, you may also set JSON_LOGGER to `true`
 #   Not Implemented or used Yet
 #   OIDC_SERVER_URL
-#     - FIXME
-#     - List of allowed prefixes for OIDC tokens
-#   LOGLEVEL
-#     - Verbosity of default log handler. Should recognize python log levels
-#   JSON_LOGGER
-#     - if to enable json mode of log output. 'true' enabled json output
+#     - FIXME/DEPRECATED
+#     - Partial implementation for demos only. List of allowed prefixes for OIDC tokens
 #   KAS_EC_SECP256R1_PRIVATE_KEY
 #     - (SECRET) private key of curve secp256r1, KAS uses to certify responses.
 #     - required for nanoTDF
@@ -84,10 +86,18 @@ export HOST
 
 l "Configuring ${HOST}..."
 
+# Translate from old chart env vars to newer ones
 if [ -z "$OIDC_SERVER_URL" ]; then
   : "${OIDC_ISSUER:=${OIDC_SERVER_URL}/realms/tdf}"
 else
   : "${OIDC_ISSUER:=https://localhost:65432/auth/realms/tdf}"
+fi
+if [ -z "${LOG_FORMAT}" ] && [[ true == "${JSON_LOGGER}" ]]; then
+  LOG_FORMAT=json
+fi
+
+if [ -z "${LOG_LEVEL}" ] && [ -n "${LOGLEVEL}" ]; then
+  LOG_LEVEL="${LOGLEVEL}"
 fi
 
 : "${PKCS11_SLOT_INDEX:=0}"

@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -131,21 +132,31 @@ func destroyHSMSession(hs *hsmSession) {
 	}
 }
 
+func inferLogHandler(loglevel, format string) slog.Handler {
+	level := slog.LevelInfo
+	switch strings.ToLower(loglevel) {
+	case "info":
+		level = slog.LevelInfo
+	case "warning":
+		level = slog.LevelWarn
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	case "debug":
+		level = slog.LevelDebug
+	}
+	if strings.ToLower(format) == "json" {
+		return slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+	}
+	return slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+}
+
 func main() {
+	slog.SetDefault(slog.New(inferLogHandler(os.Getenv("LOG_LEVEL"), os.Getenv("LOG_FORMAT"))))
+
 	// version and build information
 	stats := version.GetVersion()
-
-	format := os.Getenv("LOG_FORMAT")
-
-	var logHandler slog.Handler
-	switch format {
-	case "json":
-		logHandler = slog.NewJSONHandler(os.Stderr, nil)
-	default:
-		logHandler = slog.NewTextHandler(os.Stderr, nil)
-	}
-
-	slog.SetDefault(slog.New(logHandler))
 
 	slog.Info("gokas-info", "version", stats.Version, "version_long", stats.VersionLong, "build_time", stats.BuildTime)
 
