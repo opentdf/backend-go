@@ -14,7 +14,6 @@ import (
 	"testing"
 )
 
-
 func TestExportRsaPublicKeyAsPemStrSuccess(t *testing.T) {
 	mockKey := &rsa.PublicKey{
 		N: big.NewInt(123),
@@ -100,7 +99,7 @@ func TestExportCertificateAsPemStrSuccess(t *testing.T) {
 	// Decode the pemStr back into a block
 	pemBlock, _ := pem.Decode([]byte(pemStr))
 	if pemBlock == nil {
-		t.Error("Failed to decode PEM block from the generated string")
+		t.Fatal("Failed to decode PEM block from the generated string")
 	}
 
 	// Ensure that the PEM block has the expected type "CERTIFICATE"
