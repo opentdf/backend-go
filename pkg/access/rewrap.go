@@ -183,7 +183,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 
 	///////////////////// PERFORM ACCESS DECISION /////////////////////
 
-	access, err := canAccess(&ctx, claims.EntityID, policy, claims.TDFClaims, definitions)
+	access, err := canAccess(ctx, claims.EntityID, policy, claims.TDFClaims, definitions)
 
 	if err != nil {
 		slog.WarnContext(ctx, "Could not perform access decision!", "err", err)
