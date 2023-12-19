@@ -8,12 +8,16 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"github.com/opentdf/backend-go/pkg/p11"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
-
 
 func TestExportRsaPublicKeyAsPemStrSuccess(t *testing.T) {
 	mockKey := &rsa.PublicKey{
@@ -126,3 +130,61 @@ func TestError(t *testing.T) {
 		t.Errorf("Output %v not equal to expected %v", output, expectedResult)
 	}
 }
+
+const hostname = "localhost"
+
+func TestCertificateHandler(t *testing.T) {
+	// ?algorithm=ec:secp256r1
+	request, _ := http.NewRequest(http.MethodGet, "/kas_public_key", nil)
+	response := httptest.NewRecorder()
+
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRsa: rsa.PublicKey{},
+		PublicKeyEc:  ecdsa.PublicKey{},
+		Certificate:  x509.Certificate{},
+		Attributes:   nil,
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	kas.CertificateHandler(response, request)
+	result := response.Body.String()
+
+	// TODO Pass mocked certificate ?
+	if !strings.Contains(result, "BEGIN CERTIFICATE") {
+		t.Errorf("got %s, but should be certificate", result)
+	}
+}
+
+// TODO
+//func TestPublicKeyHandlerV2(t *testing.T) {
+//	// ?algorithm=ec:secp256r1
+//
+//	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key", nil)
+//	response := httptest.NewRecorder()
+//
+//	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+//	kas := Provider{
+//		URI:          *kasURI,
+//		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+//		PublicKeyRsa: rsa.PublicKey{},
+//		PublicKeyEc:  ecdsa.PublicKey{},
+//		Certificate:  x509.Certificate{},
+//		Attributes:   nil,
+//		Session:      p11.Pkcs11Session{},
+//		OIDCVerifier: nil,
+//	}
+//
+//	kas.PublicKeyHandlerV2(response, request)
+//	result := response.Body.String()
+//
+//	fmt.Println("result", result)
+//
+//	// TODO Pass mocked pub key ?
+//	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
+//		t.Errorf("got %s, but should be certificate", result)
+//	}
+//}
