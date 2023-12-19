@@ -2,15 +2,12 @@ package access
 
 import (
 	"context"
-	"log/slog"
-	"os"
 	"testing"
 
 	uuid "github.com/google/uuid"
 	attrs "github.com/virtru/access-pdp/attributes"
 )
 
-var l = slog.New(slog.NewTextHandler(os.Stderr, nil))
 var c = context.Background()
 
 // ######## Dissem tests ################
@@ -114,7 +111,7 @@ func TestAllOfSuccess(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
 			Dissem: []string{},
 		},
@@ -125,19 +122,19 @@ func TestAllOfSuccess(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example.com",
 			Name:      "Test1",
 			Rule:      "allOf",
@@ -161,8 +158,8 @@ func TestAllOfFailure(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-				Attribute{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
 			},
 			Dissem: []string{},
 		},
@@ -173,19 +170,19 @@ func TestAllOfFailure(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example.com",
 			Name:      "Test1",
 			Rule:      "allOf",
@@ -211,8 +208,8 @@ func TestAnyOfSuccess(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example3.com/attr/Test3/value/A", Name: "Test3"},
-				Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+				{URI: "https://example3.com/attr/Test3/value/A", Name: "Test3"},
+				{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 			},
 			Dissem: []string{},
 		},
@@ -223,19 +220,19 @@ func TestAnyOfSuccess(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example3.com",
 			Name:      "Test3",
 			Rule:      "anyOf",
@@ -259,8 +256,8 @@ func TestAnyOfFailure(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example3.com/attr/Test3/value/A", Name: "Test3"},
-				Attribute{URI: "https://example3.com/attr/Test3/value/B", Name: "Test3"},
+				{URI: "https://example3.com/attr/Test3/value/A", Name: "Test3"},
+				{URI: "https://example3.com/attr/Test3/value/B", Name: "Test3"},
 			},
 			Dissem: []string{},
 		},
@@ -271,19 +268,19 @@ func TestAnyOfFailure(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example3.com",
 			Name:      "Test3",
 			Rule:      "anyOf",
@@ -309,7 +306,7 @@ func TestHierarchySuccess(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example2.com/attr/Test2/value/C", Name: "Test2"},
+				{URI: "https://example2.com/attr/Test2/value/C", Name: "Test2"},
 			},
 			Dissem: []string{},
 		},
@@ -320,19 +317,19 @@ func TestHierarchySuccess(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example2.com",
 			Name:      "Test2",
 			Rule:      "hierarchy",
@@ -356,8 +353,8 @@ func TestHierarchyFailure(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example2.com/attr/Test2/value/A", Name: "Test2"},
-				Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+				{URI: "https://example2.com/attr/Test2/value/A", Name: "Test2"},
+				{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
 			},
 			Dissem: []string{},
 		},
@@ -368,19 +365,19 @@ func TestHierarchyFailure(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example2.com",
 			Name:      "Test2",
 			Rule:      "hierarchy",
@@ -406,7 +403,7 @@ func TestAttrDissemSuccess(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
 			Dissem: []string{"email1@example.com",
 				"email2@example.com",
@@ -419,19 +416,19 @@ func TestAttrDissemSuccess(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example.com",
 			Name:      "Test1",
 			Rule:      "allOf",
@@ -455,7 +452,7 @@ func TestAttrDissemFailure1(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
 			Dissem: []string{"email1@example.com",
 				"email3@example.com"},
@@ -467,19 +464,19 @@ func TestAttrDissemFailure1(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example.com",
 			Name:      "Test1",
 			Rule:      "allOf",
@@ -503,8 +500,8 @@ func TestAttrDissemFailure2(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-				Attribute{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
 			},
 			Dissem: []string{"email1@example.com",
 				"email2@example.com",
@@ -517,19 +514,19 @@ func TestAttrDissemFailure2(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example.com",
 			Name:      "Test1",
 			Rule:      "allOf",
@@ -553,8 +550,8 @@ func TestAttrDissemFailure3(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-				Attribute{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
 			},
 			Dissem: []string{"email1@example.com",
 				"email2@example.com",
@@ -567,19 +564,19 @@ func TestAttrDissemFailure3(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example.com",
 			Name:      "Test1",
 			Rule:      "allOf",
@@ -603,7 +600,7 @@ func TestAttrDissemFailure4(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "", Name: "Test1"},
+				{URI: "", Name: "Test1"},
 			},
 			Dissem: []string{"email1@example.com",
 				"email2@example.com",
@@ -616,19 +613,19 @@ func TestAttrDissemFailure4(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
-					Attribute{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
-					Attribute{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
+					{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example.com",
 			Name:      "Test1",
 			Rule:      "allOf",
@@ -654,7 +651,7 @@ func TestAttrDissemFailure5(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
 			Dissem: []string{"email1@example.com",
 				"email2@example.com",
@@ -667,17 +664,17 @@ func TestAttrDissemFailure5(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "", Name: "Test1"},
+					{URI: "", Name: "Test1"},
 				},
 			},
 		},
 	}
 
 	testDefinitions := []attrs.AttributeDefinition{
-		attrs.AttributeDefinition{
+		{
 			Authority: "https://example.com",
 			Name:      "Test1",
 			Rule:      "allOf",
@@ -703,7 +700,7 @@ func TestAttrDissemFailure6(t *testing.T) {
 		UUID: uuid.New(),
 		Body: Body{
 			DataAttributes: []Attribute{
-				Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
 			Dissem: []string{"email1@example.com",
 				"email2@example.com",
@@ -716,10 +713,10 @@ func TestAttrDissemFailure6(t *testing.T) {
 		ClientPublicSigningKey: "test-client-public-signing-key",
 		SchemaVersion:          "test-schema",
 		Entitlements: []Entitlement{
-			Entitlement{
+			{
 				EntityID: "email2@example.com",
 				EntityAttributes: []Attribute{
-					Attribute{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
+					{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 				},
 			},
 		},
