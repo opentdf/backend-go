@@ -319,8 +319,8 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
+	http.HandleFunc("/healthz", kas.HealthZ)
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
-	http.HandleFunc("/healthz", kas.CertificateHandler)
 	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
 	slog.Info("listening", "host", ":8000")
