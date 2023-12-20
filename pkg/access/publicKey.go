@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/lestrrat-go/jwx/v2/jwk"
@@ -20,24 +20,29 @@ const (
 )
 
 func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	algorithm := r.URL.Query().Get("algorithm")
 	if algorithm == algorithmEc256 {
 		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
 		if err != nil {
-			log.Fatalf("error EC public key from PKCS11: %v", err)
+			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
+			panic(err)
 		}
 		_, _ = w.Write([]byte(ecPublicKeyPem))
 		return
 	}
 	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("error RSA public key from PKCS11: %v", err)
+		http.Error(w, "configuration error", http.StatusInternalServerError)
+		slog.ErrorContext(ctx, "RSA public key from PKCS11", "err", err)
+		return
 	}
-	log.Println(certificatePem)
+	slog.DebugContext(ctx, "Cert Handler found", "cert", certificatePem)
 	jData, err := json.Marshal(certificatePem)
 	if err != nil {
-		log.Printf("error json certificate Marshal: %v", err)
+		http.Error(w, "serialization error", http.StatusInternalServerError)
+		slog.ErrorContext(ctx, "json certificate Marshal", "err", err)
+		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(jData)
@@ -46,12 +51,15 @@ func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 
 // PublicKeyHandlerV2 decrypts and encrypts the symmetric data key
 func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	algorithm := r.URL.Query().Get("algorithm")
 	// ?algorithm=ec:secp256r1
 	if algorithm == algorithmEc256 {
 		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
 		if err != nil {
-			log.Printf("error EC public key from PKCS11: %v", err)
+			http.Error(w, "configuration error", http.StatusInternalServerError)
+			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
+			return
 		}
 		_, _ = w.Write([]byte(ecPublicKeyPem))
 		return
@@ -61,13 +69,15 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 		// Parse, serialize, slice and dice JWKs!
 		rsaPublicKeyJwk, err := jwk.FromRaw(&p.PublicKeyRsa)
 		if err != nil {
-			log.Printf("failed to parse JWK: %s\n", err)
+			http.Error(w, "configuration error", http.StatusInternalServerError)
+			slog.ErrorContext(ctx, "failed to parse JWK", "err", err)
 			return
 		}
 		// Keys can be serialized back to JSON
 		jsonPublicKey, err := json.Marshal(rsaPublicKeyJwk)
 		if err != nil {
-			log.Printf("failed to marshal key into JSON: %s", err)
+			http.Error(w, "configuration error", http.StatusInternalServerError)
+			slog.ErrorContext(ctx, "failed to marshal JWK", "err", err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -76,8 +86,9 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 	}
 	rsaPublicKeyPem, err := exportRsaPublicKeyAsPemStr(&p.PublicKeyRsa)
 	if err != nil {
-		log.Printf("error RSA public key from PKCS11: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, "configuration error", http.StatusInternalServerError)
+		slog.ErrorContext(ctx, "export RSA public key", "err", err)
+		return
 	}
 	_, _ = w.Write([]byte(rsaPublicKeyPem))
 }

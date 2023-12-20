@@ -2,10 +2,11 @@ package access
 
 import (
 	"context"
-	"github.com/jarcoal/httpmock"
-	"github.com/virtru/access-pdp/attributes"
 	"net/http"
 	"testing"
+
+	"github.com/jarcoal/httpmock"
+	"github.com/virtru/access-pdp/attributes"
 )
 
 type WrongAttributeDefinition struct {
@@ -150,7 +151,7 @@ func TestFetchAttributesFailure2(t *testing.T) {
 func TestFetchAttributesForNamespaceFailure(t *testing.T) {
 	namespaces := []string{"namespace1", "namespace2"}
 
-	output, err := fetchAttributes(nil, namespaces)
+	output, err := fetchAttributes(context.Background(), namespaces)
 
 	if err == nil {
 		t.Error("Should throw an error")

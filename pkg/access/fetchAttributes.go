@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/virtru/access-pdp/attributes"
@@ -25,8 +25,7 @@ func fetchAttributes(ctx context.Context, namespaces []string) ([]attributes.Att
 	for _, ns := range namespaces {
 		attrDefs, err := fetchAttributesForNamespace(ctx, ns)
 		if err != nil {
-			// logger.Warn("Error creating http request to attributes service")
-			log.Printf("Error fetching attributes for namespace %s", ns)
+			slog.ErrorContext(ctx, "unable to fetch attributes for namespace", "err", err, "namespace", ns)
 			return nil, err
 		}
 		definitions = append(definitions, attrDefs...)
@@ -35,10 +34,10 @@ func fetchAttributes(ctx context.Context, namespaces []string) ([]attributes.Att
 }
 
 func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attributes.AttributeDefinition, error) {
-	log.Println("Fetching for ", namespace)
+	slog.DebugContext(ctx, "Fetching", "namespace", namespace)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, attributeHost+"/v1/attrName", nil)
 	if err != nil {
-		log.Println("Error creating http request to attributes service")
+		slog.ErrorContext(ctx, "unable to create http request to attributes service", "namespace", namespace, "attributeHost", attributeHost)
 		return nil, errors.Join(ErrAttributeDefinitionsServiceCall, err)
 	}
 
@@ -50,13 +49,13 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attri
 	var httpClient http.Client
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		log.Println("Error executing http request to attributes service")
+		slog.ErrorContext(ctx, "failed http request to attributes service", "err", err, "namespace", namespace, "attributeHost", attributeHost, "req", req)
 		return nil, errors.Join(ErrAttributeDefinitionsServiceCall, err)
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			log.Println(err)
+			slog.ErrorContext(ctx, "failed to close http request to attributes service", "err", err, "namespace", namespace, "attributeHost", attributeHost, "req", req)
 		}
 	}(resp.Body)
 	if resp.StatusCode != http.StatusOK {
@@ -67,7 +66,7 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attri
 	var definitions []attributes.AttributeDefinition
 	err = json.NewDecoder(resp.Body).Decode(&definitions)
 	if err != nil {
-		log.Println("Error parsing response from attributes service")
+		slog.ErrorContext(ctx, "failed to parse response from attributes service", "err", err, "namespace", namespace, "attributeHost", attributeHost, "req", req)
 		return nil, errors.Join(ErrAttributeDefinitionsUnmarshal, err)
 	}
 
