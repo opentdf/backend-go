@@ -15,7 +15,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/miekg/pkcs11"
@@ -26,11 +25,8 @@ import (
 )
 
 const (
-	ErrHsm             = Error("hsm unexpected")
-	hostname           = "localhost"
-	timeoutServerRead  = 5 * time.Second
-	timeoutServerWrite = 10 * time.Second
-	timeoutServerIdle  = 120 * time.Second
+	ErrHsm   = Error("hsm unexpected")
+	hostname = "localhost"
 )
 
 func loadIdentityProvider() oidc.IDTokenVerifier {
@@ -323,27 +319,13 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	// server
-	server := http.Server{
-		Addr:         "127.0.0.1:8080",
-		ReadTimeout:  timeoutServerRead,
-		WriteTimeout: timeoutServerWrite,
-		IdleTimeout:  timeoutServerIdle,
-	}
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
+	http.HandleFunc("/healthz", kas.CertificateHandler)
 	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
-	go func() {
-		slog.Info("listening", "host", server.Addr)
-		if err := server.ListenAndServe(); err != nil {
-			slog.Error("server failure")
-			panic(err)
-		}
-	}()
-	<-stop
-	err = server.Shutdown(context.Background())
-	if err != nil {
-		slog.Error("server shutdown failure", "err", err)
+	slog.Info("listening", "host", ":8000")
+	if err := http.ListenAndServe(":8000", nil); err != nil {
+		slog.Error("server failure", "err", err)
 	}
 }
 
