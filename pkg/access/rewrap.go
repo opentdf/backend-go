@@ -6,7 +6,6 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -50,8 +49,6 @@ type customClaimsHeader struct {
 func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	slog.DebugContext(ctx, "REWRAP", "headers", r.Header, "body", r.Body, "ContentLength", r.ContentLength)
-
-	fmt.Println("Handler", r.ContentLength)
 
 	// preflight
 	if r.ContentLength == 0 {
