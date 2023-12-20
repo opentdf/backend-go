@@ -8,7 +8,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"fmt"
 	"github.com/opentdf/backend-go/pkg/p11"
 	"math/big"
 	"net/http"
@@ -218,8 +217,6 @@ func TestPublicKeyHandlerV2(t *testing.T) {
 	kas.PublicKeyHandlerV2(response, request)
 	result := response.Body.String()
 
-	fmt.Println("result", result)
-
 	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
 		t.Errorf("got %s, but should be pubkey", result)
 	}
@@ -284,8 +281,6 @@ func TestPublicKeyHandlerV2WithEc256(t *testing.T) {
 
 	kas.PublicKeyHandlerV2(response, request)
 	result := response.Body.String()
-
-	fmt.Println("result", result)
 
 	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
 		t.Errorf("got %s, but should be pubkey", result)
