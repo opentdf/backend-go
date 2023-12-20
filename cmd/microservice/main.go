@@ -34,10 +34,17 @@ const (
 )
 
 func loadIdentityProvider() oidc.IDTokenVerifier {
-	oidcIssuer := os.Getenv("OIDC_ISSUER")
-	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
+	oidcIssuerURL := os.Getenv("OIDC_ISSUER_URL")
+	discoveryBaseURL := os.Getenv("OIDC_DISCOVERY_BASE_URL")
+	ctx := context.Background()
+	if discoveryBaseURL != "" {
+		ctx = oidc.InsecureIssuerURLContext(ctx, oidcIssuerURL)
+	} else {
+		discoveryBaseURL = oidcIssuerURL
+	}
+	provider, err := oidc.NewProvider(ctx, discoveryBaseURL)
 	if err != nil {
-		slog.Error("OIDC_ISSUER provider fail", "err", err, "OIDC_ISSUER", oidcIssuer)
+		slog.Error("OIDC_ISSUER provider fail", "err", err, "OIDC_ISSUER_URL", oidcIssuerURL, "OIDC_DISCOVERY_BASE_URL", os.Getenv("OIDC_DISCOVERY_BASE_URL"))
 		panic(err)
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
@@ -362,9 +369,9 @@ func findKey(hs *hsmSession, class uint, id []byte, label string) (pkcs11.Object
 	}
 	defer func() {
 		finalErr := hs.c.ctx.FindObjectsFinal(hs.session)
-		if err == nil {
+		if err != nil {
 			err = finalErr
-			slog.Error("server shutdown failure", "err", err)
+			slog.Error("pcks11 FindObjectsFinal failure", "err", err)
 		}
 	}()
 

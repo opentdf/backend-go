@@ -99,6 +99,7 @@ def backend(values=[], set={}, resource_deps=[]):
         "backend",
         repo_name="oci://ghcr.io/opentdf/charts",
         values=values,
+        version=BACKEND_CHART_TAG,
         set=dict_to_equals_list(set_values),
     )
     for x in ["attributes", "entitlement-store"]:
@@ -111,6 +112,7 @@ def frontend(values=[], set={}, resource_deps=[]):
         "abacus",
         repo_name="oci://ghcr.io/opentdf/charts",
         values=values,
+        version=FRONTEND_CHART_TAG,
         set=dict_to_equals_list(set),
     )
     # resource("abacus", labels="opentdf", resource_deps=resource_deps)
