@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestInferLogHandlerDefaults(t *testing.T) {
-	h := inferLogHandler("", "")
-	_, ok := h.(*slog.TextHandler)
+func TestInferLoggerDefaults(t *testing.T) {
+	h := inferLogger("", "")
+	_, ok := h.Handler().(*slog.TextHandler)
 	if !ok {
 		t.Error("should default to TextHandler")
 	}
@@ -20,28 +20,28 @@ func TestInferLogHandlerDefaults(t *testing.T) {
 	}
 }
 
-func TestInferLogHandlerType(t *testing.T) {
-	h := inferLogHandler("", "json")
-	_, ok := h.(*slog.JSONHandler)
+func TestInferLoggerType(t *testing.T) {
+	h := inferLogger("", "json")
+	_, ok := h.Handler().(*slog.JSONHandler)
 	if !ok {
 		t.Error("wrong handler type")
 	}
 
-	h = inferLogHandler("", "jSoN")
-	_, ok = h.(*slog.JSONHandler)
+	h = inferLogger("", "jSoN")
+	_, ok = h.Handler().(*slog.JSONHandler)
 	if !ok {
 		t.Error("wrong handler type")
 	}
 
-	h = inferLogHandler("", "idkwhatever")
-	_, ok = h.(*slog.TextHandler)
+	h = inferLogger("", "idkwhatever")
+	_, ok = h.Handler().(*slog.TextHandler)
 	if !ok {
 		t.Error("wrong handler type")
 	}
 }
 
 func TestInferLogLevel(t *testing.T) {
-	h := inferLogHandler("info", "")
+	h := inferLogger("info", "")
 	if !h.Enabled(context.Background(), slog.LevelInfo) {
 		t.Error("should be at INFO")
 	}
@@ -49,12 +49,12 @@ func TestInferLogLevel(t *testing.T) {
 		t.Error("should not be at DEBUG")
 	}
 
-	h = inferLogHandler("DEbUG", "")
+	h = inferLogger("DEbUG", "")
 	if !h.Enabled(context.Background(), slog.LevelDebug) {
 		t.Error("should be at DEBUG")
 	}
 
-	h = inferLogHandler("warn", "")
+	h = inferLogger("warn", "")
 	if !h.Enabled(context.Background(), slog.LevelWarn) {
 		t.Error("should be at warn")
 	}
@@ -62,7 +62,7 @@ func TestInferLogLevel(t *testing.T) {
 		t.Error("should not be at info")
 	}
 
-	h = inferLogHandler("warnING", "")
+	h = inferLogger("warnING", "")
 	if !h.Enabled(context.Background(), slog.LevelWarn) {
 		t.Error("should be at warn")
 	}
@@ -70,7 +70,7 @@ func TestInferLogLevel(t *testing.T) {
 		t.Error("should not be at info")
 	}
 
-	h = inferLogHandler("erroR", "")
+	h = inferLogger("erroR", "")
 	if !h.Enabled(context.Background(), slog.LevelError) {
 		t.Error("should be at error")
 	}

@@ -132,7 +132,7 @@ func destroyHSMSession(hs *hsmSession) {
 	}
 }
 
-func inferLogHandler(loglevel, format string) slog.Handler {
+func inferLogger(loglevel, format string) *slog.Logger {
 	level := slog.LevelInfo
 	switch strings.ToLower(loglevel) {
 	case "info":
@@ -147,13 +147,13 @@ func inferLogHandler(loglevel, format string) slog.Handler {
 		level = slog.LevelDebug
 	}
 	if strings.ToLower(format) == "json" {
-		return slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+		return slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 	}
-	return slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})
+	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 }
 
 func main() {
-	slog.SetDefault(slog.New(inferLogHandler(os.Getenv("LOG_LEVEL"), os.Getenv("LOG_FORMAT"))))
+	slog.SetDefault(inferLogger(os.Getenv("LOG_LEVEL"), os.Getenv("LOG_FORMAT")))
 
 	// version and build information
 	stats := version.GetVersion()
