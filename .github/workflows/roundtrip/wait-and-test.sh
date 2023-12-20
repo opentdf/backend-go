@@ -27,3 +27,5 @@ _wait-for() {
 if ! _wait-for; then
   exit 1
 fi
+
+# TODO Encrypt and decrypt an object
