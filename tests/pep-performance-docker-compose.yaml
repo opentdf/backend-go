@@ -72,6 +72,7 @@ services:
       - PRIVATE_KEY_RSA_PATH=../../kas-private.pem
       - OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
     logging:
+      # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
       driver: loki
       options:
         loki-url: http://host.docker.internal:3100/loki/api/v1/push
