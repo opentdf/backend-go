@@ -5,6 +5,12 @@ set -x
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 ROOT_DIR="$(cd "${APP_DIR}/../../.." >/dev/null && pwd)"
 
+cd $APP_DIR
+if ! pip install -r requirements.txt; then
+  echo "Failed to install python deps for roundtrip test"
+  exit 1
+fi
+
 _wait-for() {
   echo "[INFO] In retry loop for quickstarted opentdf backend..."
   limit=5
@@ -28,4 +34,14 @@ if ! _wait-for; then
   exit 1
 fi
 
-# TODO Encrypt and decrypt an object
+rm -rf sample.{out,tdf,txt}
+echo hello-world >sample.txt
+if ! python3 ./tdf.py encrypt sample.txt sample.tdf; then
+  echo ERROR encrypt failure
+  exit 1
+fi
+
+if ! python3 ./tdf.py decrypt sample.tdf sample.out; then
+  echo ERROR decrypt failure
+  exit 1
+fi

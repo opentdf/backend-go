@@ -48,6 +48,16 @@ def dict_to_helm_set_list(dict):
 docker_build(
     "gokas",
     context=".",
+    only=[
+        './go.mod',
+        './go.sum',
+        './makefile',
+        './cmd',
+        './internal',
+        './pkg',
+        './scripts',
+        './softhsm2-debug.conf',
+    ],
     target="server-debug",
 )
 

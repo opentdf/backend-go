@@ -84,9 +84,10 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.HasPrefix(os.Getenv("OIDC_ISSUER"), idToken.Issuer) {
+	oidcIssuerURL := os.Getenv("OIDC_ISSUER_URL")
+	if !strings.HasPrefix(oidcIssuerURL, idToken.Issuer) {
 		http.Error(w, "forbidden", http.StatusForbidden)
-		slog.WarnContext(ctx, "Invalid token issuer", "issuer", idToken.Issuer)
+		slog.WarnContext(ctx, "Invalid token issuer", "issuer", idToken.Issuer, "oidcIssuerURL", oidcIssuerURL)
 		return
 	}
 
@@ -133,9 +134,10 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.HasPrefix(os.Getenv("OIDC_ISSUER"), requestBody.KeyAccess.URL) {
+	kasURL := os.Getenv("KAS_URL")
+	if !strings.HasPrefix(requestBody.KeyAccess.URL, kasURL) {
 		http.Error(w, "forbidden", http.StatusForbidden)
-		slog.WarnContext(ctx, "invalid key access url", "keyAccessURL", requestBody.KeyAccess.URL)
+		slog.WarnContext(ctx, "invalid key access url", "keyAccessURL", requestBody.KeyAccess.URL, "oidcIssuerURL", oidcIssuerURL)
 		return
 	}
 

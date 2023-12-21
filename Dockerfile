@@ -31,6 +31,7 @@ FROM ubuntu:latest as server-debug
 ENV SERVICE "default"
 ENV LOG_LEVEL "DEBUG"
 ENV LOG_FORMAT "TEXT"
+ENV KAS_URL ""
 ENV PKCS11_SLOT_INDEX "0"
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 COPY --from=builder /build/gokas /
@@ -47,9 +48,7 @@ ENV SERVICE "default"
 # Server
 ENV LOG_LEVEL "INFO"
 ENV LOG_FORMAT "JSON"
-ENV SERVER_ROOT_PATH "/"
-ENV SERVER_PORT "4020"
-ENV SERVER_PUBLIC_NAME ""
+ENV KAS_URL ""
 ## trailing / is required
 ENV OIDC_DISCOVERY_BASE_URL ""
 ENV OIDC_ISSUER_URL ""

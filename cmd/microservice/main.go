@@ -40,7 +40,7 @@ func loadIdentityProvider() oidc.IDTokenVerifier {
 	}
 	provider, err := oidc.NewProvider(ctx, discoveryBaseURL)
 	if err != nil {
-		slog.Error("OIDC_ISSUER provider fail", "err", err, "OIDC_ISSUER_URL", oidcIssuerURL, "OIDC_DISCOVERY_BASE_URL", os.Getenv("OIDC_DISCOVERY_BASE_URL"))
+		slog.Error("OIDC_ISSUER_URL provider fail", "err", err, "OIDC_ISSUER_URL", oidcIssuerURL, "OIDC_DISCOVERY_BASE_URL", os.Getenv("OIDC_DISCOVERY_BASE_URL"))
 		panic(err)
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
