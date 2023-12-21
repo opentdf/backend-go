@@ -1,4 +1,4 @@
-version: '3'
+version: '3.8'
 
 services:
   speedbump:
@@ -57,6 +57,8 @@ services:
       - loki
   pep-key:
     build:
+      args:
+        - ARTIFACT=gokas
       context: ..
       dockerfile: Dockerfile
     environment:
@@ -71,6 +73,23 @@ services:
       - PKCS11_LABEL_PUBKEY_EC=development-ec-kas
       - PRIVATE_KEY_RSA_PATH=../../kas-private.pem
       - OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
+      - LOG_LEVEL=debug
+    logging:
+      # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
+      driver: loki
+      options:
+        loki-url: http://host.docker.internal:3100/loki/api/v1/push
+  pep-cli:
+    command: ["ls"]
+    build:
+      args:
+        - ARTIFACT=cli
+      target: cli
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      - OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
+      - LOG_LEVEL=debug
     logging:
       # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
       driver: loki
