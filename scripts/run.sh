@@ -87,17 +87,20 @@ export HOST
 l "Configuring ${HOST}..."
 
 # Translate from old chart env vars to newer ones
-if [ -z "$OIDC_SERVER_URL" ]; then
-  : "${OIDC_ISSUER:=${OIDC_SERVER_URL}/realms/tdf}"
-else
-  : "${OIDC_ISSUER:=https://localhost:65432/auth/realms/tdf}"
+if [ -z "$OIDC_ISSUER_URL" ]; then
+  if [ -n "$OIDC_SERVER_URL" ]; then
+    OIDC_ISSUER_URL="${OIDC_SERVER_URL}/realms/tdf}"
+    export OIDC_ISSUER_URL
+  fi
 fi
 if [ -z "${LOG_FORMAT}" ] && [[ true == "${JSON_LOGGER}" ]]; then
   LOG_FORMAT=json
+  export LOG_FORMAT
 fi
 
 if [ -z "${LOG_LEVEL}" ] && [ -n "${LOGLEVEL}" ]; then
   LOG_LEVEL="${LOGLEVEL}"
+  export LOG_LEVEL
 fi
 
 : "${PKCS11_SLOT_INDEX:=0}"
@@ -116,6 +119,13 @@ else
   monolog ERROR "Unknown OS [${OSTYPE}]"
   exit 1
 fi
+
+export PKCS11_LABEL_PUBKEY_EC
+export PKCS11_LABEL_PUBKEY_RSA
+export PKCS11_MODULE_PATH
+export PKCS11_PIN
+export PKCS11_SLOT_INDEX
+export PKCS11_SO_PIN
 
 MODULE_ARGS=("--allow-sw")
 

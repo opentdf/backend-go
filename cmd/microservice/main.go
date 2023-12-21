@@ -15,7 +15,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/miekg/pkcs11"
@@ -26,18 +25,22 @@ import (
 )
 
 const (
-	ErrHsm             = Error("hsm unexpected")
-	hostname           = "localhost"
-	timeoutServerRead  = 5 * time.Second
-	timeoutServerWrite = 10 * time.Second
-	timeoutServerIdle  = 120 * time.Second
+	ErrHsm   = Error("hsm unexpected")
+	hostname = "localhost"
 )
 
 func loadIdentityProvider() oidc.IDTokenVerifier {
-	oidcIssuer := os.Getenv("OIDC_ISSUER")
-	provider, err := oidc.NewProvider(context.Background(), oidcIssuer)
+	oidcIssuerURL := os.Getenv("OIDC_ISSUER_URL")
+	discoveryBaseURL := os.Getenv("OIDC_DISCOVERY_BASE_URL")
+	ctx := context.Background()
+	if discoveryBaseURL != "" {
+		ctx = oidc.InsecureIssuerURLContext(ctx, oidcIssuerURL)
+	} else {
+		discoveryBaseURL = oidcIssuerURL
+	}
+	provider, err := oidc.NewProvider(ctx, discoveryBaseURL)
 	if err != nil {
-		slog.Error("OIDC_ISSUER provider fail", "err", err, "OIDC_ISSUER", oidcIssuer)
+		slog.Error("OIDC_ISSUER provider fail", "err", err, "OIDC_ISSUER_URL", oidcIssuerURL, "OIDC_DISCOVERY_BASE_URL", os.Getenv("OIDC_DISCOVERY_BASE_URL"))
 		panic(err)
 	}
 	// Configure an OpenID Connect aware OAuth2 client.
@@ -316,27 +319,14 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	// server
-	server := http.Server{
-		Addr:         "127.0.0.1:8080",
-		ReadTimeout:  timeoutServerRead,
-		WriteTimeout: timeoutServerWrite,
-		IdleTimeout:  timeoutServerIdle,
-	}
+	http.HandleFunc("/", kas.Version)
+	http.HandleFunc("/healthz", kas.HealthZ)
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
 	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
 	http.HandleFunc("/v2/rewrap", kas.Handler)
-	go func() {
-		slog.Info("listening", "host", server.Addr)
-		if err := server.ListenAndServe(); err != nil {
-			slog.Error("server failure")
-			panic(err)
-		}
-	}()
-	<-stop
-	err = server.Shutdown(context.Background())
-	if err != nil {
-		slog.Error("server shutdown failure", "err", err)
+	slog.Info("listening", "host", ":8000")
+	if err := http.ListenAndServe(":8000", nil); err != nil {
+		slog.Error("server failure", "err", err)
 	}
 }
 
@@ -362,9 +352,9 @@ func findKey(hs *hsmSession, class uint, id []byte, label string) (pkcs11.Object
 	}
 	defer func() {
 		finalErr := hs.c.ctx.FindObjectsFinal(hs.session)
-		if err == nil {
+		if err != nil {
 			err = finalErr
-			slog.Error("server shutdown failure", "err", err)
+			slog.Error("pcks11 FindObjectsFinal failure", "err", err)
 		}
 	}()
 
