@@ -4,8 +4,11 @@
 #   Optional parameter: port or host to expose. Defaults to 8000
 #
 # Environment variables:
-#   OIDC_ISSUER
-#     -
+#   KAS_URL
+#     - The URL prefix this KAS is served from, including origin
+#   OIDC_ISSUER_URL
+#     - The URL prefix to check for ISSUER. Also used for oidc discovery, 
+#       unless overridden by OIDC_DISCOVERY_BASE_URL
 #   PKCS11_PIN
 #     - SECRET
 #     - local PIN for pkcs11. will be generated if not present
@@ -24,11 +27,12 @@
 #     - The public key used to validate responses from ATTR_AUTHORITY_HOST.
 #   LOG_LEVEL
 #     - `slog` level. Defaults to `info`. Other options include
-#         `debug` (more verbose) and `warn` (less verbose)
+#       `debug` (more verbose) and `warn` (less verbose)
 #     - For compatiblity, LOGLEVEL is an acceptible alias
 #   LOG_FORMAT
 #     - Set to `json` to enable JSON loglines
 #     - For compatiblity, you may also set JSON_LOGGER to `true`
+#
 #   Not Implemented or used Yet
 #   OIDC_SERVER_URL
 #     - FIXME/DEPRECATED
@@ -136,8 +140,8 @@ else
   l "Using PKCS11 with default --allow-sw"
 fi
 
-export OIDC_ISSUER
-l "{host: '${HOST}', issuer: '${OIDC_ISSUER}', slot: ${PKCS11_SLOT_INDEX}, tokenLabel: '${PKCS11_TOKEN_LABEL}', modulePath: '${PKCS11_MODULE_PATH}'}"
+export OIDC_ISSUER_URL
+l "{host: '${HOST}', issuer: '${OIDC_ISSUER_URL}', slot: ${PKCS11_SLOT_INDEX}, tokenLabel: '${PKCS11_TOKEN_LABEL}', modulePath: '${PKCS11_MODULE_PATH}'}"
 
 mkdir -p "${PROJECT_ROOT}/secrets/tokens"
 
