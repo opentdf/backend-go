@@ -3,9 +3,8 @@
 set -x
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
-ROOT_DIR="$(cd "${APP_DIR}/../../.." >/dev/null && pwd)"
 
-cd $APP_DIR
+cd "$APP_DIR" || exit 1
 if ! pip install -r requirements.txt; then
   echo "Failed to install python deps for roundtrip test"
   exit 1
@@ -45,3 +44,5 @@ if ! python3 ./tdf.py decrypt sample.tdf sample.out; then
   echo ERROR decrypt failure
   exit 1
 fi
+
+echo INFO Successful round trip!
