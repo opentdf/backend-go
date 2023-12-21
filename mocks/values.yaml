@@ -9,9 +9,9 @@ entitlements:
     password: bXlQb3N0Z3Jlc1Bhc3N3b3Jk
 imageCredentials:
   registry: ghcr.io
-  username: your-gh-username
-  password: your-pat
-  email: your@github.profile.email
+  username: my-gh-username
+  password: my-pat
+  email: my@github.profile.email
 keycloak:
   postgres:
     password: bXlQb3N0Z3Jlc1Bhc3N3b3Jk
@@ -20,4 +20,4 @@ kas:
     "http://localhost:65432/auth/realms/tdf":
       discoveryBaseUrl: "http://keycloak-http/auth/realms/tdf"
 entitlementpdp:
-  opaPolicyPullSecret: your-pat
+  opaPolicyPullSecret: my-pat
