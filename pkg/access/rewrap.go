@@ -54,6 +54,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	if r.ContentLength == 0 {
 		// TODO: What is this doing here?
 		// If there is an empty body, should we return 400?
+		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
 

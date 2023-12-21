@@ -24,7 +24,7 @@ jobs:
       - name: 'Setup Go'
         uses: actions/setup-go@v3
         with:
-          go-version: '${{ inputs.go-version }}'
+          go-version: '1.21.5'
           cache: true
 
       - name: 'Generate Golang Test Reports'
