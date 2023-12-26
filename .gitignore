@@ -8,3 +8,6 @@
 /kas
 /go-kas
 gokas
+
+# test data
+.github/workflows/roundtrip/sample.*
