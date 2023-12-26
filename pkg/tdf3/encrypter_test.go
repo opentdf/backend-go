@@ -2,8 +2,8 @@ package tdf3
 
 import (
 	"crypto/rsa"
+	"errors"
 	"math/big"
-	"reflect"
 	"testing"
 )
 
@@ -26,17 +26,7 @@ func TestEncryptWithPublicKeyFailure(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected  error, but got: %v", err)
 	}
-}
-
-func TestError(t *testing.T) {
-	expectedResult := "hsm decrypt error"
-	output := Error.Error(ErrHsmEncrypt)
-
-	if reflect.TypeOf(output).String() != "string" {
-		t.Error("Expected string")
-	}
-
-	if output != expectedResult {
-		t.Errorf("Output %v not equal to expected %v", output, expectedResult)
+	if !errors.Is(err, ErrHsmEncrypt) {
+		t.Errorf("Expected ErrHsmEncrypt, but got: %v", err)
 	}
 }
