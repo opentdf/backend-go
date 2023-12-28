@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -29,6 +30,10 @@ import (
 	"github.com/opentdf/backend-go/pkg/tdf3"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
+
+const keyLength = 32
+const ivSize = 12
+const tagSize = 12
 
 type RewrapRequest struct {
 	SignedRequestToken string `json:"signedRequestToken"`
@@ -162,7 +167,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if requestBody.Algorithm == "ec:secp256r1" {
-		responseBytes, err := nanoTDFRewrap(requestBody, r.Header, claims)
+		responseBytes, err := nanoTDFRewrap(requestBody)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
@@ -233,27 +238,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "clientPublicKey parse failure", http.StatusBadRequest)
 		return
 	}
-	// ///////////////////////////////
-
-	// nano header
-	// slog.Println(requestBody.KeyAccess.Header)
-	// slog.Println(len(requestBody.KeyAccess.Header))
-	// s := kaitai.NewStream(bytes.NewReader(requestBody.KeyAccess.Header))
-	// n := tdf3.new
-	// err = n.Read(s, n, n)
-	// if err != nil {
-	// 	slog.Panic(err)
-	// }
-	// slog.Print(n.Header.Length)
-
-	// unwrap using a key from file
-	// ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)
-	// symmetricKey, err := tdf3.DecryptWithPrivateKey(requestBody.KeyAccess.WrappedKey, &p.PrivateKey)
-	// if err != nil {
-	// 	// FIXME handle error
-	// 	slog.Panic(err)
-	// 	return
-	// }
 
 	// ///////////// UNWRAP AND REWRAP //////////////////
 
@@ -296,8 +280,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func nanoTDFRewrap(requestBody RequestBody, headers http.Header, claims customClaimsHeader) ([]byte, error) {
-
+func nanoTDFRewrap(requestBody RequestBody) ([]byte, error) {
 	header := requestBody.KeyAccess.Header
 
 	headerReader := bytes.NewReader(header)
@@ -317,7 +300,7 @@ func nanoTDFRewrap(requestBody RequestBody, headers http.Header, claims customCl
 	// Load PEM file
 	raw, err := os.ReadFile(kasEcPrivKeyFilePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read KAS private key JSON data: %w", err)
 	}
 
 	block, _ := pem.Decode(raw)
@@ -354,7 +337,7 @@ func nanoTDFRewrap(requestBody RequestBody, headers http.Header, claims customCl
 	clientPublicKey := requestBody.ClientPublicKey
 	block, _ = pem.Decode([]byte(clientPublicKey))
 	if block == nil {
-		slog.Error("Failed to decode PEM block")
+		return nil, fmt.Errorf("failed to decode PEM block")
 	}
 	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
@@ -363,7 +346,7 @@ func nanoTDFRewrap(requestBody RequestBody, headers http.Header, claims customCl
 
 	pub, ok := pubInterface.(*ecdsa.PublicKey)
 	if !ok {
-		return nil, err
+		return nil, fmt.Errorf("failed to extract public key: %w", err)
 	}
 	sessionKey, err := generateSessionKey(pub, privateKeyEphemeral)
 	if err != nil {
@@ -384,9 +367,12 @@ func nanoTDFRewrap(requestBody RequestBody, headers http.Header, claims customCl
 		"sessionPublicKey": pemString,
 		"schemaVersion":    schemaVersion,
 	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON data: %w", err)
+	}
 
-	return json.Marshal(data)
-
+	return jsonData, nil
 }
 
 func versionSalt() []byte {
@@ -403,16 +389,17 @@ func generateSymmetricKey(ephemeralPublicKeyBytes []byte, privateKey *ecdsa.Priv
 		slog.Error("Error unmarshalling elliptic point")
 	}
 
-	ephemeralPublicKey := ecdsa.PublicKey{Curve: curve, X: x, Y: y}
-	symmetricKey, _ := privateKey.Curve.ScalarMult(ephemeralPublicKey.X, ephemeralPublicKey.Y, privateKey.D.Bytes())
+	// ephemeralPublicKey := &ecdsa.PublicKey{Curve: curve, X: x, Y: y}
+	// symmetricKey, _ := privateKey.Curve.ScalarMult(ephemeralPublicKey.X, ephemeralPublicKey.Y, privateKey.D.Bytes())
+	symmetricKey, _ := privateKey.Curve.ScalarMult(x, y, privateKey.D.Bytes())
 
 	salt := versionSalt()
 
 	hkdf := hkdf.New(sha256.New, symmetricKey.Bytes(), salt, nil)
 
-	derivedKey := make([]byte, 32)
+	derivedKey := make([]byte, keyLength)
 	if _, err := io.ReadFull(hkdf, derivedKey); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate symmetric key: %w", err)
 	}
 
 	return derivedKey, nil
@@ -423,15 +410,15 @@ func generateSessionKey(ephemeralPublicKey *ecdsa.PublicKey, privateKey *ecdsa.P
 	salt := versionSalt()
 
 	hkdf := hkdf.New(sha256.New, sessionKey.Bytes(), salt, nil)
-	derivedKey := make([]byte, 32)
+	derivedKey := make([]byte, keyLength)
 	if _, err := io.ReadFull(hkdf, derivedKey); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate session key: %w", err)
 	}
 
 	return derivedKey, nil
 }
 
-func parsePrivateKey(der []byte) (crypto.PrivateKey, error) {
+func parsePrivateKey(der []byte) (crypto.PrivateKey, error) { //nolint:ireturn //no lint
 	if key, err := x509.ParsePKCS1PrivateKey(der); err == nil {
 		return key, nil
 	}
@@ -440,7 +427,7 @@ func parsePrivateKey(der []byte) (crypto.PrivateKey, error) {
 		case *rsa.PrivateKey, *ecdsa.PrivateKey:
 			return key, nil
 		default:
-			return nil, err
+			return nil, fmt.Errorf("failed to parse private key: %w", err)
 		}
 	}
 	if key, err := x509.ParseECPrivateKey(der); err == nil {
@@ -452,17 +439,17 @@ func parsePrivateKey(der []byte) (crypto.PrivateKey, error) {
 func encryptKey(sessionKey []byte, symmetricKey []byte) ([]byte, error) {
 	block, err := aes.NewCipher(sessionKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create cipher block: %w", err)
 	}
 
-	aesGcm, err := cipher.NewGCMWithTagSize(block, 12)
+	aesGcm, err := cipher.NewGCMWithTagSize(block, tagSize)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create NewGCMWithTagSize: %w", err)
 	}
 
-	iv := make([]byte, 12)
+	iv := make([]byte, ivSize)
 	if _, err = io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to generate IV: %w", err)
 	}
 
 	cipherText := aesGcm.Seal(iv, iv, symmetricKey, nil)
