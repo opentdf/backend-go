@@ -16,3 +16,6 @@ git clone https://github.com/pflynn-virtru/speedbump
 ```shell
 docker-compose -f pep-performance-docker-compose.yaml -p tests up -d pep-cli
 ```
+
+Grafana frontend http://localhost:3000  
+admin/admin

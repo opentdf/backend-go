@@ -5,13 +5,13 @@ services:
     build:
       context: speedbump
       dockerfile: Dockerfile
-    command: ["--port=80", "echo:80"]
+    command: ["--port=8080", "echo:8080"]
   echo:
     image: ealen/echo-server:0.8.12
     environment:
       - ENABLE__ENVIRONMENT=false
     ports:
-      - "80:80"
+      - "8080:8080"
   loki:
     image: grafana/loki:2.9.0
     ports:
@@ -26,6 +26,7 @@ services:
     command: -config.file=/etc/promtail/config.yml
     networks:
       - loki
+  # http://localhost:3000
   grafana:
     environment:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
@@ -55,6 +56,23 @@ services:
       - "3000:3000"
     networks:
       - loki
+  hydra:
+    image: oryd/hydra:v1.11.10
+    ports:
+      - "4444:4444"
+    command:
+      serve all --dangerous-force-http --dev
+    environment:
+      - URLS_SELF_ISSUER=http://localhost:4444/
+      - DSN=memory
+      - SECRETS_SYSTEM=OpcPXxgE6U9xboFAjzAyyaSouqy15OZh
+      - URLS_CONSENT=http://localhost:9020/consent
+      - URLS_LOGIN=http://localhost:9020/login
+    logging:
+      # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
+      driver: loki
+      options:
+        loki-url: http://host.docker.internal:3100/loki/api/v1/push
   pep-key:
     build:
       args:
@@ -73,7 +91,7 @@ services:
       - PKCS11_LABEL_PUBKEY_EC=development-ec-kas
       - PRIVATE_KEY_RSA_PATH=../../kas-private.pem
       - OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=DEBUG
     logging:
       # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
       driver: loki
@@ -89,11 +107,19 @@ services:
       dockerfile: Dockerfile
     environment:
       - OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
-      - LOG_LEVEL=debug
+      - AUTHORIZATION_URL=http://authorization
+      - LOG_FORMAT=json
+      - LOG_LEVEL=DEBUG
     logging:
       # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
       driver: loki
       options:
         loki-url: http://host.docker.internal:3100/loki/api/v1/push
+  authorization:
+    image: ealen/echo-server:0.8.12
+    environment:
+      - ENABLE__ENVIRONMENT=false
+    ports:
+      - "80:80"
 networks:
   loki:
