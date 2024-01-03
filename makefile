@@ -10,6 +10,7 @@ BUILD_TIME = $(shell date +'%Y-%m-%d_%T')
 SHA1 = $(shell git rev-parse HEAD)
 MAIN_FILE = cmd/microservice/main.go
 
+# RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./...
 # TODO: Fix swagger generation
 # update-doc: 
 # 	swag init -d api
