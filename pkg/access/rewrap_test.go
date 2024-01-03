@@ -1,52 +1,20 @@
 package access
 
 import (
-	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
-	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 
 	"github.com/opentdf/backend-go/pkg/p11"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
-func TestHandlerEmptyRequestFailure(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/v2/rewrap", nil)
-	request.Header.Set("Content-Type", "application/json")
-
-	response := httptest.NewRecorder()
-
-	kasURI, _ := url.Parse("https://" + hostname + ":5000")
-	kas := Provider{
-		URI:          *kasURI,
-		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRSA: rsa.PublicKey{},
-		PublicKeyEC:  ecdsa.PublicKey{},
-		Certificate:  x509.Certificate{},
-		Attributes:   nil,
-		Session:      p11.Pkcs11Session{},
-		OIDCVerifier: nil,
-	}
-
-	kas.Handler(response, request)
-	result := response.Result().Status
-
-	if strings.Compare(result, "400 Bad Request") != 0 {
-		t.Errorf("got %s, but should return error", result)
-	}
-}
-
 func TestHandlerAuthFailure0(t *testing.T) {
-	body := `{"mock": "value"}`
-	request, _ := http.NewRequest(http.MethodGet, "/v2/rewrap", bytes.NewBufferString(body))
-	request.Header.Set("Content-Type", "application/json")
-
-	response := httptest.NewRecorder()
-
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
 		URI:          *kasURI,
@@ -59,22 +27,15 @@ func TestHandlerAuthFailure0(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.Handler(response, request)
-	result := response.Result().Status
-
-	if strings.Compare(result, "401 Unauthorized") != 0 {
-		t.Errorf("got %s, but should return error", result)
+	body := `{"mock": "value"}`
+	_, err := kas.Rewrap(context.Background(), &RewrapRequest{SignedRequestToken: body})
+	status, ok := status.FromError(err)
+	if !ok || strings.Compare(status.Message(), "forbidden") != 0 {
+		t.Errorf("got [%s], but should return expected error, status.message: [%s]", err, status.Message())
 	}
 }
 
 func TestHandlerAuthFailure1(t *testing.T) {
-	body := `{"mock": "value"}`
-	request, _ := http.NewRequest(http.MethodGet, "/v2/rewrap", bytes.NewBufferString(body))
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Authorization", "Bearer invalidToken")
-
-	response := httptest.NewRecorder()
-
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
 		URI:          *kasURI,
@@ -87,23 +48,19 @@ func TestHandlerAuthFailure1(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.Handler(response, request)
-
-	resultStatus := response.Result().Status
-
-	if strings.Compare(resultStatus, "400 Bad Request") != 0 {
-		t.Errorf("got %s, but should return error", resultStatus)
+	body := `{"mock": "value"}`
+	md := map[string][]string{
+		"Authorization": {"Bearer invalidToken"},
+	}
+	ctx := metadata.NewIncomingContext(context.Background(), md)
+	_, err := kas.Rewrap(ctx, &RewrapRequest{SignedRequestToken: body})
+	status, ok := status.FromError(err)
+	if !ok || strings.Compare(status.Message(), "forbidden") != 0 {
+		t.Errorf("got [%s], but should return expected error, status.message: [%s]", err, status.Message())
 	}
 }
 
 func TestHandlerAuthFailure2(t *testing.T) {
-	body := `{"mock": "value"}`
-	request, _ := http.NewRequest(http.MethodGet, "/v2/rewrap", bytes.NewBufferString(body))
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Authorization", "invalidToken")
-
-	response := httptest.NewRecorder()
-
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
 		URI:          *kasURI,
@@ -116,11 +73,10 @@ func TestHandlerAuthFailure2(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.Handler(response, request)
-
-	resultStatus := response.Result().Status
-
-	if strings.Compare(resultStatus, "400 Bad Request") != 0 {
-		t.Errorf("got %s, but should return error", resultStatus)
+	body := `{"mock": "value"}`
+	_, err := kas.Rewrap(context.Background(), &RewrapRequest{SignedRequestToken: body, Bearer: "invalidToken"})
+	status, ok := status.FromError(err)
+	if !ok || strings.Compare(status.Message(), "forbidden") != 0 {
+		t.Errorf("got [%s], but should return expected error, status.message: [%s], ok: [%t]", err, status.Message(), ok)
 	}
 }

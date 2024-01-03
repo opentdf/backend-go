@@ -5,6 +5,12 @@ ARG GO_VERSION=latest
 # builder - executable for deployment
 # reference https://hub.docker.com/_/golang
 FROM golang:$GO_VERSION as builder
+
+RUN \
+  go install github.com/bufbuild/buf/cmd/buf@v1.28.1 && \
+  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3 && \
+  go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.32
+
 WORKDIR /build/
 COPY go.mod ./
 COPY go.sum ./
@@ -18,6 +24,12 @@ RUN make gokas
 
 # tester
 FROM golang:$GO_VERSION as tester
+
+RUN \
+  go install github.com/bufbuild/buf/cmd/buf@v1.28.1 && \
+  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3 && \
+  go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.32
+
 WORKDIR /test/
 COPY go.mod ./
 COPY go.sum ./
@@ -27,7 +39,11 @@ COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
 RUN go list -m -u all
+RUN touch empty.tmp
 RUN make test
+# Validate that buf didn't generate new files
+RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
+RUN diff new.tmp empty.tmp
 
 # server-debug - root
 FROM ubuntu:latest as server-debug
@@ -37,6 +53,7 @@ ENV LOG_FORMAT "TEXT"
 ENV KAS_URL ""
 ENV PKCS11_SLOT_INDEX "0"
 ENV AUDIT_ENABLED=false
+ENV SERVER_GRPC_PORT 5000
 ENV SERVER_HTTP_PORT 8000
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 COPY --from=builder /build/gokas /
@@ -55,6 +72,7 @@ ENV LOG_LEVEL "INFO"
 ENV LOG_FORMAT "JSON"
 ENV KAS_URL ""
 ENV AUDIT_ENABLED=false
+ENV SERVER_GRPC_PORT 5000
 ENV SERVER_HTTP_PORT 8000
 ## trailing / is required
 ENV OIDC_DISCOVERY_BASE_URL ""

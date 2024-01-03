@@ -1,6 +1,7 @@
 package access
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
@@ -8,9 +9,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"log/slog"
-	"net/http"
 
 	"github.com/lestrrat-go/jwx/v2/jwk"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const (
@@ -19,86 +22,69 @@ const (
 	algorithmEc256       = "ec:secp256r1"
 )
 
-func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	algorithm := r.URL.Query().Get("algorithm")
+func (p *Provider) LegacyPublicKey(ctx context.Context, in *LegacyPublicKeyRequest) (*wrapperspb.StringValue, error) {
+	algorithm := in.Algorithm
+	var pem string
+	var err error
 	if algorithm == algorithmEc256 {
-		eccPem, err := exportCertificateAsPemStr(&p.CertificateEC)
-		if err != nil {
-			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
-			panic(err)
-		}
-		jData, err := json.Marshal(eccPem)
-		if err != nil {
-			slog.ErrorContext(ctx, "json EC certificate Marshal fail", "err", err)
-			http.Error(w, "configuration error", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(jData)
-		_, _ = w.Write([]byte("\n"))
-		return
+		pem, err = exportCertificateAsPemStr(&p.CertificateEC)
+		slog.DebugContext(ctx, "Legacy EC Public Key Handler found", "cert", pem)
+	} else {
+		pem, err = exportCertificateAsPemStr(&p.Certificate)
+		slog.DebugContext(ctx, "Legacy RSA CERT Handler found", "cert", pem)
 	}
-	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
 	if err != nil {
-		http.Error(w, "configuration error", http.StatusInternalServerError)
-		slog.ErrorContext(ctx, "RSA public key from PKCS11", "err", err)
-		return
+		slog.ErrorContext(ctx, "unable to generate PEM", "err", err)
+		return nil, status.Error(codes.Internal, "configuration error")
 	}
-	slog.DebugContext(ctx, "Cert Handler found", "cert", certificatePem)
-	jData, err := json.Marshal(certificatePem)
-	if err != nil {
-		http.Error(w, "serialization error", http.StatusInternalServerError)
-		slog.ErrorContext(ctx, "json certificate Marshal", "err", err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(jData)
-	_, _ = w.Write([]byte("\n")) // added so that /kas_public_key matches opentdf response exactly
+	return &wrapperspb.StringValue{Value: pem}, nil
 }
 
-// PublicKeyHandlerV2 decrypts and encrypts the symmetric data key
-func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	algorithm := r.URL.Query().Get("algorithm")
-	// ?algorithm=ec:secp256r1
+func (p *Provider) PublicKey(ctx context.Context, in *PublicKeyRequest) (*PublicKeyResponse, error) {
+	algorithm := in.Algorithm
 	if algorithm == algorithmEc256 {
 		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEC)
 		if err != nil {
-			http.Error(w, "configuration error", http.StatusInternalServerError)
 			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
-			return
+			return nil, status.Error(codes.Internal, "configuration error")
 		}
-		_, _ = w.Write([]byte(ecPublicKeyPem))
-		return
+		slog.DebugContext(ctx, "EC Public Key Handler found", "cert", ecPublicKeyPem)
+		return &PublicKeyResponse{PublicKey: ecPublicKeyPem}, nil
 	}
-	format := r.URL.Query().Get("format")
-	if format == "jwk" {
-		// Parse, serialize, slice and dice JWKs!
+
+	if in.Fmt == "jwk" {
 		rsaPublicKeyJwk, err := jwk.FromRaw(&p.PublicKeyRSA)
 		if err != nil {
-			http.Error(w, "configuration error", http.StatusInternalServerError)
 			slog.ErrorContext(ctx, "failed to parse JWK", "err", err)
-			return
+			return nil, status.Error(codes.Internal, "configuration error")
 		}
 		// Keys can be serialized back to JSON
 		jsonPublicKey, err := json.Marshal(rsaPublicKeyJwk)
 		if err != nil {
-			http.Error(w, "configuration error", http.StatusInternalServerError)
 			slog.ErrorContext(ctx, "failed to marshal JWK", "err", err)
-			return
+			return nil, status.Error(codes.Internal, "configuration error")
 		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(jsonPublicKey)
-		return
+		slog.DebugContext(ctx, "JWK Public Key Handler found", "cert", jsonPublicKey)
+		return &PublicKeyResponse{PublicKey: string(jsonPublicKey)}, nil
 	}
+
+	if in.Fmt == "pkcs8" {
+		certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
+		if err != nil {
+			slog.ErrorContext(ctx, "RSA public key from PKCS11", "err", err)
+			return nil, status.Error(codes.Internal, "configuration error")
+		}
+		slog.DebugContext(ctx, "RSA Cert Handler found", "cert", certificatePem)
+		return &PublicKeyResponse{PublicKey: certificatePem}, nil
+	}
+
 	rsaPublicKeyPem, err := exportRsaPublicKeyAsPemStr(&p.PublicKeyRSA)
 	if err != nil {
-		http.Error(w, "configuration error", http.StatusInternalServerError)
-		slog.ErrorContext(ctx, "export RSA public key", "err", err)
-		return
+		slog.ErrorContext(ctx, "RSA public key export fail", "err", err)
+		return nil, status.Error(codes.Internal, "configuration error")
 	}
-	_, _ = w.Write([]byte(rsaPublicKeyPem))
+	slog.DebugContext(ctx, "RSA Public Key Handler found", "cert", rsaPublicKeyPem)
+	return &PublicKeyResponse{PublicKey: rsaPublicKeyPem}, nil
 }
 
 func exportRsaPublicKeyAsPemStr(pubkey *rsa.PublicKey) (string, error) {

@@ -5,7 +5,10 @@
 #
 # Environment variables:
 #   KAS_URL
-#     - The URL prefix this KAS is served from, including origin
+#     - The URL prefix this KAS is served from, including origin and optional PATH
+#   SERVER_GRPC_PORT
+#     - The port to server gRPC content on. If not specified, stores at a free
+#       high port, selected by the operating system
 #   SERVER_HTTP_PORT
 #     - The port to serve the HTTP REST endpoint on
 #   OIDC_ISSUER_URL
@@ -152,7 +155,7 @@ l "{host: '${HOST}', issuer: '${OIDC_ISSUER_URL}', slot: ${PKCS11_SLOT_INDEX}, t
 
 mkdir -p "${PROJECT_ROOT}/secrets/tokens"
 
-if pkcs11-tool "${MODULE_ARGS[@]}" --show-info --list-objects; then
+if pkcs11-tool "${MODULE_ARGS[@]}" --show-info --list-objects --slot-index "${PKCS11_SLOT_INDEX}}"; then
   e "pkcs11-tool indicates softhsm already inited; run 'softhsm2-util --delete-token --token ${PKCS11_TOKEN_LABEL}' or similar to delete"
 fi
 l "Unable to list objects with pkcs11-tool before init"

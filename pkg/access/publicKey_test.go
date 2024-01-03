@@ -2,6 +2,7 @@ package access
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -9,8 +10,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"math/big"
-	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"reflect"
@@ -135,9 +134,6 @@ func TestError(t *testing.T) {
 const hostname = "localhost"
 
 func TestCertificateHandler(t *testing.T) {
-	request, _ := http.NewRequest(http.MethodGet, "/kas_public_key", nil)
-	response := httptest.NewRecorder()
-
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
 		URI:          *kasURI,
@@ -150,10 +146,11 @@ func TestCertificateHandler(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.CertificateHandler(response, request)
-	result := response.Body.String()
-
-	if !strings.Contains(result, "BEGIN CERTIFICATE") {
+	result, err := kas.PublicKey(context.Background(), &PublicKeyRequest{Fmt: "pkcs8"})
+	if err != nil {
+		t.Errorf("got %s, but should be nil", err)
+	}
+	if result == nil || !strings.Contains(result.PublicKey, "BEGIN CERTIFICATE") {
 		t.Errorf("got %s, but should be certificate", result)
 	}
 }
@@ -165,8 +162,34 @@ func TestCertificateHandlerWithEc256(t *testing.T) {
 		t.Errorf("Failed to generate a private key: %v", err)
 	}
 
-	request, _ := http.NewRequest(http.MethodGet, "/kas_public_key?algorithm=ec:secp256r1", nil)
-	response := httptest.NewRecorder()
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := Provider{
+		URI:           *kasURI,
+		PrivateKey:    p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRSA:  rsa.PublicKey{},
+		PublicKeyEC:   privateKey.PublicKey,
+		Certificate:   x509.Certificate{},
+		CertificateEC: x509.Certificate{},
+		Attributes:    nil,
+		Session:       p11.Pkcs11Session{},
+		OIDCVerifier:  nil,
+	}
+
+	result, err := kas.LegacyPublicKey(context.Background(), &LegacyPublicKeyRequest{Algorithm: "ec:secp256r1"})
+	if err != nil {
+		t.Errorf("got %s, but should be nil", err)
+	}
+	if result == nil || !strings.Contains(result.Value, "BEGIN CERTIFICATE") {
+		t.Errorf("got %s, but should be cert", result)
+	}
+}
+
+func TestPublicKeyHandlerWithEc256(t *testing.T) {
+	curve := elliptic.P256()
+	privateKey, err := ecdsa.GenerateKey(curve, rand.Reader)
+	if err != nil {
+		t.Errorf("Failed to generate a private key: %v", err)
+	}
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
@@ -180,11 +203,12 @@ func TestCertificateHandlerWithEc256(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.CertificateHandler(response, request)
-	result := response.Body.String()
-
-	if !strings.Contains(result, "BEGIN CERTIFICATE") {
-		t.Errorf("got %s, but should be cert", result)
+	result, err := kas.PublicKey(context.Background(), &PublicKeyRequest{Algorithm: "ec:secp256r1"})
+	if err != nil {
+		t.Errorf("got %s, but should be nil", err)
+	}
+	if result == nil || !strings.Contains(result.PublicKey, "BEGIN PUBLIC KEY") {
+		t.Errorf("got %s, but should be public key", result)
 	}
 }
 
@@ -200,9 +224,6 @@ func TestPublicKeyHandlerV2(t *testing.T) {
 		t.Errorf("Failed to generate a private key: %v", err)
 	}
 
-	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key", nil)
-	response := httptest.NewRecorder()
-
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
 		URI:          *kasURI,
@@ -215,10 +236,11 @@ func TestPublicKeyHandlerV2(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.PublicKeyHandlerV2(response, request)
-	result := response.Body.String()
-
-	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
+	result, err := kas.PublicKey(context.Background(), &PublicKeyRequest{Algorithm: "rsa"})
+	if err != nil {
+		t.Errorf("got %s, but should be nil", err)
+	}
+	if !strings.Contains(result.PublicKey, "BEGIN PUBLIC KEY") {
 		t.Errorf("got %s, but should be pubkey", result)
 	}
 }
@@ -229,9 +251,6 @@ func TestPublicKeyHandlerV2Failure(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to generate a private key: %v", err)
 	}
-
-	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key", nil)
-	response := httptest.NewRecorder()
 
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
@@ -245,11 +264,9 @@ func TestPublicKeyHandlerV2Failure(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.PublicKeyHandlerV2(response, request)
-	result := response.Result().Status
-
-	if strings.Compare(result, "500 Internal Server Error") != 0 {
-		t.Errorf("got %s, but should return error", result)
+	_, err = kas.PublicKey(context.Background(), &PublicKeyRequest{Algorithm: "rsa"})
+	if err == nil {
+		t.Errorf("got nil error")
 	}
 }
 
@@ -264,10 +281,6 @@ func TestPublicKeyHandlerV2WithEc256(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to generate a private key: %v", err)
 	}
-	// &format=jwk
-	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key?algorithm=ec:secp256r1", nil)
-	response := httptest.NewRecorder()
-
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
 		URI:          *kasURI,
@@ -280,10 +293,12 @@ func TestPublicKeyHandlerV2WithEc256(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.PublicKeyHandlerV2(response, request)
-	result := response.Body.String()
-
-	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
+	result, err := kas.PublicKey(context.Background(), &PublicKeyRequest{Algorithm: "ec:secp256r1",
+		V: "2"})
+	if err != nil {
+		t.Errorf("got %s, but should be nil", err)
+	}
+	if !strings.Contains(result.PublicKey, "BEGIN PUBLIC KEY") {
 		t.Errorf("got %s, but should be pubkey", result)
 	}
 }
@@ -299,9 +314,6 @@ func TestPublicKeyHandlerV2WithJwk(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to generate a private key: %v", err)
 	}
-	request, _ := http.NewRequest(http.MethodGet, "/v2/kas_public_key?format=jwk", nil)
-	response := httptest.NewRecorder()
-
 	kasURI, _ := url.Parse("https://" + hostname + ":5000")
 	kas := Provider{
 		URI:          *kasURI,
@@ -314,10 +326,15 @@ func TestPublicKeyHandlerV2WithJwk(t *testing.T) {
 		OIDCVerifier: nil,
 	}
 
-	kas.PublicKeyHandlerV2(response, request)
-	result := response.Body.String()
-
-	if !strings.Contains(result, "\"kty\":\"RSA\"") {
-		t.Errorf("got %s, but should be JSON Web Key", result)
+	result, err := kas.PublicKey(context.Background(), &PublicKeyRequest{
+		Algorithm: "rsa",
+		V:         "2",
+		Fmt:       "jwk",
+	})
+	if err != nil {
+		t.Errorf("got %s, but should be nil", err)
+	}
+	if !strings.Contains(result.PublicKey, "\"kty\"") {
+		t.Errorf("got %s, but should be JSON Web Key", result.PublicKey)
 	}
 }
