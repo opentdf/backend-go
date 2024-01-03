@@ -259,6 +259,12 @@ openssl rsa -RSAPublicKey_in -in development-public.der -inform DER -outform PEM
 pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --list-objects
 ```
 
+### Protocol Buffers
+
+```shell
+protoc --go_out=gen --go-grpc_out=gen --proto_path=proto --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative authorization/authorization.proto proto/entitlements/entitlements.proto
+```
+
 ## Troubleshooting
 
 ### inside a container

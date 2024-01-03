@@ -1,5 +1,7 @@
 version: '3.8'
 
+networks:
+  loki:
 services:
   speedbump:
     build:
@@ -61,7 +63,7 @@ services:
     ports:
       - "4444:4444"
     command:
-      serve all --dangerous-force-http --dev
+      serve all --dangerous-force-http
     environment:
       - URLS_SELF_ISSUER=http://localhost:4444/
       - DSN=memory
@@ -91,6 +93,7 @@ services:
       - PKCS11_LABEL_PUBKEY_EC=development-ec-kas
       - PRIVATE_KEY_RSA_PATH=../../kas-private.pem
       - OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
+      - LOG_FORMAT=text
       - LOG_LEVEL=DEBUG
     logging:
       # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
@@ -108,7 +111,7 @@ services:
     environment:
       - OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
       - AUTHORIZATION_URL=http://authorization
-      - LOG_FORMAT=json
+      - LOG_FORMAT=text
       - LOG_LEVEL=DEBUG
     logging:
       # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
@@ -116,10 +119,16 @@ services:
       options:
         loki-url: http://host.docker.internal:3100/loki/api/v1/push
   authorization:
-    image: ealen/echo-server:0.8.12
+    build:
+      args:
+        - ARTIFACT=authorization
+      context: ..
+      dockerfile: Dockerfile
     environment:
-      - ENABLE__ENVIRONMENT=false
-    ports:
-      - "80:80"
-networks:
-  loki:
+      - LOG_FORMAT=text
+      - LOG_LEVEL=DEBUG
+    logging:
+      # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
+      driver: loki
+      options:
+        loki-url: http://host.docker.internal:3100/loki/api/v1/push

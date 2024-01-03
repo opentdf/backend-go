@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package authorization;
+option go_package = "github.com/opentdf/backend-go/gen/authorization";
+
+import "google/api/annotations.proto";
+import "entitlements/entitlements.proto";
+
+message Entity {
+  string id = 1;
+  map<string, string> context = 2;
+}
+
+message EntityChain {
+  repeated Entity entity = 1;
+}
+
+message GetEntitlementsRequest {
+  EntityChain entityChain = 1;
+}
+
+message GetEntitlementsResponse {
+  map<string, entitlements.Entitlements> entitlements = 1;
+}
+
+service AuthorizationService {
+  //Any fields in the request message which are not bound by the path pattern automatically become (optional) HTTP query parameters. Assume the following definition of the request message:
+  rpc GetEntitlements(GetEntitlementsRequest) returns (GetEntitlementsResponse) {
+    option (google.api.http) = {
+      post: "/authorization"
+      body: "entityChain"
+    };
+  }
+}

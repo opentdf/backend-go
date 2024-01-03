@@ -40,6 +40,7 @@ func main() {
 	}
 	ctx = context.WithValue(ctx, "username", currentUser.Username)
 	ctx = context.WithValue(ctx, "pid", pid)
+	slog.InfoContext(ctx, "Listing...")
 	files, err := os.ReadDir(".")
 	if err != nil {
 		slog.ErrorContext(ctx, err.Error())

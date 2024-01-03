@@ -9,3 +9,4 @@
 /go-kas
 gokas
 /tests/speedbump/
+!/proto/google/
