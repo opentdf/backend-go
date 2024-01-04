@@ -17,7 +17,7 @@ jobs:
   version:
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: "${{ github.event.release.tag_name}}"
+      RELEASE_TAG: "${{ github.event.release.tag_name }}"
     outputs:
       VERSION: "${{ steps.info.outputs.VERSION }}"
       SHA_TAG: "${{ steps.info.outputs.SHA }}"
@@ -144,7 +144,6 @@ jobs:
     if: github.event.release
     needs:
       - ci
-      - version
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -169,4 +168,4 @@ jobs:
           context: .
           platforms: "${{ env.CONTAINER_ARCHS }}"
           push: true
-          tags: ghcr.io/opentdf/gokas:${{ needs.version.outputs.VERSION }}
+          tags: ghcr.io/opentdf/gokas:${{ github.event.release.tag_name }}
