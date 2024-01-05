@@ -4,7 +4,6 @@ package authorization;
 option go_package = "github.com/opentdf/backend-go/gen/authorization";
 
 import "google/api/annotations.proto";
-import "entitlements/entitlements.proto";
 
 message Entity {
   enum Type {
@@ -80,8 +79,19 @@ message IsAuthorizedRequest {
   Resources resources = 3;
 }
 
+message Decision {
+  enum Type {
+    DENY = 0;
+    PERMIT = 1;
+  }
+  string entityId = 1;
+  string resourceId = 2;
+  Type type = 3;
+  repeated string obligations = 4;
+}
+
 message IsAuthorizedResponse {
-  map<string, entitlements.Entitlements> entitlements = 1;
+  repeated Decision decisions = 1;
 }
 
 service AuthorizationService {
