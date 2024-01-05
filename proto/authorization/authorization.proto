@@ -11,18 +11,36 @@ message Entity {
   map<string, string> context = 2;
 }
 
-message EntityChain {
+// EntityChain
+message Entities {
   repeated Entity entity = 1;
 }
 
-message DataAttributes {
-  repeated string dataAttribute = 1;
+message Attributes {
+  repeated string attribute = 1;
+}
+
+message Resource {
+  string id = 1;
+  Attributes attributes = 3;
+}
+
+message Resources {
+  repeated Resource resources = 1;
+}
+
+message Action {
+    string name = 1;
+}
+
+message Actions {
+  repeated Action action = 1;
 }
 
 message IsAuthorizedRequest {
-  string action = 1;
-  EntityChain entityChain = 2;
-  DataAttributes dataAttributes = 3;
+  Actions actions = 1;
+  Entity entities = 2;
+  Resources resources = 3;
 }
 
 message IsAuthorizedResponse {
