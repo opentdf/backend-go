@@ -7,8 +7,17 @@ import "google/api/annotations.proto";
 import "entitlements/entitlements.proto";
 
 message Entity {
+  enum Type {
+    OTHER = 0;
+    EMAIL = 1;
+    USERNAME = 2;
+    REMOTE_CLAIMS = 3;
+    CLAIMS = 4;
+    JWT = 5;
+  }
   string id = 1;
-  map<string, string> context = 2;
+  Type type = 2;
+  map<string, string> extension = 3;
 }
 
 // EntityChain
@@ -30,7 +39,35 @@ message Resources {
 }
 
 message Action {
-    string name = 1;
+  enum Type {
+    OTHER = 0;
+    CREATE = 1;
+    READ = 2;
+    UPDATE = 3;
+    DELETE = 4;
+    WRITE = 5;
+    EXECUTE = 6;
+    COPY = 7;
+    MOVE = 9;
+    RENAME = 10;
+    SHARE = 11;
+    DOWNLOAD = 12;
+    UPLOAD = 13;
+    ARCHIVE = 14;
+    EXPORT = 15;
+    IMPORT = 16;
+    LOCK = 17;
+    UNLOCK = 18;
+    PRINT = 19;
+    BACKUP = 20;
+    RESTORE = 21;
+    ENCRYPT = 22;
+    DECRYPT = 23;
+    AUDIT = 24;
+    TRANSMIT = 25;
+  }
+  Type type = 1;
+  map<string, string> extension = 2;
 }
 
 message Actions {
@@ -48,7 +85,6 @@ message IsAuthorizedResponse {
 }
 
 service AuthorizationService {
-  //Any fields in the request message which are not bound by the path pattern automatically become (optional) HTTP query parameters. Assume the following definition of the request message:
   rpc IsAuthorized(IsAuthorizedRequest) returns (IsAuthorizedResponse) {
     option (google.api.http) = {
       post: "/authorization"
