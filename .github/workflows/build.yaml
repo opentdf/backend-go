@@ -170,8 +170,8 @@ jobs:
           images: |
             ghcr.io/opentdf/gokas
           tags: |
-            type=semver,pattern={{major}},value=${{ needs.version.outputs.VERSION }}
-            type=semver,pattern={{major}},value=${{ needs.version.outputs.VERSION }},suffix=-${{ github.event.release.tag_name }}
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.VERSION }}
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.VERSION }},suffix=-${{ github.event.release.tag_name }}
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
