@@ -59,7 +59,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//////////////// OIDC VERIFY ///////////////
-	// Check if Authorization header is present
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		slog.InfoContext(ctx, "no authorization header")
@@ -101,7 +100,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	slog.DebugContext(ctx, "verified", "claims", claims)
 
 	//////////////// DECODE REQUEST BODY /////////////////////
-
 	decoder := json.NewDecoder(r.Body)
 	var rewrapRequest RewrapRequest
 	err = decoder.Decode(&rewrapRequest)
@@ -142,7 +140,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//////////////// FILTER BASED ON ALGORITHM /////////////////////
-
 	if requestBody.Algorithm == "" {
 		requestBody.Algorithm = "rsa:2048"
 	}
@@ -185,7 +182,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	slog.DebugContext(ctx, "fetch attributes", "definitions", definitions)
 
 	///////////////////// PERFORM ACCESS DECISION /////////////////////
-
 	access, err := canAccess(ctx, claims.EntityID, policy, claims.TDFClaims, definitions)
 
 	if err != nil {
@@ -217,7 +213,6 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// ///////////////////////////////
-
 	// nano header
 	// slog.Println(requestBody.KeyAccess.Header)
 	// slog.Println(len(requestBody.KeyAccess.Header))
