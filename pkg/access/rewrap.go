@@ -45,11 +45,7 @@ type customClaimsHeader struct {
 	TDFClaims ClaimsObject `json:"tdf_claims"`
 }
 
-// Handler decrypts and encrypts the symmetric data key
-func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	slog.DebugContext(ctx, "REWRAP", "headers", r.Header, "body", r.Body, "ContentLength", r.ContentLength)
-
+func handleContentLength(w http.ResponseWriter, r *http.Request) {
 	// preflight
 	if r.ContentLength == 0 {
 		// TODO: What is this doing here?
@@ -57,6 +53,14 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
+}
+
+// Handler decrypts and encrypts the symmetric data key
+func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	slog.DebugContext(ctx, "REWRAP", "headers", r.Header, "body", r.Body, "ContentLength", r.ContentLength)
+
+	handleContentLength(w, r)
 
 	//////////////// OIDC VERIFY ///////////////
 	authHeader := r.Header.Get("Authorization")
