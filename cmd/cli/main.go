@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/opentdf/backend-go/gen/authorization"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log/slog"
 	"os"
 	"os/user"
@@ -40,6 +43,21 @@ func main() {
 	}
 	ctx = context.WithValue(ctx, "username", currentUser.Username)
 	ctx = context.WithValue(ctx, "pid", pid)
+	slog.InfoContext(ctx, "Ascertaining...")
+	do := grpc.WithTransportCredentials(insecure.NewCredentials())
+	cc, err := grpc.Dial("localhost:8081", do)
+	if err != nil {
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
+	}
+	ac := authorization.NewAuthorizationServiceClient(cc)
+	in := authorization.DecisionRequest{}
+	out, err := ac.IsAuthorized(ctx, &in)
+	if err != nil {
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
+	}
+	slog.InfoContext(ctx, out.String())
 	slog.InfoContext(ctx, "Listing...")
 	files, err := os.ReadDir(".")
 	if err != nil {

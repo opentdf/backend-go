@@ -10,3 +10,4 @@
 gokas
 /tests/speedbump/
 !/proto/google/
+/proto/google/*

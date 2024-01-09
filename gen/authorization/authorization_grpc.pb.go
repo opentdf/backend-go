@@ -22,7 +22,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthorizationServiceClient interface {
-	IsAuthorized(ctx context.Context, in *IsAuthorizedRequest, opts ...grpc.CallOption) (*IsAuthorizedResponse, error)
+	IsAuthorized(ctx context.Context, in *DecisionRequest, opts ...grpc.CallOption) (*AuthorizationDecisionResponse, error)
+	GetEntitlements(ctx context.Context, in *EntitlementsRequest, opts ...grpc.CallOption) (*AuthorizationDecisionResponse, error)
 }
 
 type authorizationServiceClient struct {
@@ -33,9 +34,18 @@ func NewAuthorizationServiceClient(cc grpc.ClientConnInterface) AuthorizationSer
 	return &authorizationServiceClient{cc}
 }
 
-func (c *authorizationServiceClient) IsAuthorized(ctx context.Context, in *IsAuthorizedRequest, opts ...grpc.CallOption) (*IsAuthorizedResponse, error) {
-	out := new(IsAuthorizedResponse)
+func (c *authorizationServiceClient) IsAuthorized(ctx context.Context, in *DecisionRequest, opts ...grpc.CallOption) (*AuthorizationDecisionResponse, error) {
+	out := new(AuthorizationDecisionResponse)
 	err := c.cc.Invoke(ctx, "/authorization.AuthorizationService/IsAuthorized", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authorizationServiceClient) GetEntitlements(ctx context.Context, in *EntitlementsRequest, opts ...grpc.CallOption) (*AuthorizationDecisionResponse, error) {
+	out := new(AuthorizationDecisionResponse)
+	err := c.cc.Invoke(ctx, "/authorization.AuthorizationService/GetEntitlements", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +56,8 @@ func (c *authorizationServiceClient) IsAuthorized(ctx context.Context, in *IsAut
 // All implementations must embed UnimplementedAuthorizationServiceServer
 // for forward compatibility
 type AuthorizationServiceServer interface {
-	IsAuthorized(context.Context, *IsAuthorizedRequest) (*IsAuthorizedResponse, error)
+	IsAuthorized(context.Context, *DecisionRequest) (*AuthorizationDecisionResponse, error)
+	GetEntitlements(context.Context, *EntitlementsRequest) (*AuthorizationDecisionResponse, error)
 	mustEmbedUnimplementedAuthorizationServiceServer()
 }
 
@@ -54,8 +65,11 @@ type AuthorizationServiceServer interface {
 type UnimplementedAuthorizationServiceServer struct {
 }
 
-func (UnimplementedAuthorizationServiceServer) IsAuthorized(context.Context, *IsAuthorizedRequest) (*IsAuthorizedResponse, error) {
+func (UnimplementedAuthorizationServiceServer) IsAuthorized(context.Context, *DecisionRequest) (*AuthorizationDecisionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsAuthorized not implemented")
+}
+func (UnimplementedAuthorizationServiceServer) GetEntitlements(context.Context, *EntitlementsRequest) (*AuthorizationDecisionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEntitlements not implemented")
 }
 func (UnimplementedAuthorizationServiceServer) mustEmbedUnimplementedAuthorizationServiceServer() {}
 
@@ -71,7 +85,7 @@ func RegisterAuthorizationServiceServer(s grpc.ServiceRegistrar, srv Authorizati
 }
 
 func _AuthorizationService_IsAuthorized_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IsAuthorizedRequest)
+	in := new(DecisionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -83,7 +97,25 @@ func _AuthorizationService_IsAuthorized_Handler(srv interface{}, ctx context.Con
 		FullMethod: "/authorization.AuthorizationService/IsAuthorized",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthorizationServiceServer).IsAuthorized(ctx, req.(*IsAuthorizedRequest))
+		return srv.(AuthorizationServiceServer).IsAuthorized(ctx, req.(*DecisionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthorizationService_GetEntitlements_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EntitlementsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthorizationServiceServer).GetEntitlements(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/authorization.AuthorizationService/GetEntitlements",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthorizationServiceServer).GetEntitlements(ctx, req.(*EntitlementsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -98,6 +130,10 @@ var AuthorizationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "IsAuthorized",
 			Handler:    _AuthorizationService_IsAuthorized_Handler,
+		},
+		{
+			MethodName: "GetEntitlements",
+			Handler:    _AuthorizationService_GetEntitlements_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
