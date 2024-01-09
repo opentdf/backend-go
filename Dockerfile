@@ -14,10 +14,7 @@ COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
 RUN make gokas
-
-# TODO Should be moved to makefile?
-RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/audit_hooks.go
-RUN CGO_ENABLED=1 GOOS=linux go build --buildmode=plugin -v -a -installsuffix cgo -o . ./plugins/revocation_plugin.go
+RUN make go-plugins
 
 # tester
 FROM golang:$GO_VERSION as tester

@@ -170,7 +170,7 @@ func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
 		}
 	}
 
-	plug, err := plugin.Open("audit_hooks.so")
+	plug, err := plugin.Open("plugins/audit_hooks.so")
 	if err != nil {
 		panic(err)
 	}
