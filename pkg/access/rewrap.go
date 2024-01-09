@@ -295,7 +295,7 @@ func nanoTDFRewrap(requestBody RequestBody) ([]byte, error) {
 		return nil, errors.New("failed to unmarshal ephemeral public key")
 	}
 
-	kasEcPrivKeyFilePath := os.Getenv("KAS_PRIVATE_KEY")
+	kasEcPrivKeyFilePath := os.Getenv("KAS_EC_SECP256R1_PRIVATE_KEY")
 
 	// Load PEM file
 	raw, err := os.ReadFile(kasEcPrivKeyFilePath)

@@ -2,34 +2,35 @@ package nanotdf
 
 import (
 	"bytes"
+	"encoding/gob"
 	"os"
 	"testing"
 )
 
-// nanotdfEqual compares two NanoTDF structures for equality.
-func nanoTDFEqual(a, b *NanoTDF) bool {
-	// Compare Magic field
-	if a.Magic != b.Magic {
+// nanotdfEqual compares two nanoTdf structures for equality.
+func nanoTDFEqual(a, b *nanoTdf) bool {
+	// Compare magicNumber field
+	if a.magicNumber != b.magicNumber {
 		return false
 	}
 
-	// Compare Kas field
-	if a.Kas.Protocol != b.Kas.Protocol || a.Kas.Len != b.Kas.Len || a.Kas.Body != b.Kas.Body {
+	// Compare kasUrl field
+	if a.kasUrl.protocol != b.kasUrl.protocol || a.kasUrl.lengthBody != b.kasUrl.lengthBody || a.kasUrl.body != b.kasUrl.body {
 		return false
 	}
 
-	// Compare Binding field
-	if a.Binding.UseEcdsaBinding != b.Binding.UseEcdsaBinding || a.Binding.Padding != b.Binding.Padding || a.Binding.BindingBody != b.Binding.BindingBody {
+	// Compare binding field
+	if a.binding.useEcdsaBinding != b.binding.useEcdsaBinding || a.binding.padding != b.binding.padding || a.binding.bindingBody != b.binding.bindingBody {
 		return false
 	}
 
-	// Compare SigCfg field
-	if a.SigCfg.HasSignature != b.SigCfg.HasSignature || a.SigCfg.SignatureMode != b.SigCfg.SignatureMode || a.SigCfg.Cipher != b.SigCfg.Cipher {
+	// Compare sigCfg field
+	if a.sigCfg.hasSignature != b.sigCfg.hasSignature || a.sigCfg.signatureMode != b.sigCfg.signatureMode || a.sigCfg.cipher != b.sigCfg.cipher {
 		return false
 	}
 
-	// Compare Policy field
-	if a.Policy.Mode != b.Policy.Mode || !policyBodyEqual(a.Policy.Body, b.Policy.Body) || !eccSignatureEqual(a.Policy.Binding, b.Policy.Binding) {
+	// Compare policy field
+	if a.policy.mode != b.policy.mode || !policyBodyEqual(a.policy.body, b.policy.body) || !eccSignatureEqual(a.policy.binding, b.policy.binding) {
 		return false
 	}
 
@@ -46,14 +47,14 @@ func nanoTDFEqual(a, b *NanoTDF) bool {
 func policyBodyEqual(a, b PolicyBody) bool {
 	// Compare based on the concrete type of PolicyBody
 	switch a := a.(type) {
-	case Nanotdf_RemotePolicy:
-		b, ok := b.(Nanotdf_RemotePolicy)
+	case remotePolicy:
+		b, ok := b.(remotePolicy)
 		if !ok {
 			return false
 		}
 		return remotePolicyEqual(a, b)
-	case Nanotdf_EmbeddedPolicy:
-		b, ok := b.(Nanotdf_EmbeddedPolicy)
+	case embeddedPolicy:
+		b, ok := b.(embeddedPolicy)
 		if !ok {
 			return false
 		}
@@ -64,79 +65,85 @@ func policyBodyEqual(a, b PolicyBody) bool {
 	}
 }
 
-// remotePolicyEqual compares two Nanotdf_RemotePolicy instances for equality.
-func remotePolicyEqual(a, b Nanotdf_RemotePolicy) bool {
-	// Compare Url field
-	if a.Url.Protocol != b.Url.Protocol || a.Url.Len != b.Url.Len || a.Url.Body != b.Url.Body {
+// remotePolicyEqual compares two remotePolicy instances for equality.
+func remotePolicyEqual(a, b remotePolicy) bool {
+	// Compare url field
+	if a.url.protocol != b.url.protocol || a.url.lengthBody != b.url.lengthBody || a.url.body != b.url.body {
 		return false
 	}
 	return true
 }
 
-// embeddedPolicyEqual compares two Nanotdf_EmbeddedPolicy instances for equality.
-func embeddedPolicyEqual(a, b Nanotdf_EmbeddedPolicy) bool {
-	// Compare Len and Body fields
-	return a.Len == b.Len && a.Body == b.Body
+// embeddedPolicyEqual compares two embeddedPolicy instances for equality.
+func embeddedPolicyEqual(a, b embeddedPolicy) bool {
+	// Compare lengthBody and body fields
+	return a.lengthBody == b.lengthBody && a.body == b.body
 }
 
-// eccSignatureEqual compares two Nanotdf_EccSignature instances for equality.
-func eccSignatureEqual(a, b *Nanotdf_EccSignature) bool {
-	// Compare Value field
-	return bytes.Equal(a.Value, b.Value)
+// eccSignatureEqual compares two eccSignature instances for equality.
+func eccSignatureEqual(a, b *eccSignature) bool {
+	// Compare value field
+	return bytes.Equal(a.value, b.value)
+}
+
+func init() {
+	// Register the remotePolicy type with gob
+	gob.Register(&remotePolicy{})
 }
 
 func TestReadNanoTDFHeader(t *testing.T) {
-	// Prepare a sample NanoTDF structure
-	nanoTDF := NanoTDF{
-		Magic: [3]byte{'L', '1', 'L'},
-		Kas: &Nanotdf_ResourceLocator{
-			Protocol: Nanotdf_UrlProtocol__Https,
-			Len:      14,
-			Body:     "kas.virtru.com",
+	// Prepare a sample nanoTdf structure
+	nanoTDF := nanoTdf{
+		magicNumber: [3]byte{'L', '1', 'L'},
+		kasUrl: &resourceLocator{
+			protocol:   urlProtocolHttps,
+			lengthBody: 14,
+			body:       "kas.virtru.com",
 		},
-		Binding: &Nanotdf_BindingCfg{
-			UseEcdsaBinding: true,
-			Padding:         0,
-			BindingBody:     Nanotdf_EccMode__Secp256r1,
+		binding: &bindingCfg{
+			useEcdsaBinding: true,
+			padding:         0,
+			bindingBody:     eccModeSecp256r1,
 		},
-		SigCfg: &Nanotdf_SignatureConfig{
-			HasSignature:  true,
-			SignatureMode: Nanotdf_EccMode__Secp256r1,
-			Cipher:        Nanotdf_CipherMode__Aes256gcm64Bit,
+		sigCfg: &signatureConfig{
+			hasSignature:  true,
+			signatureMode: eccModeSecp256r1,
+			cipher:        cipherModeAes256gcm64Bit,
 		},
-		Policy: &Nanotdf_Policy{
-			Mode: Nanotdf_PolicyType__RemotePolicy,
-			Body: Nanotdf_RemotePolicy{
-				Url: &Nanotdf_ResourceLocator{
-					Protocol: Nanotdf_UrlProtocol__Https,
-					Len:      21,
-					Body:     "kas.virtru.com/policy",
+		policy: &policyInfo{
+			mode: uint8(policyTypeRemotePolicy),
+			body: remotePolicy{
+				url: &resourceLocator{
+					protocol:   urlProtocolHttps,
+					lengthBody: 21,
+					body:       "kas.virtru.com/policy",
 				},
 			},
-			Binding: &Nanotdf_EccSignature{
-				Value: []byte{181, 228, 19, 166, 2, 17, 229, 241},
+			binding: &eccSignature{
+				value: []byte{181, 228, 19, 166, 2, 17, 229, 241},
 			},
 		},
-		EphemeralPublicKey: &Nanotdf_EccKey{
+		EphemeralPublicKey: &eccKey{
 			Key: []byte{123, 34, 52, 160, 205, 63, 54, 255, 123, 186, 109,
 				143, 232, 223, 35, 246, 44, 157, 9, 53, 111, 133,
 				130, 248, 169, 207, 21, 18, 108, 138, 157, 164, 108},
 		},
 	}
 
+	// Serialize the sample nanoTdf structure into a byte slice using gob
 	file, err := os.Open("nanotdfspec.ntdf")
 	if err != nil {
-		t.Fatalf("Cannot open NanoTDF file: %v", err)
+		t.Fatalf("Cannot open nanoTdf file: %v", err)
 	}
 	defer file.Close()
 
 	result, err := ReadNanoTDFHeader(file)
 	if err != nil {
-		t.Fatalf("Error while reading NanoTDF header: %v", err)
+		t.Fatalf("Error while reading nanoTdf header: %v", err)
 	}
 
-	// Compare the result with the original NanoTDF structure
+	// Compare the result with the original nanoTdf structure
 	if !nanoTDFEqual(result, &nanoTDF) {
-		t.Error("Result does not match the expected NanoTDF structure.")
+		t.Error("Result does not match the expected nanoTdf structure.")
 	}
 }
