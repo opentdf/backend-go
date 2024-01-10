@@ -17,7 +17,7 @@ jobs:
   version:
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: "${{ github.event.release.tag_name}}"
+      RELEASE_TAG: "${{ github.event.release.tag_name }}"
     outputs:
       VERSION: "${{ steps.info.outputs.VERSION }}"
       SHA_TAG: "${{ steps.info.outputs.SHA }}"
@@ -39,7 +39,7 @@ jobs:
           echo "SHA=sha-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
         id: info
 
-  ci:
+  build-and-test:
     needs:
       - version
     runs-on: ubuntu-latest
@@ -98,12 +98,53 @@ jobs:
         run: |-
           tilt ci
 
-  build-and-push:
+  ci:
+    if: always()
     needs:
-      - ci
+      - build-and-test
       - test-backend
       - version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check version step
+        if: ${{ needs.version.result == 'failure' }}
+        run: exit 1
+      - name: Check test-backend step
+        if: ${{ needs.test-backend.result == 'failure' }}
+        run: exit 1
+      - name: Check build-and-test step
+        if: ${{ needs.build-and-test.result == 'failure' }}
+        run: exit 1
+
+  tag:
+    if: github.event_name == 'push'
+    needs:
+      - ci
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: "0"
+      - uses: anothrNick/github-tag-action@1.67.0
+        id: tag-rel
+        env:
+          DEFAULT_BUMP: false
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+      - uses: ncipollo/release-action@v1
+        if: steps.tag-rel.outputs.new_tag
+        with:
+          tag: ${{ steps.tag-rel.outputs.new_tag }}
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-push:
     if: github.event.release
+    needs:
+      - ci
+      - version
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -122,10 +163,20 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/opentdf/gokas
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.VERSION }}
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.VERSION }},suffix=-${{ github.event.release.tag_name }}
       - name: Build and push
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: .
           platforms: "${{ env.CONTAINER_ARCHS }}"
           push: true
-          tags: ghcr.io/opentdf/gokas:${{ needs.version.outputs.VERSION }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
