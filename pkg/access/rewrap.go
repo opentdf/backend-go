@@ -169,7 +169,9 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	if requestBody.Algorithm == "ec:secp256r1" {
 		responseBytes, err := nanoTDFRewrap(requestBody)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			slog.WarnContext(ctx, "nanotdf failure", "err", err)
+			return
 		}
 		_, _ = w.Write(responseBytes)
 		return
@@ -288,6 +290,7 @@ func nanoTDFRewrap(requestBody RequestBody) ([]byte, error) {
 	nanoTDF, err := nanotdf.ReadNanoTDFHeader(headerReader)
 	if err != nil {
 		slog.Error("Could not fetch attribute definitions from attributes service!", "err", err)
+		return nil, err
 	}
 
 	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), nanoTDF.EphemeralPublicKey.Key)
@@ -306,25 +309,25 @@ func nanoTDFRewrap(requestBody RequestBody) ([]byte, error) {
 	block, _ := pem.Decode(raw)
 	privateKey, err := parsePrivateKey(block.Bytes)
 	if err != nil {
-		slog.Error("Failed to encode private key to DER", "err", err)
+		return nil, fmt.Errorf("failed to encode private key to DER: %w", err)
 	}
 
 	symmetricKey, err := generateSymmetricKey(nanoTDF.EphemeralPublicKey.Key, privateKey.(*ecdsa.PrivateKey))
 	if err != nil {
-		slog.Error("Failed to generate symmetric key", "err", err)
+		return nil, fmt.Errorf("failed to generate symmetric key: %w", err)
 	}
 
 	// Generate a private key
 	privateKeyEphemeral, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		slog.Error("Failed to create ec pair:", "err", err)
+		return nil, fmt.Errorf("failed to generate private key: %w", err)
 	}
 
 	// Extract the public key from the private key
 	publicKeyEphemeral := &privateKeyEphemeral.PublicKey
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(publicKeyEphemeral)
 	if err != nil {
-		slog.Error("Failed to extract public key:", "err", err)
+		return nil, fmt.Errorf("failed to extract public key: %w", err)
 	}
 
 	// Create a PEM block
@@ -341,7 +344,7 @@ func nanoTDFRewrap(requestBody RequestBody) ([]byte, error) {
 	}
 	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		slog.Error("Failed to parse public key PEM block", "err", err)
+		return nil, fmt.Errorf("failed to parse public key PEM block")
 	}
 
 	pub, ok := pubInterface.(*ecdsa.PublicKey)
@@ -350,14 +353,12 @@ func nanoTDFRewrap(requestBody RequestBody) ([]byte, error) {
 	}
 	sessionKey, err := generateSessionKey(pub, privateKeyEphemeral)
 	if err != nil {
-		slog.Error("Failed to generate session key", "err", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to generate session key: %w", err)
 	}
 
 	cipherText, err := encryptKey(sessionKey, symmetricKey)
 	if err != nil {
-		slog.Error("Failed to encrypt key", "err", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to encrypt key: %w", err)
 	}
 
 	encoded := base64.StdEncoding.EncodeToString(cipherText)
@@ -386,7 +387,7 @@ func generateSymmetricKey(ephemeralPublicKeyBytes []byte, privateKey *ecdsa.Priv
 
 	x, y := elliptic.UnmarshalCompressed(curve, ephemeralPublicKeyBytes)
 	if x == nil {
-		slog.Error("Error unmarshalling elliptic point")
+		return nil, fmt.Errorf("error unmarshalling elliptic point")
 	}
 
 	// ephemeralPublicKey := &ecdsa.PublicKey{Curve: curve, X: x, Y: y}
@@ -433,7 +434,7 @@ func parsePrivateKey(der []byte) (crypto.PrivateKey, error) { //nolint:ireturn /
 	if key, err := x509.ParseECPrivateKey(der); err == nil {
 		return key, nil
 	}
-	return nil, nil
+	return nil, fmt.Errorf("failed to parse ec private key")
 }
 
 func encryptKey(sessionKey []byte, symmetricKey []byte) ([]byte, error) {
