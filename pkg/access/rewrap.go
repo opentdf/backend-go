@@ -1,20 +1,39 @@
 package access
 
 import (
+	"bytes"
 	"crypto"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	b64 "encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
+	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/opentdf/backend-go/pkg/nanotdf"
+	"github.com/segmentio/asm/base64"
+	"golang.org/x/crypto/hkdf"
+
 	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/opentdf/backend-go/pkg/tdf3"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
+
+const keyLength = 32
+const ivSize = 12
+const tagSize = 12
 
 type RewrapRequest struct {
 	SignedRequestToken string `json:"signedRequestToken"`
@@ -101,6 +120,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	slog.DebugContext(ctx, "verified", "claims", claims)
 
 	//////////////// DECODE REQUEST BODY /////////////////////
+
 	decoder := json.NewDecoder(r.Body)
 	var rewrapRequest RewrapRequest
 	err = decoder.Decode(&rewrapRequest)
@@ -141,13 +161,19 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//////////////// FILTER BASED ON ALGORITHM /////////////////////
+
 	if requestBody.Algorithm == "" {
 		requestBody.Algorithm = "rsa:2048"
 	}
 
 	if requestBody.Algorithm == "ec:secp256r1" {
-		http.Error(w, "Unsupported Algorithm", http.StatusBadRequest)
-		slog.WarnContext(ctx, "Nano not implemented yet")
+		responseBytes, err := nanoTDFRewrap(requestBody)
+		if err != nil {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			slog.WarnContext(ctx, "nanotdf failure", "err", err)
+			return
+		}
+		_, _ = w.Write(responseBytes)
 		return
 	}
 
@@ -183,6 +209,7 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 	slog.DebugContext(ctx, "fetch attributes", "definitions", definitions)
 
 	///////////////////// PERFORM ACCESS DECISION /////////////////////
+
 	access, err := canAccess(ctx, claims.EntityID, policy, claims.TDFClaims, definitions)
 
 	if err != nil {
@@ -273,4 +300,179 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		// FIXME Yikes what can we do?
 		slog.ErrorContext(ctx, "rewrap: marshall response failed", "err", err)
 	}
+}
+
+func nanoTDFRewrap(requestBody RequestBody) ([]byte, error) {
+	header := requestBody.KeyAccess.Header
+
+	headerReader := bytes.NewReader(header)
+
+	nanoTDF, err := nanotdf.ReadNanoTDFHeader(headerReader)
+	if err != nil {
+		slog.Error("Could not fetch attribute definitions from attributes service!", "err", err)
+		return nil, err
+	}
+
+	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), nanoTDF.EphemeralPublicKey.Key)
+	if x == nil || y == nil {
+		return nil, errors.New("failed to unmarshal ephemeral public key")
+	}
+
+	kasEcPrivKeyFilePath := os.Getenv("KAS_EC_SECP256R1_PRIVATE_KEY")
+
+	// Load PEM file
+	raw, err := os.ReadFile(kasEcPrivKeyFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read KAS private key JSON data: %w", err)
+	}
+
+	block, _ := pem.Decode(raw)
+	privateKey, err := parsePrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode private key to DER: %w", err)
+	}
+
+	symmetricKey, err := generateSymmetricKey(nanoTDF.EphemeralPublicKey.Key, privateKey.(*ecdsa.PrivateKey))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate symmetric key: %w", err)
+	}
+
+	// Generate a private key
+	privateKeyEphemeral, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate private key: %w", err)
+	}
+
+	// Extract the public key from the private key
+	publicKeyEphemeral := &privateKeyEphemeral.PublicKey
+	pubKeyBytes, err := x509.MarshalPKIXPublicKey(publicKeyEphemeral)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract public key: %w", err)
+	}
+
+	// Create a PEM block
+	pemBlock := &pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubKeyBytes,
+	}
+	pemString := string(pem.EncodeToMemory(pemBlock))
+
+	clientPublicKey := requestBody.ClientPublicKey
+	block, _ = pem.Decode([]byte(clientPublicKey))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block")
+	}
+	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse public key PEM block")
+	}
+
+	pub, ok := pubInterface.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("failed to extract public key: %w", err)
+	}
+	sessionKey, err := generateSessionKey(pub, privateKeyEphemeral)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate session key: %w", err)
+	}
+
+	cipherText, err := encryptKey(sessionKey, symmetricKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encrypt key: %w", err)
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(cipherText)
+
+	data := map[string]interface{}{
+		"entityWrappedKey": encoded,
+		"sessionPublicKey": pemString,
+		"schemaVersion":    schemaVersion,
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON data: %w", err)
+	}
+
+	return jsonData, nil
+}
+
+func versionSalt() []byte {
+	digest := sha256.New()
+	digest.Write([]byte("L1L"))
+	return digest.Sum(nil)
+}
+
+func generateSymmetricKey(ephemeralPublicKeyBytes []byte, privateKey *ecdsa.PrivateKey) ([]byte, error) {
+	curve := elliptic.P256()
+
+	x, y := elliptic.UnmarshalCompressed(curve, ephemeralPublicKeyBytes)
+	if x == nil {
+		return nil, fmt.Errorf("error unmarshalling elliptic point")
+	}
+
+	// ephemeralPublicKey := &ecdsa.PublicKey{Curve: curve, X: x, Y: y}
+	// symmetricKey, _ := privateKey.Curve.ScalarMult(ephemeralPublicKey.X, ephemeralPublicKey.Y, privateKey.D.Bytes())
+	symmetricKey, _ := privateKey.Curve.ScalarMult(x, y, privateKey.D.Bytes())
+
+	salt := versionSalt()
+
+	hkdf := hkdf.New(sha256.New, symmetricKey.Bytes(), salt, nil)
+
+	derivedKey := make([]byte, keyLength)
+	if _, err := io.ReadFull(hkdf, derivedKey); err != nil {
+		return nil, fmt.Errorf("failed to generate symmetric key: %w", err)
+	}
+
+	return derivedKey, nil
+}
+
+func generateSessionKey(ephemeralPublicKey *ecdsa.PublicKey, privateKey *ecdsa.PrivateKey) ([]byte, error) {
+	sessionKey, _ := privateKey.Curve.ScalarMult(ephemeralPublicKey.X, ephemeralPublicKey.Y, privateKey.D.Bytes())
+	salt := versionSalt()
+
+	hkdf := hkdf.New(sha256.New, sessionKey.Bytes(), salt, nil)
+	derivedKey := make([]byte, keyLength)
+	if _, err := io.ReadFull(hkdf, derivedKey); err != nil {
+		return nil, fmt.Errorf("failed to generate session key: %w", err)
+	}
+
+	return derivedKey, nil
+}
+
+func parsePrivateKey(der []byte) (crypto.PrivateKey, error) { //nolint:ireturn //no lint
+	if key, err := x509.ParsePKCS1PrivateKey(der); err == nil {
+		return key, nil
+	}
+	if key, err := x509.ParsePKCS8PrivateKey(der); err == nil {
+		switch key := key.(type) {
+		case *rsa.PrivateKey, *ecdsa.PrivateKey:
+			return key, nil
+		default:
+			return nil, fmt.Errorf("failed to parse private key: %w", err)
+		}
+	}
+	if key, err := x509.ParseECPrivateKey(der); err == nil {
+		return key, nil
+	}
+	return nil, fmt.Errorf("failed to parse ec private key")
+}
+
+func encryptKey(sessionKey []byte, symmetricKey []byte) ([]byte, error) {
+	block, err := aes.NewCipher(sessionKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cipher block: %w", err)
+	}
+
+	aesGcm, err := cipher.NewGCMWithTagSize(block, tagSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create NewGCMWithTagSize: %w", err)
+	}
+
+	iv := make([]byte, ivSize)
+	if _, err = io.ReadFull(rand.Reader, iv); err != nil {
+		return nil, fmt.Errorf("failed to generate IV: %w", err)
+	}
+
+	cipherText := aesGcm.Seal(iv, iv, symmetricKey, nil)
+	return cipherText, nil
 }
