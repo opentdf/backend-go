@@ -12,7 +12,9 @@ COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
+COPY plugins/ plugins/
 RUN make gokas
+#RUN make go-plugins
 
 # tester
 FROM golang:$GO_VERSION as tester
@@ -23,6 +25,7 @@ COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
+COPY plugins/ plugins/
 RUN go list -m -u all
 RUN make test
 
@@ -33,6 +36,7 @@ ENV LOG_LEVEL "DEBUG"
 ENV LOG_FORMAT "TEXT"
 ENV KAS_URL ""
 ENV PKCS11_SLOT_INDEX "0"
+ENV AUDIT_ENABLED=false
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 COPY --from=builder /build/gokas /
 COPY scripts/ scripts/

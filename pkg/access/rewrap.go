@@ -240,6 +240,26 @@ func (p *Provider) Handler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "clientPublicKey parse failure", http.StatusBadRequest)
 		return
 	}
+	// ///////////////////////////////
+	// nano header
+	// slog.Println(requestBody.KeyAccess.Header)
+	// slog.Println(len(requestBody.KeyAccess.Header))
+	// s := kaitai.NewStream(bytes.NewReader(requestBody.KeyAccess.Header))
+	// n := tdf3.new
+	// err = n.Read(s, n, n)
+	// if err != nil {
+	// 	slog.Panic(err)
+	// }
+	// slog.Print(n.Header.Length)
+
+	// unwrap using a key from file
+	// ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)
+	// symmetricKey, err := tdf3.DecryptWithPrivateKey(requestBody.KeyAccess.WrappedKey, &p.PrivateKey)
+	// if err != nil {
+	// 	// FIXME handle error
+	// 	slog.Panic(err)
+	// 	return
+	// }
 
 	// ///////////// UNWRAP AND REWRAP //////////////////
 

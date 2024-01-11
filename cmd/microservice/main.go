@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"plugin"
 	"strconv"
 	"strings"
 
@@ -153,6 +154,33 @@ func inferLogger(loglevel, format string) *slog.Logger {
 		return slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 	}
 	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+}
+
+type IMiddleware interface {
+	AuditHook(f http.HandlerFunc) http.HandlerFunc
+}
+
+func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
+	auditEnabled := os.Getenv("AUDIT_ENABLED")
+	slog.Info("gokas-info", "AUDIT_ENABLED", auditEnabled)
+
+	if auditEnabled != "true" {
+		return func(f http.HandlerFunc) http.HandlerFunc {
+			return f
+		}
+	}
+
+	plug, err := plugin.Open("plugins/audit_hooks.so")
+	if err != nil {
+		panic(err)
+	}
+	symMiddleware, err := plug.Lookup("Middleware")
+	if err != nil {
+		panic(err)
+	}
+	mid, _ := symMiddleware.(IMiddleware)
+
+	return mid.AuditHook
 }
 
 func main() {
@@ -319,10 +347,12 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
+	auditHook := loadAuditHook()
+
 	http.HandleFunc("/", kas.Version)
 	http.HandleFunc("/healthz", kas.HealthZ)
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
-	http.HandleFunc("/v2/kas_public_key", kas.PublicKeyHandlerV2)
+	http.HandleFunc("/v2/kas_public_key", auditHook(kas.PublicKeyHandlerV2))
 	http.HandleFunc("/v2/rewrap", kas.Handler)
 	slog.Info("listening", "host", ":8000")
 	if err := http.ListenAndServe(":8000", nil); err != nil {

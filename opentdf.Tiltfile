@@ -55,6 +55,7 @@ docker_build(
         './cmd',
         './internal',
         './pkg',
+        './plugins',
         './scripts',
         './softhsm2-debug.conf',
     ],
