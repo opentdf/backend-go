@@ -33,16 +33,18 @@ if ! _wait-for; then
   exit 1
 fi
 
-rm -rf sample.{out,tdf,txt}
-echo hello-world >sample.txt
-if ! python3 ./tdf.py encrypt sample.txt sample.tdf; then
-  echo ERROR encrypt failure
-  exit 1
-fi
+for e in tdf ntdf; do
+  rm -rf sample.{out,{n,}tdf,txt}
+  echo "hello-world ${e} sample plaintext" >sample.txt
+  if ! python3 ./tdf.py encrypt sample.txt "sample.${e}"; then
+    echo ERROR encrypt ${e} failure
+    exit 1
+  fi
 
-if ! python3 ./tdf.py decrypt sample.tdf sample.out; then
-  echo ERROR decrypt failure
-  exit 1
-fi
+  if ! python3 ./tdf.py decrypt "sample.${e}" sample.out; then
+    echo ERROR decrypt ${e} failure
+    exit 1
+  fi
 
-echo INFO Successful round trip!
+  echo INFO Successful ${e} round trip!
+done
