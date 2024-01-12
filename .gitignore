@@ -15,3 +15,9 @@ gokas
 
 # test data
 .github/workflows/roundtrip/sample.*
+
+# Mock certs
+kas-cert.pem
+kas-ec-cert.pem
+kas-ec-private.pem
+kas-private.pem

@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"plugin"
 	"strconv"
 	"strings"
@@ -26,8 +25,9 @@ import (
 )
 
 const (
-	ErrHsm   = Error("hsm unexpected")
-	hostname = "localhost"
+	ErrHsm         = Error("hsm unexpected")
+	ErrInvalidPort = Error("invalid port")
+	hostname       = "localhost"
 )
 
 func loadIdentityProvider() oidc.IDTokenVerifier {
@@ -156,16 +156,16 @@ func inferLogger(loglevel, format string) *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 }
 
-type IMiddleware interface {
-	AuditHook(f http.HandlerFunc) http.HandlerFunc
+type BackendMiddleware interface {
+	AuditHook(f http.Handler) http.Handler
 }
 
-func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
+func loadAuditHook() func(f http.Handler) http.Handler {
 	auditEnabled := os.Getenv("AUDIT_ENABLED")
 	slog.Info("gokas-info", "AUDIT_ENABLED", auditEnabled)
 
 	if auditEnabled != "true" {
-		return func(f http.HandlerFunc) http.HandlerFunc {
+		return func(f http.Handler) http.Handler {
 			return f
 		}
 	}
@@ -178,9 +178,23 @@ func loadAuditHook() func(f http.HandlerFunc) http.HandlerFunc {
 	if err != nil {
 		panic(err)
 	}
-	mid, _ := symMiddleware.(IMiddleware)
+	mid, _ := symMiddleware.(BackendMiddleware)
 
 	return mid.AuditHook
+}
+
+func validatePort(port string) (int, error) {
+	if port == "" {
+		return 0, nil
+	}
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		return 0, errors.Join(ErrInvalidPort, err)
+	}
+	if p < 0 || p > 65535 {
+		return 0, ErrInvalidPort
+	}
+	return p, nil
 }
 
 func main() {
@@ -191,7 +205,13 @@ func main() {
 
 	slog.Info("gokas-info", "version", stats.Version, "version_long", stats.VersionLong, "build_time", stats.BuildTime)
 
-	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	portHTTP, err := validatePort(os.Getenv("SERVER_HTTP_PORT"))
+	if err != nil {
+		slog.Error("Invalid port specified in SERVER_HTTP_PORT env variable", "err", err)
+		panic(err)
+	}
+
+	kasURI, _ := url.Parse("https://" + hostname + ":" + strconv.Itoa(portHTTP))
 	kas := access.Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
@@ -343,16 +363,12 @@ func main() {
 	}
 	kas.PublicKeyEc = *ecPublicKey
 
-	// os interrupt
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-
 	auditHook := loadAuditHook()
 
 	http.HandleFunc("/", kas.Version)
 	http.HandleFunc("/healthz", kas.HealthZ)
 	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
-	http.HandleFunc("/v2/kas_public_key", auditHook(kas.PublicKeyHandlerV2))
+	http.Handle("/v2/kas_public_key", auditHook(http.HandlerFunc(kas.PublicKeyHandlerV2)))
 	http.HandleFunc("/v2/rewrap", kas.Handler)
 	slog.Info("listening", "host", ":8000")
 	if err := http.ListenAndServe(":8000", nil); err != nil {

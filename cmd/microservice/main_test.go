@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"testing"
 )
@@ -76,5 +77,24 @@ func TestInferLogLevel(t *testing.T) {
 	}
 	if h.Enabled(context.Background(), slog.LevelWarn) {
 		t.Error("should not be at warn")
+	}
+}
+
+func TestValidatePort(t *testing.T) {
+	p, err := validatePort("")
+	if p != 0 || err != nil {
+		t.Error("empty SERVER_PORT should default properly")
+	}
+	p, err = validatePort("invalid")
+	if p != 0 || !errors.Is(err, ErrInvalidPort) {
+		t.Error("invalid error code")
+	}
+	p, err = validatePort("-1000")
+	if p != 0 || !errors.Is(err, ErrInvalidPort) {
+		t.Error("invalid error code")
+	}
+	p, err = validatePort("65536")
+	if p != 0 || !errors.Is(err, ErrInvalidPort) {
+		t.Error("invalid error code")
 	}
 }
