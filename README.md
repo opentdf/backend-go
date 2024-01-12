@@ -1,4 +1,5 @@
 # backend-go
+
 Key Access Service Go implementation supporting [Trusted Data Format Protocol](https://github.com/opentdf/spec) 
 
 ## Prerequisites
@@ -69,6 +70,7 @@ brew install softhsm
 # get module path
 brew info softhsm
 # /opt/homebrew/Cellar/softhsm/2.6.1  will be  /opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
+# FIXME: How can we extract the path from brew???
 export PKCS11_MODULE_PATH=/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
 # installs pkcs11-tool
 brew install opensc
@@ -86,13 +88,13 @@ openssl req -x509 -nodes -newkey RSA:2048 -subj "/CN=kas" -keyout kas-private.pe
 # crease EC key and cert
 openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
 # import RSA key to PKCS
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --id 100 --label development-rsa-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-private.pem --type privkey --label development-rsa-kas
 # import RSA cert to PKCS
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-cert.pem --type cert --id 100 --label development-rsa-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-cert.pem --type cert --label development-rsa-kas
 # import EC key to PKCS
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --id 200 --label development-ec-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.pem --type privkey --label development-ec-kas
 # import EC cert to PKCS
-pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert --id 200 --label development-ec-kas
+pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert  --label development-ec-kas
 ```
 
 ### Start services
@@ -128,6 +130,7 @@ brew install act golangci-lint
 ```
 
 Tools
+
 - https://www.docker.com
 - https://github.com/nektos/act
 - https://github.com/golangci/golangci-lint
@@ -173,41 +176,52 @@ docker run -it --volume "$PWD":/workdir ksc:0.8 \
 ## References
 
 ### Helm
+
 https://helm.sh/docs/chart_template_guide/subcharts_and_globals/  
 https://faun.pub/helm-chart-how-to-create-helm-charts-from-kubernetes-k8s-yaml-from-scratch-d64901e36850  
 https://github.com/kubernetes/examples/blob/master/guidelines.md  
 
 ### Go
+
 https://github.com/powerman/go-monolith-example  
 https://github.com/getkin/kin-openapi  
 
 ### Docker
+
 https://docs.docker.com/develop/develop-images/multistage-build/  
 https://medium.com/@lizrice/non-privileged-containers-based-on-the-scratch-image-a80105d6d341  
 
 ### Tilt
+
 https://dev.to/ndrean/rails-on-kubernetes-with-minikube-and-tilt-25ka  
 
 ### PostgreSQL
+
 https://dev.to/kushagra_mehta/postgresql-with-go-in-2021-3dfg  
 https://stackoverflow.com/questions/24319662/from-inside-of-a-docker-container-how-do-i-connect-to-the-localhost-of-the-mach/24326540#24326540  
 
 ### minikube
+
 https://minikube.sigs.k8s.io/docs/handbook/host-access/  
 
 ### OIDC
+
 https://github.com/coreos/go-oidc  
 
 ### Ingress
+
 https://docs.nginx.com/nginx-ingress-controller/installation/installation-with-helm/  
 
 ### KMIP  
+
 https://github.com/ThalesGroup/kmip-go
 
 ### pkcs11-tool  
+
 https://verschlüsselt.it/generate-rsa-ecc-and-aes-keys-with-opensc-pkcs11-tool/
 
 ### go-util  
+
 https://github.com/gbolo/go-util  
 https://github.com/gbolo/go-util/tree/master/pkcs11-test
 
@@ -216,6 +230,7 @@ https://github.com/gbolo/go-util/tree/master/pkcs11-test
 https://github.com/psmiraglia/docker-softhsm
 
 ### For local running please start backend following instructions
+
 https://github.com/opentdf/opentdf/tree/main/quickstart
 
 ```shell
@@ -235,6 +250,7 @@ pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
 ```
 
 ### Following that steps run the "show info" command
+
 ```shell
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --show-info --list-objects
 ```

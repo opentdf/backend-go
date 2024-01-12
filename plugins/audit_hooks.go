@@ -126,7 +126,7 @@ func CreateLogger() (*slog.Logger, error) {
 	return logger, nil
 }
 
-func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
+func (g a) AuditHook(next http.Handler) http.Handler {
 	logger, err := CreateLogger()
 	if err != nil {
 		panic(err)
@@ -160,7 +160,7 @@ func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
 
 	auditLog.tdfAttributes.attrs = append(auditLog.tdfAttributes.attrs, policy.exportRaw()...)
 
-	return func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auditHookLogger.Info("HTTP request", "Method", r.Method, "Url", r.URL.Path)
 
 		auditLog.tdfAttributes.dissem = policy.dissem
@@ -175,7 +175,7 @@ func (g a) AuditHook(next http.HandlerFunc) http.HandlerFunc {
 		auditHookLogger.Info("Processed AuditLog", "auditLog", processedAuditLogAsString)
 
 		next(w, r)
-	}
+	})
 }
 
 func ErrAuditHook(err string) {

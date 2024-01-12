@@ -6,6 +6,8 @@
 # Environment variables:
 #   KAS_URL
 #     - The URL prefix this KAS is served from, including origin
+#   SERVER_HTTP_PORT
+#     - The port to serve the HTTP REST endpoint on
 #   OIDC_ISSUER_URL
 #     - The URL prefix to check for ISSUER. Also used for oidc discovery, 
 #       unless overridden by OIDC_DISCOVERY_BASE_URL
@@ -71,22 +73,27 @@ w() {
   echo WARNING "${@}"
 }
 
+: "${SERVER_HTTP_PORT:=8000}"
+
 # Configure and validate HOST variable
 # This should be of the form [port] or [https://host:port/], for example
 if [ -z "$1" ]; then
-  HOST=https://localhost:8000/
+  HOST=https://localhost:${SERVER_HTTP_PORT}/
 elif [[ $1 == *" "* ]]; then
   e "Invalid hostname: [$1]"
 elif [[ $1 == http?:* ]]; then
-  HOST="$1":8000
-elif [[ $1 == http?:*:* ]]; then
-  HOST="$1"
+  HOST="${1}:${SERVER_HTTP_PORT}"
+elif [[ ${1} == http?:*:* ]]; then
+  SERVER_HTTP_PORT="${${${1#*:}#*:}%%/*}"
+  HOST="${1}"
 elif [[ $1 =~ ^[0-9]+$ ]]; then
+  SERVER_HTTP_PORT="$1"
   HOST=https://localhost:$1/
 else
   e "Invalid hostname or port: [$1]"
 fi
 export HOST
+export SERVER_HTTP_PORT
 
 l "Configuring ${HOST}..."
 

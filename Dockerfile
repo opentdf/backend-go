@@ -37,6 +37,7 @@ ENV LOG_FORMAT "TEXT"
 ENV KAS_URL ""
 ENV PKCS11_SLOT_INDEX "0"
 ENV AUDIT_ENABLED=false
+ENV SERVER_HTTP_PORT 8000
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 COPY --from=builder /build/gokas /
 COPY scripts/ scripts/
@@ -53,6 +54,8 @@ ENV SERVICE "default"
 ENV LOG_LEVEL "INFO"
 ENV LOG_FORMAT "JSON"
 ENV KAS_URL ""
+ENV AUDIT_ENABLED=false
+ENV SERVER_HTTP_PORT 8000
 ## trailing / is required
 ENV OIDC_DISCOVERY_BASE_URL ""
 ENV OIDC_ISSUER_URL ""

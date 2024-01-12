@@ -13,7 +13,7 @@ min_tilt_version("0.31")
 EXTERNAL_URL = "http://localhost:65432"
 
 # Versions of things backend to pull (attributes, kas, etc)
-BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "0.0.0-sha-27d776c")
+BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "0.0.0-sha-02d27b5")
 FRONTEND_CHART_TAG = os.environ.get("FRONTEND_LATEST_VERSION", "1.4.1")
 
 CONTAINER_REGISTRY = os.environ.get("CONTAINER_REGISTRY", "ghcr.io")
@@ -115,7 +115,12 @@ def backend(values=[], set={}, resource_deps=[]):
     )
     for x in ["attributes", "entitlement-store"]:
         k8s_resource(x, labels="opentdf", resource_deps=["postgresql"])
-    k8s_resource("kas", labels="opentdf", resource_deps=["attributes", "keycloak"])
+    k8s_resource(
+        "kas",
+        labels="opentdf",
+        resource_deps=["attributes", "keycloak"],
+        port_forwards="9000:5000"
+    )
 
 
 def frontend(values=[], set={}, resource_deps=[]):
@@ -143,7 +148,7 @@ def opentdf_cluster_with_ingress(start_frontend=True):
                 "entitlement-store",
             ]
         },
-        # values=[TESTS_DIR + "/mocks/values.yaml"],
+        values=[TESTS_DIR + "/mocks/values.yaml"],
         resource_deps=["ingress-nginx"],
     )
 
