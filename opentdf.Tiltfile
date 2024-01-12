@@ -10,8 +10,6 @@ load("ext://restart_process", "docker_build_with_restart")
 
 min_tilt_version("0.31")
 
-EXTERNAL_URL = "http://localhost:65432"
-
 # Versions of things backend to pull (attributes, kas, etc)
 BACKEND_CHART_TAG = os.environ.get("BACKEND_LATEST_VERSION", "0.0.0-sha-02d27b5")
 FRONTEND_CHART_TAG = os.environ.get("FRONTEND_LATEST_VERSION", "1.4.1")
@@ -63,7 +61,7 @@ docker_build(
 )
 
 
-def ingress():
+def ingress(external_port="65432"):
     helm_repo(
         "k8s-in",
         "https://kubernetes.github.io/ingress-nginx",
@@ -83,7 +81,7 @@ def ingress():
             }
         ),
         labels="third-party",
-        port_forwards="65432:80",
+        port_forwards="{}:80".format(external_port),
         resource_deps=["k8s-in"],
     )
 
@@ -134,8 +132,8 @@ def frontend(values=[], set={}, resource_deps=[]):
     # resource("abacus", labels="opentdf", resource_deps=resource_deps)
 
 
-def opentdf_cluster_with_ingress(start_frontend=True):
-    ingress()
+def opentdf_cluster_with_ingress(external_port=65432, start_frontend=True):
+    ingress(external_port=external_port)
 
     backend(
         set={

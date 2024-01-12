@@ -1,6 +1,6 @@
 .PHONY: all clean test
 
-all: gokas
+all: gokas go-plugins
 go-plugins: plugins/audit_hooks.so
 
 GO_MOD_LINE = $(shell head -n 1 go.mod | cut -c 8-)
