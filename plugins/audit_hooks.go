@@ -174,7 +174,7 @@ func (g a) AuditHook(next http.Handler) http.Handler {
 		processedAuditLogAsString := fmt.Sprintf("%+v", auditLog)
 		auditHookLogger.Info("Processed AuditLog", "auditLog", processedAuditLogAsString)
 
-		next(w, r)
+		next.ServeHTTP(w, r)
 	})
 }
 
