@@ -322,7 +322,6 @@ func main() {
 	kas.PublicKeyRsa = *rsaPublicKey
 
 	// EC Cert
-	var ecCert x509.Certificate
 	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") // development-ec-kas
 	certECHandle, err := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
@@ -351,12 +350,12 @@ func main() {
 				slog.Error("x509 parse error", "err", err)
 				panic(err)
 			}
-			ecCert = *certEC
+			kas.CertificateEc = *certEC
 		}
 	}
 
 	// EC Public Key
-	ecPublicKey, ok := ecCert.PublicKey.(*ecdsa.PublicKey)
+	ecPublicKey, ok := kas.CertificateEc.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		slog.Error("public key from cert fail for EC")
 		panic("EC parse fail")

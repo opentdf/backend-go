@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"log"
 	"log/slog"
 	"net/http"
 
@@ -23,12 +24,18 @@ func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	algorithm := r.URL.Query().Get("algorithm")
 	if algorithm == algorithmEc256 {
-		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
+		ecCertPem, err := exportCertificateAsPemStr(&p.CertificateEc)
 		if err != nil {
 			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
 			panic(err)
 		}
-		_, _ = w.Write([]byte(ecPublicKeyPem))
+		jData, err := json.Marshal(ecCertPem)
+		if err != nil {
+			log.Printf("error json EC certificate Marshal: %v", err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jData)
+		_, _ = w.Write([]byte("\n"))
 		return
 	}
 	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
