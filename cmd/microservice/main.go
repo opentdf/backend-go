@@ -215,8 +215,8 @@ func main() {
 	kas := access.Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -319,10 +319,9 @@ func main() {
 		slog.Error("public key RSA cert error")
 		panic("public key RSA cert error")
 	}
-	kas.PublicKeyRsa = *rsaPublicKey
+	kas.PublicKeyRSA = *rsaPublicKey
 
 	// EC Cert
-	var ecCert x509.Certificate
 	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") // development-ec-kas
 	certECHandle, err := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
@@ -351,17 +350,17 @@ func main() {
 				slog.Error("x509 parse error", "err", err)
 				panic(err)
 			}
-			ecCert = *certEC
+			kas.CertificateEC = *certEC
 		}
 	}
 
 	// EC Public Key
-	ecPublicKey, ok := ecCert.PublicKey.(*ecdsa.PublicKey)
+	ecPublicKey, ok := kas.CertificateEC.PublicKey.(*ecdsa.PublicKey)
 	if !ok {
 		slog.Error("public key from cert fail for EC")
 		panic("EC parse fail")
 	}
-	kas.PublicKeyEc = *ecPublicKey
+	kas.PublicKeyEC = *ecPublicKey
 
 	auditHook := loadAuditHook()
 

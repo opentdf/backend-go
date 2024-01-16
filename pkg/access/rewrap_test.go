@@ -5,12 +5,13 @@ import (
 	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/x509"
-	"github.com/opentdf/backend-go/pkg/p11"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/opentdf/backend-go/pkg/p11"
 )
 
 func TestHandlerEmptyRequestFailure(t *testing.T) {
@@ -23,8 +24,8 @@ func TestHandlerEmptyRequestFailure(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -50,8 +51,8 @@ func TestHandlerAuthFailure0(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -78,8 +79,8 @@ func TestHandlerAuthFailure1(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -107,8 +108,8 @@ func TestHandlerAuthFailure2(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},

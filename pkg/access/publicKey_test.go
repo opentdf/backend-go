@@ -8,7 +8,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"github.com/opentdf/backend-go/pkg/p11"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +16,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/opentdf/backend-go/pkg/p11"
 )
 
 func TestExportRsaPublicKeyAsPemStrSuccess(t *testing.T) {
@@ -141,8 +142,8 @@ func TestCertificateHandler(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  ecdsa.PublicKey{},
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -171,8 +172,8 @@ func TestCertificateHandlerWithEc256(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  privateKey.PublicKey,
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -182,8 +183,8 @@ func TestCertificateHandlerWithEc256(t *testing.T) {
 	kas.CertificateHandler(response, request)
 	result := response.Body.String()
 
-	if !strings.Contains(result, "BEGIN PUBLIC KEY") {
-		t.Errorf("got %s, but should be pubkey", result)
+	if !strings.Contains(result, "BEGIN CERTIFICATE") {
+		t.Errorf("got %s, but should be cert", result)
 	}
 }
 
@@ -206,8 +207,8 @@ func TestPublicKeyHandlerV2(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: mockPublicKeyRsa,
-		PublicKeyEc:  privateKey.PublicKey,
+		PublicKeyRSA: mockPublicKeyRsa,
+		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -236,8 +237,8 @@ func TestPublicKeyHandlerV2Failure(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: rsa.PublicKey{},
-		PublicKeyEc:  privateKey.PublicKey,
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -271,8 +272,8 @@ func TestPublicKeyHandlerV2WithEc256(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: mockPublicKeyRsa,
-		PublicKeyEc:  privateKey.PublicKey,
+		PublicKeyRSA: mockPublicKeyRsa,
+		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
@@ -305,8 +306,8 @@ func TestPublicKeyHandlerV2WithJwk(t *testing.T) {
 	kas := Provider{
 		URI:          *kasURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
-		PublicKeyRsa: mockPublicKeyRsa,
-		PublicKeyEc:  privateKey.PublicKey,
+		PublicKeyRSA: mockPublicKeyRsa,
+		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
 		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
