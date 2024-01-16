@@ -23,12 +23,20 @@ func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	algorithm := r.URL.Query().Get("algorithm")
 	if algorithm == algorithmEc256 {
-		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
+		eccPem, err := exportCertificateAsPemStr(&p.CertificateEC)
 		if err != nil {
 			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
 			panic(err)
 		}
-		_, _ = w.Write([]byte(ecPublicKeyPem))
+		jData, err := json.Marshal(eccPem)
+		if err != nil {
+			slog.ErrorContext(ctx, "json EC certificate Marshal fail", "err", err)
+			http.Error(w, "configuration error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jData)
+		_, _ = w.Write([]byte("\n"))
 		return
 	}
 	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
@@ -55,7 +63,7 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 	algorithm := r.URL.Query().Get("algorithm")
 	// ?algorithm=ec:secp256r1
 	if algorithm == algorithmEc256 {
-		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEc)
+		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEC)
 		if err != nil {
 			http.Error(w, "configuration error", http.StatusInternalServerError)
 			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
@@ -67,7 +75,7 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 	format := r.URL.Query().Get("format")
 	if format == "jwk" {
 		// Parse, serialize, slice and dice JWKs!
-		rsaPublicKeyJwk, err := jwk.FromRaw(&p.PublicKeyRsa)
+		rsaPublicKeyJwk, err := jwk.FromRaw(&p.PublicKeyRSA)
 		if err != nil {
 			http.Error(w, "configuration error", http.StatusInternalServerError)
 			slog.ErrorContext(ctx, "failed to parse JWK", "err", err)
@@ -84,7 +92,7 @@ func (p *Provider) PublicKeyHandlerV2(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(jsonPublicKey)
 		return
 	}
-	rsaPublicKeyPem, err := exportRsaPublicKeyAsPemStr(&p.PublicKeyRsa)
+	rsaPublicKeyPem, err := exportRsaPublicKeyAsPemStr(&p.PublicKeyRSA)
 	if err != nil {
 		http.Error(w, "configuration error", http.StatusInternalServerError)
 		slog.ErrorContext(ctx, "export RSA public key", "err", err)
