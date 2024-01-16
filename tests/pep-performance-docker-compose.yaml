@@ -110,7 +110,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - OIDC_ISSUER=http://localhost:65432/auth/realms/tdf
-      - AUTHORIZATION_URL=http://authorization
+      - AUTHORIZATION_HOST=authorization:8080
       - LOG_FORMAT=text
       - LOG_LEVEL=DEBUG
     logging:
@@ -122,11 +122,13 @@ services:
     build:
       args:
         - ARTIFACT=authorization
+      target: authorization
       context: ..
       dockerfile: Dockerfile
     environment:
       - LOG_FORMAT=text
       - LOG_LEVEL=DEBUG
+      - SERVER_PORT=8080
     logging:
       # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
       driver: loki

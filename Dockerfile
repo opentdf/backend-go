@@ -16,6 +16,7 @@ COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
+COPY gen/ gen/
 RUN CGO_ENABLED=1 GOOS=linux go build -v -a -installsuffix cgo -o . ./...
 
 # tester
@@ -80,4 +81,14 @@ ENV LOG_FORMAT=text
 
 COPY --from=builder /build/cli /
 ENTRYPOINT ["/cli"]
+CMD ["--help"]
+
+# authorization - production
+FROM ubuntu:latest AS authorization
+
+ENV LOG_LEVEL=info
+ENV LOG_FORMAT=text
+
+COPY --from=builder /build/authorization /
+ENTRYPOINT ["/authorization"]
 CMD ["--help"]

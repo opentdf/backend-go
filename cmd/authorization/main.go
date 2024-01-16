@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -37,17 +37,25 @@ func main() {
 		}))
 	}
 	slog.InfoContext(ctx, "Starting...")
-	l, err := net.Listen("tcp", ":8081")
-	if err != nil {
-		log.Fatal(err)
+	port := "50051"
+	if os.Getenv("SERVER_PORT") != "" {
+		port = os.Getenv("SERVER_PORT")
 	}
+	l, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
+	}
+	slog.InfoContext(ctx, fmt.Sprintf("Listening on %s...", port))
 	s := grpc.NewServer()
 	err = NewAuthorizationServer(s)
 	if err != nil {
-		log.Fatal(err)
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
 	}
 	if err := s.Serve(l); err != nil {
-		log.Fatal(err)
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
 	}
 }
 

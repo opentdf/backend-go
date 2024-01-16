@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"github.com/opentdf/backend-go/gen/authorization"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"log/slog"
 	"os"
 	"os/user"
 	"strings"
+
+	"github.com/opentdf/backend-go/gen/authorization"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -45,7 +46,11 @@ func main() {
 	ctx = context.WithValue(ctx, "pid", pid)
 	slog.InfoContext(ctx, "Ascertaining...")
 	do := grpc.WithTransportCredentials(insecure.NewCredentials())
-	cc, err := grpc.Dial("localhost:8081", do)
+	host := "localhost:50051"
+	if os.Getenv("AUTHORIZATION_HOST") != "" {
+		host = os.Getenv("AUTHORIZATION_HOST")
+	}
+	cc, err := grpc.Dial(host, do)
 	if err != nil {
 		slog.ErrorContext(ctx, err.Error())
 		panic(err)
