@@ -131,7 +131,7 @@ func exportCertificateAsPemStr(cert *x509.Certificate) (string, error) {
 	if certPem == nil {
 		return "", ErrCertificateEncode
 	}
-	return string(certPem), nil
+	return string(certPem) + "\n", nil
 }
 
 type Error string
