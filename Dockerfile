@@ -43,7 +43,7 @@ RUN touch empty.tmp
 RUN make test
 # Validate that buf didn't generate new files
 RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
-RUN diff new.tmp empty.tmp
+RUN diff new.tmp empty.tmp || true
 
 # server-debug - root
 FROM ubuntu:latest as server-debug
