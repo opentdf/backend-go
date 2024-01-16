@@ -28,7 +28,15 @@ func (p *Provider) CertificateHandler(w http.ResponseWriter, r *http.Request) {
 			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
 			panic(err)
 		}
-		_, _ = w.Write([]byte(eccPem))
+		jData, err := json.Marshal(eccPem)
+		if err != nil {
+			slog.ErrorContext(ctx, "json EC certificate Marshal fail", "err", err)
+			http.Error(w, "configuration error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jData)
+		_, _ = w.Write([]byte("\n"))
 		return
 	}
 	certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
