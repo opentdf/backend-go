@@ -24,9 +24,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/opentdf/backend-go/pkg/access"
+	"golang.org/x/exp/slog"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -57,7 +59,8 @@ func main() {
 	conn, err := grpc.DialContext(ctx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 
 	if err != nil {
-		log.Fatalf("grpc.Dial(%q): %v", address, err)
+		slog.Error("grpc.Dial(%q): %v", address, err)
+		os.Exit(1)
 	}
 	defer conn.Close()
 
