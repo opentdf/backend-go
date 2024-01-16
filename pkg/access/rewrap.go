@@ -318,15 +318,21 @@ func nanoTDFRewrap(requestBody RequestBody) ([]byte, error) {
 		return nil, errors.New("failed to unmarshal ephemeral public key")
 	}
 
-	kasEcPrivKeyFilePath := os.Getenv("KAS_EC_SECP256R1_PRIVATE_KEY")
+	// TODO use PKCS11 instead
+	kasEcPrivKeyString := os.Getenv("KAS_EC_SECP256R1_PRIVATE_KEY")
+	var ecPrivateRaw []byte
 
-	// Load PEM file
-	raw, err := os.ReadFile(kasEcPrivKeyFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read KAS private key JSON data: %w", err)
+	if strings.Contains(kasEcPrivKeyString, "BEGIN PRIVATE KEY") {
+		ecPrivateRaw = []byte(kasEcPrivKeyString)
+	} else if strings.Contains(kasEcPrivKeyString, ".pem") {
+		// Load PEM file
+		ecPrivateRaw, err = os.ReadFile(kasEcPrivKeyString)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read KAS private key JSON data: %w", err)
+		}
 	}
 
-	block, _ := pem.Decode(raw)
+	block, _ := pem.Decode(ecPrivateRaw)
 	privateKey, err := parsePrivateKey(block.Bytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode private key to DER: %w", err)
