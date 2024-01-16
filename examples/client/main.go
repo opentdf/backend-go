@@ -22,8 +22,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -40,22 +39,20 @@ func callVersion(c access.AccessServiceClient) {
 	defer cancel()
 	r, err := c.Info(ctx, &access.InfoRequest{})
 	if err != nil {
-		fmt.Println("AppInfo: _, ", err)
+		slog.Info("AppInfo", "err", err)
 	} else {
-		fmt.Println("AppInfo: ", r.Version)
+		slog.Info("AppInfo", "version", r.Version)
 	}
 }
 
 func main() {
 	flag.Parse()
-	fmt.Println("lesgo")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	address := ":5000"
 
-	fmt.Println("dialing")
 	conn, err := grpc.DialContext(ctx, address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 
 	if err != nil {
@@ -64,11 +61,9 @@ func main() {
 	}
 	defer conn.Close()
 
-	fmt.Println("infoermering")
 	informerClient := access.NewAccessServiceClient(conn)
 
 	for {
-		fmt.Println("callVersion")
 		callVersion(informerClient)
 		time.Sleep(time.Second)
 	}
