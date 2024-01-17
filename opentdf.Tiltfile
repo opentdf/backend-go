@@ -100,6 +100,8 @@ def backend(values=[], set={}, resource_deps=[]):
         "kas.envConfig.cert": all_secrets["KAS_CERTIFICATE"],
         "kas.envConfig.ecPrivKey": all_secrets["KAS_EC_SECP256R1_PRIVATE_KEY"],
         "kas.envConfig.privKey": all_secrets["KAS_PRIVATE_KEY"],
+        "kas.livenessProbeOverride.grpc.port": "5000",
+        "kas.readinessProbeOverride.grpc.port": "5000",
         "kas.image.repo": "gokas",
     }
     set_values.update(set)
