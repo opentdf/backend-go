@@ -11,6 +11,7 @@ import (
 )
 
 type Provider struct {
+	AccessServiceServer
 	URI           url.URL `json:"uri"`
 	PrivateKey    p11.Pkcs11PrivateKeyRSA
 	PublicKeyRSA  rsa.PublicKey `json:"publicKey"`

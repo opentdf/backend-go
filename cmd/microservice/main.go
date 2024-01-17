@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,11 +18,16 @@ import (
 	"strings"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/miekg/pkcs11"
 	"github.com/opentdf/backend-go/internal/version"
 	"github.com/opentdf/backend-go/pkg/access"
 	"github.com/opentdf/backend-go/pkg/p11"
 	"golang.org/x/oauth2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/health"
+	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 const (
@@ -205,6 +211,12 @@ func main() {
 
 	slog.Info("gokas-info", "version", stats.Version, "version_long", stats.VersionLong, "build_time", stats.BuildTime)
 
+	portGRPC, err := validatePort(os.Getenv("SERVER_GRPC_PORT"))
+	if err != nil {
+		slog.Error("Invalid port specified in SERVER_GRPC_PORT env variable", "err", err)
+		panic(err)
+	}
+
 	portHTTP, err := validatePort(os.Getenv("SERVER_HTTP_PORT"))
 	if err != nil {
 		slog.Error("Invalid port specified in SERVER_HTTP_PORT env variable", "err", err)
@@ -362,17 +374,67 @@ func main() {
 	}
 	kas.PublicKeyEC = *ecPublicKey
 
-	auditHook := loadAuditHook()
+	portGRPC = loadGRPC(portGRPC, &kas)
 
-	http.HandleFunc("/", kas.Version)
-	http.HandleFunc("/healthz", kas.HealthZ)
-	http.HandleFunc("/kas_public_key", kas.CertificateHandler)
-	http.Handle("/v2/kas_public_key", auditHook(http.HandlerFunc(kas.PublicKeyHandlerV2)))
-	http.HandleFunc("/v2/rewrap", kas.Handler)
-	slog.Info("listening", "host", ":8000")
-	if err := http.ListenAndServe(":8000", nil); err != nil {
+	if 0 == portHTTP {
+		slog.Debug("gRPC only")
+		return
+	}
+
+	conn, err := grpc.DialContext(
+		context.Background(),
+		fmt.Sprintf("0.0.0.0:%d", portGRPC),
+		grpc.WithBlock(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		slog.Error("Failed to dial internal gRPC server", "err", err)
+		panic(err)
+	}
+
+	gwmux := runtime.NewServeMux()
+	// Register Greeter
+	err = access.RegisterAccessServiceHandler(context.Background(), gwmux, conn)
+	if err != nil {
+		slog.Error("Failed to register gateway", "err", err)
+		panic(err)
+	}
+
+	auditHook := loadAuditHook()
+	gwServer := &http.Server{
+		Addr:    fmt.Sprintf(":%d", portHTTP),
+		Handler: auditHook(gwmux),
+	}
+
+	slog.Info(fmt.Sprintf("Serving gRPC-Gateway on [http://0.0.0.0:%d], connected to gRPC on [%d]", portHTTP, portGRPC))
+	if err := gwServer.ListenAndServe(); err != nil {
 		slog.Error("server failure", "err", err)
 	}
+}
+
+func loadGRPC(port int, kas *access.Provider) int {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		slog.Error("gRPC listen failure", "err", err)
+		panic(err)
+	}
+
+	s := grpc.NewServer()
+	healthcheck := health.NewServer()
+	healthcheck.SetServingStatus("", healthgrpc.HealthCheckResponse_SERVING)
+	healthgrpc.RegisterHealthServer(s, healthcheck)
+
+	access.RegisterAccessServiceServer(s, kas)
+	slog.Info("Serving gRPC on [" + lis.Addr().String() + "]")
+
+	go func() {
+		// FIXME channel join
+		if err := s.Serve(lis); err != nil {
+			slog.Error("server failure", "err", err)
+		}
+	}()
+
+	return lis.Addr().(*net.TCPAddr).Port
 }
 
 func findKey(hs *hsmSession, class uint, id []byte, label string) (pkcs11.ObjectHandle, error) {
