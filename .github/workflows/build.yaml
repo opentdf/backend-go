@@ -21,7 +21,6 @@ jobs:
     outputs:
       VERSION: "${{ steps.info.outputs.VERSION }}"
       SHA_TAG: "${{ steps.info.outputs.SHA }}"
-      SERVER_TARGET: "${{ github.event_name == 'release' && 'server' || 'server-debug' }}"
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
@@ -37,6 +36,7 @@ jobs:
       - run: |-
           echo "VERSION=$(cat VERSION)" >> $GITHUB_OUTPUT
           echo "SHA=sha-$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "### Processing Version [$(cat VERSION)] at sha [$(git rev-parse --short HEAD)]" >> $GITHUB_STEP_SUMMARY
         id: info
 
   build-and-test:
@@ -121,6 +121,8 @@ jobs:
     needs:
       - ci
     runs-on: ubuntu-22.04
+    outputs:
+      TAG: "${{ steps.tag-rel.outputs.tag }}"
     permissions:
       contents: write
     steps:
@@ -178,7 +180,7 @@ jobs:
             ghcr.io/opentdf/gokas
           tags: |
             type=semver,pattern={{version}},value=${{ needs.version.outputs.VERSION }}
-            type=semver,pattern={{version}},value=${{ needs.version.outputs.VERSION }},suffix=-${{ github.event.release.tag_name }}
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.VERSION }},suffix=-${{ needs.tag.outputs.TAG || github.event.release.tag_name || needs.version.outputs.SHA_TAG }}
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
