@@ -141,10 +141,17 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push:
-    if: github.event.release
+    # This lets the event fire on manual releases, which do not have a tag event,
+    # and push events AFTER a successful tag event. `always` is required because
+    # in manual releases, tag will not run.
+    if: >-
+      always() &&
+      contains(fromJSON('["push", "release"]'), github.event_name) &&
+      contains(needs.*.result, 'success') && !contains(needs.*.result, 'failure')
     needs:
       - ci
       - version
+      - tag
     runs-on: ubuntu-latest
     permissions:
       packages: write
