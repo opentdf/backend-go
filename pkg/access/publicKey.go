@@ -35,7 +35,7 @@ func (p *Provider) LegacyPublicKey(ctx context.Context, in *LegacyPublicKeyReque
 	}
 	if err != nil {
 		slog.ErrorContext(ctx, "unable to generate PEM", "err", err)
-		return nil, status.Error(codes.Internal, "configuration error")
+		return nil, errors.Join(ErrConfig, status.Error(codes.Internal, "configuration error"))
 	}
 	return &wrapperspb.StringValue{Value: pem}, nil
 }
@@ -46,7 +46,7 @@ func (p *Provider) PublicKey(ctx context.Context, in *PublicKeyRequest) (*Public
 		ecPublicKeyPem, err := exportEcPublicKeyAsPemStr(&p.PublicKeyEC)
 		if err != nil {
 			slog.ErrorContext(ctx, "EC public key from PKCS11", "err", err)
-			return nil, status.Error(codes.Internal, "configuration error")
+			return nil, errors.Join(ErrConfig, status.Error(codes.Internal, "configuration error"))
 		}
 		slog.DebugContext(ctx, "EC Public Key Handler found", "cert", ecPublicKeyPem)
 		return &PublicKeyResponse{PublicKey: ecPublicKeyPem}, nil
@@ -56,13 +56,13 @@ func (p *Provider) PublicKey(ctx context.Context, in *PublicKeyRequest) (*Public
 		rsaPublicKeyJwk, err := jwk.FromRaw(&p.PublicKeyRSA)
 		if err != nil {
 			slog.ErrorContext(ctx, "failed to parse JWK", "err", err)
-			return nil, status.Error(codes.Internal, "configuration error")
+			return nil, errors.Join(ErrConfig, status.Error(codes.Internal, "configuration error"))
 		}
 		// Keys can be serialized back to JSON
 		jsonPublicKey, err := json.Marshal(rsaPublicKeyJwk)
 		if err != nil {
 			slog.ErrorContext(ctx, "failed to marshal JWK", "err", err)
-			return nil, status.Error(codes.Internal, "configuration error")
+			return nil, errors.Join(ErrConfig, status.Error(codes.Internal, "configuration error"))
 		}
 		slog.DebugContext(ctx, "JWK Public Key Handler found", "cert", jsonPublicKey)
 		return &PublicKeyResponse{PublicKey: string(jsonPublicKey)}, nil
@@ -72,7 +72,7 @@ func (p *Provider) PublicKey(ctx context.Context, in *PublicKeyRequest) (*Public
 		certificatePem, err := exportCertificateAsPemStr(&p.Certificate)
 		if err != nil {
 			slog.ErrorContext(ctx, "RSA public key from PKCS11", "err", err)
-			return nil, status.Error(codes.Internal, "configuration error")
+			return nil, errors.Join(ErrConfig, status.Error(codes.Internal, "configuration error"))
 		}
 		slog.DebugContext(ctx, "RSA Cert Handler found", "cert", certificatePem)
 		return &PublicKeyResponse{PublicKey: certificatePem}, nil
@@ -81,7 +81,7 @@ func (p *Provider) PublicKey(ctx context.Context, in *PublicKeyRequest) (*Public
 	rsaPublicKeyPem, err := exportRsaPublicKeyAsPemStr(&p.PublicKeyRSA)
 	if err != nil {
 		slog.ErrorContext(ctx, "RSA public key export fail", "err", err)
-		return nil, status.Error(codes.Internal, "configuration error")
+		return nil, errors.Join(ErrConfig, status.Error(codes.Internal, "configuration error"))
 	}
 	slog.DebugContext(ctx, "RSA Public Key Handler found", "cert", rsaPublicKeyPem)
 	return &PublicKeyResponse{PublicKey: rsaPublicKeyPem}, nil
