@@ -37,7 +37,23 @@ ctlptl create cluster kind --registry=ctlptl-registry
 ctlptl delete cluster kind-kind
 ```
 
-### Install ingress
+### Running service in k8s
+
+Quick
+
+```shell
+tilt up
+```
+
+With Test Script:
+
+```shell
+TEST_SCRIPT=.github/workflows/roundtrip/wait-and-test.sh CI=1 tilt up
+```
+
+### Running in host OS
+
+#### Install ingress
 
 ```shell
 helm repo add nginx-stable https://helm.nginx.com/stable
@@ -45,7 +61,7 @@ helm repo update
 helm install ex nginx-stable/nginx-ingress
 ```
 
-### Start database
+#### Start database
 
 ```shell
 mkdir -p data
@@ -58,9 +74,9 @@ docker run \
     postgres
 ```
 
-### Start HSM
+#### Start HSM
 
-#### SoftHSM C Module
+##### SoftHSM C Module
 
 https://wiki.opendnssec.org/display/SoftHSMDOCS/SoftHSM+Documentation+v2
 
@@ -76,7 +92,7 @@ export PKCS11_MODULE_PATH=/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsoft
 brew install opensc
 ```
 
-#### SoftHSM Keys
+##### SoftHSM Keys
 
 ```shell
 # enter two sets of PIN, 12345
@@ -97,10 +113,12 @@ pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-private.p
 pkcs11-tool --module $PKCS11_MODULE_PATH --login --write-object kas-ec-cert.pem --type cert  --label development-ec-kas
 ```
 
-### Start services
+#### Start services
+
+Manually disable KAS in the tiltfile, if desired, then:
 
 ```shell
-tilt up
+tilt up 
 ```
 
 ### Start monolith service (outside kubernetes)
