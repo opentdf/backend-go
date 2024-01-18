@@ -379,7 +379,7 @@ func main() {
 
 	portGRPC = loadGRPC(portGRPC, &kas)
 
-	if 0 == portHTTP {
+	if portHTTP == 0 {
 		slog.Debug("gRPC only")
 		return
 	}
