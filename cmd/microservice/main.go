@@ -31,9 +31,7 @@ import (
 )
 
 const (
-	ErrHsm         = Error("hsm unexpected")
-	ErrInvalidPort = Error("invalid port")
-	hostname       = "localhost"
+	hostname = "localhost"
 )
 
 func loadIdentityProvider() oidc.IDTokenVerifier {
@@ -89,7 +87,7 @@ func newHSMContext() (*hsmContext, error) {
 	slog.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
 	ctx := pkcs11.New(pkcs11ModulePath)
 	if err := ctx.Initialize(); err != nil {
-		return nil, errors.Join(ErrHsm, err)
+		return nil, errors.Join(access.ErrHSM, err)
 	}
 
 	hc := new(hsmContext)
@@ -110,23 +108,23 @@ func newHSMSession(hc *hsmContext) (*hsmSession, error) {
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
 		slog.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
-		return nil, errors.Join(ErrHsm, err)
+		return nil, errors.Join(access.ErrHSM, err)
 	}
 
 	slots, err := hc.ctx.GetSlotList(true)
 	if err != nil {
 		slog.Error("pkcs11 error getting slots", "err", err)
-		return nil, errors.Join(ErrHsm, err)
+		return nil, errors.Join(access.ErrHSM, err)
 	}
 	if int(slot) >= len(slots) || slot < 0 {
 		slog.Error("pkcs11 PKCS11_SLOT_INDEX is invalid", "slot_index", slot, "slots", slots)
-		return nil, errors.Join(ErrHsm, err)
+		return nil, errors.Join(access.ErrHSM, err)
 	}
 
 	session, err := hc.ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
 	if err != nil {
 		slog.Error("pkcs11 error opening session", "slot_index", slot, "slots", slots)
-		return nil, errors.Join(ErrHsm, err)
+		return nil, errors.Join(access.ErrHSM, err)
 	}
 
 	hs := new(hsmSession)
@@ -195,10 +193,10 @@ func validatePort(port string) (int, error) {
 	}
 	p, err := strconv.Atoi(port)
 	if err != nil {
-		return 0, errors.Join(ErrInvalidPort, err)
+		return 0, errors.Join(access.ErrConfig, err)
 	}
 	if p < 0 || p > 65535 {
-		return 0, ErrInvalidPort
+		return 0, access.ErrConfig
 	}
 	return p, nil
 }
@@ -222,15 +220,20 @@ func main() {
 		slog.Error("Invalid port specified in SERVER_HTTP_PORT env variable", "err", err)
 		panic(err)
 	}
+	attrSvcURI, err := access.ResolveAttributeAuthority(os.Getenv("ATTR_AUTHORITY_HOST"))
+	if err != nil {
+		slog.Error("invalid attribute authority", "err", err)
+		panic(err)
+	}
 
 	kasURI, _ := url.Parse("https://" + hostname + ":" + strconv.Itoa(portHTTP))
 	kas := access.Provider{
 		URI:          *kasURI,
+		AttributeSvc: attrSvcURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
 		PublicKeyRSA: rsa.PublicKey{},
 		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
@@ -455,7 +458,7 @@ func findKey(hs *hsmSession, class uint, id []byte, label string) (pkcs11.Object
 	var handle pkcs11.ObjectHandle
 	var err error
 	if err = hs.c.ctx.FindObjectsInit(hs.session, template); err != nil {
-		return handle, errors.Join(ErrHsm, err)
+		return handle, errors.Join(access.ErrHSM, err)
 	}
 	defer func() {
 		finalErr := hs.c.ctx.FindObjectsFinal(hs.session)
@@ -469,7 +472,7 @@ func findKey(hs *hsmSession, class uint, id []byte, label string) (pkcs11.Object
 	const maxHandles = 20
 	handles, _, err = hs.c.ctx.FindObjects(hs.session, maxHandles)
 	if err != nil {
-		return handle, errors.Join(ErrHsm, err)
+		return handle, errors.Join(access.ErrHSM, err)
 	}
 
 	switch len(handles) {

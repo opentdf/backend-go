@@ -141,7 +141,6 @@ func TestCertificateHandler(t *testing.T) {
 		PublicKeyRSA: rsa.PublicKey{},
 		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
@@ -170,7 +169,6 @@ func TestCertificateHandlerWithEc256(t *testing.T) {
 		PublicKeyEC:   privateKey.PublicKey,
 		Certificate:   x509.Certificate{},
 		CertificateEC: x509.Certificate{},
-		Attributes:    nil,
 		Session:       p11.Pkcs11Session{},
 		OIDCVerifier:  nil,
 	}
@@ -198,7 +196,7 @@ func TestPublicKeyHandlerWithEc256(t *testing.T) {
 		PublicKeyRSA: rsa.PublicKey{},
 		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
+
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
@@ -231,7 +229,7 @@ func TestPublicKeyHandlerV2(t *testing.T) {
 		PublicKeyRSA: mockPublicKeyRsa,
 		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
+
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
@@ -259,7 +257,7 @@ func TestPublicKeyHandlerV2Failure(t *testing.T) {
 		PublicKeyRSA: rsa.PublicKey{},
 		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
+
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
@@ -288,7 +286,7 @@ func TestPublicKeyHandlerV2WithEc256(t *testing.T) {
 		PublicKeyRSA: mockPublicKeyRsa,
 		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
+
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
@@ -321,7 +319,7 @@ func TestPublicKeyHandlerV2WithJwk(t *testing.T) {
 		PublicKeyRSA: mockPublicKeyRsa,
 		PublicKeyEC:  privateKey.PublicKey,
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
+
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}

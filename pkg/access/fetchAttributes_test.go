@@ -16,6 +16,33 @@ type WrongAttributeDefinition struct {
 	Response string `json:"response"`
 }
 
+func mockAttrProvider() *Provider {
+	u, err := ResolveAttributeAuthority("http://localhost:65432/api/attributes/")
+	if err != nil {
+		panic(err)
+	}
+	return &Provider{
+		AttributeSvc: u,
+	}
+}
+
+func TestResolveAttributeService(t *testing.T) {
+	p, err := ResolveAttributeAuthority("")
+	if p != nil || err == nil {
+		t.Errorf("empty ATTR_AUTHORITY_HOST should fail p=[%s], err=[%s]", p, err)
+	}
+
+	p, err = ResolveAttributeAuthority("http://localhost")
+	if p.String() != "http://localhost/v1/attrName" || err != nil {
+		t.Errorf("simple ATTR_AUTHORITY_HOST should not fail p=[%s], err=[%s]", p, err)
+	}
+
+	p, err = ResolveAttributeAuthority("http://localhost/api/attributes/")
+	if p.String() != "http://localhost/api/attributes/v1/attrName" || err != nil {
+		t.Errorf("ATTR_AUTHORITY_HOST with path should not fail p=[%s], err=[%s]", p, err)
+	}
+}
+
 func TestFetchAttributesSuccess(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
@@ -54,7 +81,8 @@ func TestFetchAttributesSuccess(t *testing.T) {
 		},
 	)
 
-	output, err := fetchAttributes(ctx, namespaces)
+	p := mockAttrProvider()
+	output, err := p.fetchAttributes(ctx, namespaces)
 
 	if err != nil {
 		t.Error(err)
@@ -86,7 +114,8 @@ func TestFetchAttributesFailure(t *testing.T) {
 		},
 	)
 
-	output, err := fetchAttributes(ctx, namespaces)
+	p := mockAttrProvider()
+	output, err := p.fetchAttributes(ctx, namespaces)
 
 	t.Log(err)
 	t.Log(output)
@@ -113,7 +142,8 @@ func TestFetchAttributesFailure1(t *testing.T) {
 		},
 	)
 
-	output, err := fetchAttributes(ctx, namespaces)
+	p := mockAttrProvider()
+	output, err := p.fetchAttributes(ctx, namespaces)
 
 	if err == nil {
 		t.Error("Should throw an error")
@@ -137,7 +167,8 @@ func TestFetchAttributesFailure2(t *testing.T) {
 		},
 	)
 
-	output, err := fetchAttributes(ctx, namespaces)
+	p := mockAttrProvider()
+	output, err := p.fetchAttributes(ctx, namespaces)
 
 	if err == nil {
 		t.Error("Should throw an error")
@@ -151,7 +182,8 @@ func TestFetchAttributesFailure2(t *testing.T) {
 func TestFetchAttributesForNamespaceFailure(t *testing.T) {
 	namespaces := []string{"namespace1", "namespace2"}
 
-	output, err := fetchAttributes(context.Background(), namespaces)
+	p := mockAttrProvider()
+	output, err := p.fetchAttributes(context.Background(), namespaces)
 
 	if err == nil {
 		t.Error("Should throw an error")

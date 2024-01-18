@@ -12,7 +12,7 @@
 #   SERVER_HTTP_PORT
 #     - The port to serve the HTTP REST endpoint on
 #   OIDC_ISSUER_URL
-#     - The URL prefix to check for ISSUER. Also used for oidc discovery, 
+#     - The URL prefix to check for ISSUER. Also used for oidc discovery,
 #       unless overridden by OIDC_DISCOVERY_BASE_URL
 #   PKCS11_PIN
 #     - SECRET
@@ -28,8 +28,6 @@
 #     - Public key KAS clients can use to validate responses.
 #   ATTR_AUTHORITY_HOST
 #     - OpenTDF Attribute service host, or other compliant authority
-#   ATTR_AUTHORITY_CERTIFICATE
-#     - The public key used to validate responses from ATTR_AUTHORITY_HOST.
 #   LOG_LEVEL
 #     - `slog` level. Defaults to `info`. Other options include
 #       `debug` (more verbose) and `warn` (less verbose)
@@ -59,6 +57,8 @@
 #   CLIENT_KEY_PATH
 #   V2_SAAS_ENABLED
 #   LEGACY_NANOTDF_IV
+#   ATTR_AUTHORITY_CERTIFICATE
+#     - The public key used to validate responses from ATTR_AUTHORITY_HOST. Not used in OIDC mode
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPTS_DIR}/../" >/dev/null && pwd | sed 's:/*$::')"
@@ -87,7 +87,9 @@ elif [[ $1 == *" "* ]]; then
 elif [[ $1 == http?:* ]]; then
   HOST="${1}:${SERVER_HTTP_PORT}"
 elif [[ ${1} == http?:*:* ]]; then
-  SERVER_HTTP_PORT="${${${1#*:}#*:}%%/*}"
+  p1="${1#*:}"
+  p2="${p1#*:}"
+  SERVER_HTTP_PORT="${p2%%/*}"
   HOST="${1}"
 elif [[ $1 =~ ^[0-9]+$ ]]; then
   SERVER_HTTP_PORT="$1"
