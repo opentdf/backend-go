@@ -12,7 +12,7 @@
 #   SERVER_HTTP_PORT
 #     - The port to serve the HTTP REST endpoint on
 #   OIDC_ISSUER_URL
-#     - The URL prefix to check for ISSUER. Also used for oidc discovery, 
+#     - The URL prefix to check for ISSUER. Also used for oidc discovery,
 #       unless overridden by OIDC_DISCOVERY_BASE_URL
 #   PKCS11_PIN
 #     - SECRET
@@ -87,7 +87,9 @@ elif [[ $1 == *" "* ]]; then
 elif [[ $1 == http?:* ]]; then
   HOST="${1}:${SERVER_HTTP_PORT}"
 elif [[ ${1} == http?:*:* ]]; then
-  SERVER_HTTP_PORT="${${${1#*:}#*:}%%/*}"
+  p1="${1#*:}"
+  p2="${p1#*:}"
+  SERVER_HTTP_PORT="${p2%%/*}"
   HOST="${1}"
 elif [[ $1 =~ ^[0-9]+$ ]]; then
   SERVER_HTTP_PORT="$1"
