@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 	"testing"
+
+	"github.com/opentdf/backend-go/pkg/access"
 )
 
 func TestInferLoggerDefaults(t *testing.T) {
@@ -86,15 +88,15 @@ func TestValidatePort(t *testing.T) {
 		t.Error("empty SERVER_PORT should default properly")
 	}
 	p, err = validatePort("invalid")
-	if p != 0 || !errors.Is(err, ErrInvalidPort) {
+	if p != 0 || !errors.Is(err, access.ErrConfig) {
 		t.Error("invalid error code")
 	}
 	p, err = validatePort("-1000")
-	if p != 0 || !errors.Is(err, ErrInvalidPort) {
+	if p != 0 || !errors.Is(err, access.ErrConfig) {
 		t.Error("invalid error code")
 	}
 	p, err = validatePort("65536")
-	if p != 0 || !errors.Is(err, ErrInvalidPort) {
+	if p != 0 || !errors.Is(err, access.ErrConfig) {
 		t.Error("invalid error code")
 	}
 }

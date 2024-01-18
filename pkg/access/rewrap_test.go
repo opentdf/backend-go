@@ -22,7 +22,7 @@ func TestHandlerAuthFailure0(t *testing.T) {
 		PublicKeyRSA: rsa.PublicKey{},
 		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
+
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
@@ -43,7 +43,7 @@ func TestHandlerAuthFailure1(t *testing.T) {
 		PublicKeyRSA: rsa.PublicKey{},
 		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
+
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}
@@ -68,7 +68,7 @@ func TestHandlerAuthFailure2(t *testing.T) {
 		PublicKeyRSA: rsa.PublicKey{},
 		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
-		Attributes:   nil,
+
 		Session:      p11.Pkcs11Session{},
 		OIDCVerifier: nil,
 	}

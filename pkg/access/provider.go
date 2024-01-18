@@ -10,6 +10,11 @@ import (
 	"github.com/opentdf/backend-go/pkg/p11"
 )
 
+const (
+	ErrHSM    = Error("hsm unexpected")
+	ErrConfig = Error("invalid port")
+)
+
 type Provider struct {
 	AccessServiceServer
 	URI           url.URL `json:"uri"`
@@ -18,7 +23,7 @@ type Provider struct {
 	PublicKeyEC   ecdsa.PublicKey
 	Certificate   x509.Certificate `json:"certificate"`
 	CertificateEC x509.Certificate `json:"certificateEc"`
-	Attributes    []Attribute      `json:"attributes"`
+	AttributeSvc  *url.URL
 	Session       p11.Pkcs11Session
 	OIDCVerifier  *oidc.IDTokenVerifier
 }

@@ -165,8 +165,8 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	}
 
 	// this part goes in the plugin?
-	slog.DebugContext(ctx, "Fetching attributes")
-	definitions, err := fetchAttributes(ctx, namespaces)
+	slog.DebugContext(ctx, "Fetching attributes", "policy.namespaces", namespaces, "policy.body", policy.Body)
+	definitions, err := p.fetchAttributes(ctx, namespaces)
 	if err != nil {
 		slog.ErrorContext(ctx, "Could not fetch attribute definitions from attributes service!", "err", err)
 		return nil, status.Error(codes.Internal, "attribute server request failure")

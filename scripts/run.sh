@@ -28,8 +28,6 @@
 #     - Public key KAS clients can use to validate responses.
 #   ATTR_AUTHORITY_HOST
 #     - OpenTDF Attribute service host, or other compliant authority
-#   ATTR_AUTHORITY_CERTIFICATE
-#     - The public key used to validate responses from ATTR_AUTHORITY_HOST.
 #   LOG_LEVEL
 #     - `slog` level. Defaults to `info`. Other options include
 #       `debug` (more verbose) and `warn` (less verbose)
@@ -59,6 +57,8 @@
 #   CLIENT_KEY_PATH
 #   V2_SAAS_ENABLED
 #   LEGACY_NANOTDF_IV
+#   ATTR_AUTHORITY_CERTIFICATE
+#     - The public key used to validate responses from ATTR_AUTHORITY_HOST. Not used in OIDC mode
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPTS_DIR}/../" >/dev/null && pwd | sed 's:/*$::')"
