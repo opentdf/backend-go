@@ -6,22 +6,17 @@ logger = logging.getLogger("xtest")
 logging.basicConfig()
 logging.getLogger().setLevel(logging.DEBUG)
 
-CLIENT_ID = "tdf-client"
-CLIENT_SECRET = "123-456"
-OIDC_ENDPOINT = "http://localhost:65432"
 KAS_URL = "http://localhost:65432/api/kas"
-REALM = "tdf"
-
 
 def main():
     function, source, target = sys.argv[1:4]
 
     oidc_creds = OIDCCredentials()
     oidc_creds.set_client_credentials_client_secret(
-        client_id=CLIENT_ID,
-        client_secret=CLIENT_SECRET,
-        organization_name=REALM,
-        oidc_endpoint=OIDC_ENDPOINT,
+        client_id="tdf-client",
+        client_secret="123-456",
+        organization_name="tdf",
+        oidc_endpoint="http://localhost:65432",
     )
 
     is_nano = source.endswith(".ntdf") or target.endswith(".ntdf")
@@ -31,6 +26,10 @@ def main():
         else TDFClient(oidc_credentials=oidc_creds, kas_url=KAS_URL)
     )
     client.enable_console_logging(LogLevel.Debug)
+    client.add_data_attribute(
+        "https://example.com/attr/Classification/value/S", KAS_URL
+    )
+    client.add_data_attribute("https://example.com/attr/COI/value/PRX", KAS_URL)
 
     if function == "encrypt":
         encrypt_file(client, source, target)

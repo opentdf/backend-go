@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/opentdf/backend-go/pkg/access"
-	"golang.org/x/exp/slog"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

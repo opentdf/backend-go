@@ -49,7 +49,7 @@ func fetchAttributesForNamespace(ctx context.Context, namespace string) ([]attri
 	var httpClient http.Client
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed http request to attributes service", "err", err, "namespace", namespace, "attributeHost", attributeHost, "req", req)
+		slog.ErrorContext(ctx, "failed http request to attributes service", "err", err, "namespace", namespace, "attributeHost", attributeHost, "req.URL", req.URL)
 		return nil, errors.Join(ErrAttributeDefinitionsServiceCall, err)
 	}
 	defer func(Body io.ReadCloser) {
