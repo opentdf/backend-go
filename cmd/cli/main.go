@@ -56,8 +56,8 @@ func main() {
 		panic(err)
 	}
 	ac := authorization.NewAuthorizationServiceClient(cc)
-	in := authorization.DecisionRequest{}
-	out, err := ac.IsAuthorized(ctx, &in)
+	in := authorization.GetDecisionsRequest{}
+	out, err := ac.GetDecisions(ctx, &in)
 	if err != nil {
 		slog.ErrorContext(ctx, err.Error())
 		panic(err)
