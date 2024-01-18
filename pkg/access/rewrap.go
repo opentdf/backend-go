@@ -56,6 +56,27 @@ type customClaimsHeader struct {
 	TDFClaims ClaimsObject `json:"tdf_claims"`
 }
 
+const (
+	ErrUser     = Error("request error")
+	ErrInternal = Error("internal error")
+)
+
+func err400(s string) error {
+	return errors.Join(ErrUser, status.Error(codes.InvalidArgument, s))
+}
+
+func err401(s string) error {
+	return errors.Join(ErrUser, status.Error(codes.Unauthenticated, s))
+}
+
+func err403(s string) error {
+	return errors.Join(ErrUser, status.Error(codes.PermissionDenied, s))
+}
+
+func err503(s string) error {
+	return errors.Join(ErrInternal, status.Error(codes.Unavailable, s))
+}
+
 func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapResponse, error) {
 	slog.DebugContext(ctx, "REWRAP")
 
@@ -68,16 +89,16 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 			authHeaders := md.Get("Authorization")
 			if len(authHeaders) == 0 {
 				slog.InfoContext(ctx, "no authorization header")
-				return nil, status.Error(codes.Unauthenticated, "no auth token")
+				return nil, err401("no auth token")
 			}
 			if len(authHeaders) != 1 {
 				slog.InfoContext(ctx, "authorization header repetition")
-				return nil, status.Error(codes.Unauthenticated, "auth fail")
+				return nil, err401("auth fail")
 			}
 			bearer = strings.TrimPrefix(authHeaders[0], "Bearer ")
 			if bearer == authHeaders[0] {
 				slog.InfoContext(ctx, "bearer token missing prefix")
-				return nil, status.Error(codes.Unauthenticated, "invalid authorization header format")
+				return nil, err401("invalid authorization header format")
 			}
 		}
 	}
@@ -89,20 +110,20 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	idToken, err := p.OIDCVerifier.Verify(ctx, bearer)
 	if err != nil {
 		slog.WarnContext(ctx, "Unable to verify", "err", err)
-		return nil, status.Error(codes.PermissionDenied, "forbidden")
+		return nil, err403("forbidden")
 	}
 
 	oidcIssuerURL := os.Getenv("OIDC_ISSUER_URL")
 	if !strings.HasPrefix(oidcIssuerURL, idToken.Issuer) {
 		slog.WarnContext(ctx, "Invalid token issuer", "issuer", idToken.Issuer, "oidcIssuerURL", oidcIssuerURL)
-		return nil, status.Error(codes.PermissionDenied, "forbidden")
+		return nil, err403("forbidden")
 	}
 
 	// Extract custom claims
 	var claims customClaimsHeader
 	if err := idToken.Claims(&claims); err != nil {
 		slog.WarnContext(ctx, "unable to load claims", "err", err)
-		return nil, status.Error(codes.PermissionDenied, "forbidden")
+		return nil, err403("forbidden")
 	}
 	slog.DebugContext(ctx, "verified", "claims", claims)
 
@@ -111,14 +132,14 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	requestToken, err := jwt.ParseSigned(in.SignedRequestToken)
 	if err != nil {
 		slog.WarnContext(ctx, "unable parse request", "err", err)
-		return nil, status.Error(codes.InvalidArgument, "bad request")
+		return nil, err400("bad request")
 	}
 	var jwtClaimsBody jwt.Claims
 	var bodyClaims customClaimsBody
 	err = requestToken.UnsafeClaimsWithoutVerification(&jwtClaimsBody, &bodyClaims)
 	if err != nil {
 		slog.WarnContext(ctx, "unable decode request", "err", err)
-		return nil, status.Error(codes.InvalidArgument, "bad request")
+		return nil, err400("bad request")
 	}
 	slog.DebugContext(ctx, "okay now we can check", "bodyClaims.RequestBody", bodyClaims.RequestBody)
 	decoder := json.NewDecoder(strings.NewReader(bodyClaims.RequestBody))
@@ -126,13 +147,13 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	err = decoder.Decode(&requestBody)
 	if err != nil {
 		slog.WarnContext(ctx, "unable decode request body", "err", err)
-		return nil, status.Error(codes.InvalidArgument, "bad request")
+		return nil, err400("bad request")
 	}
 
 	kasURL := os.Getenv("KAS_URL")
 	if !strings.HasPrefix(requestBody.KeyAccess.URL, kasURL) {
 		slog.WarnContext(ctx, "invalid key access url", "keyAccessURL", requestBody.KeyAccess.URL, "oidcIssuerURL", oidcIssuerURL)
-		return nil, status.Error(codes.PermissionDenied, "forbidden")
+		return nil, err403("forbidden")
 	}
 
 	//////////////// FILTER BASED ON ALGORITHM /////////////////////
@@ -154,14 +175,14 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	err = decoder.Decode(&policy)
 	if err != nil {
 		slog.WarnContext(ctx, "unable to decode policy", "err", err)
-		return nil, status.Error(codes.InvalidArgument, "bad request")
+		return nil, err400("bad request")
 	}
 
 	///////////////////// RETRIEVE ATTR DEFS /////////////////////
 	namespaces, err := getNamespacesFromAttributes(policy.Body)
 	if err != nil {
 		slog.WarnContext(ctx, "Could not get namespaces from policy!", "err", err)
-		return nil, status.Error(codes.PermissionDenied, "forbidden")
+		return nil, err403("forbidden")
 	}
 
 	// this part goes in the plugin?
@@ -169,7 +190,7 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	definitions, err := p.fetchAttributes(ctx, namespaces)
 	if err != nil {
 		slog.ErrorContext(ctx, "Could not fetch attribute definitions from attributes service!", "err", err)
-		return nil, status.Error(codes.Internal, "attribute server request failure")
+		return nil, err503("attribute server request failure")
 	}
 	slog.DebugContext(ctx, "fetch attributes", "definitions", definitions)
 
@@ -179,12 +200,12 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 
 	if err != nil {
 		slog.WarnContext(ctx, "Could not perform access decision!", "err", err)
-		return nil, status.Error(codes.PermissionDenied, "forbidden")
+		return nil, err403("forbidden")
 	}
 
 	if !access {
 		slog.WarnContext(ctx, "Access Denied; no reason given")
-		return nil, status.Error(codes.PermissionDenied, "forbidden")
+		return nil, err403("forbidden")
 	}
 
 	/////////////////////EXTRACT CLIENT PUBKEY /////////////////////
@@ -194,12 +215,12 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	block, _ := pem.Decode([]byte(requestBody.ClientPublicKey))
 	if block == nil {
 		slog.WarnContext(ctx, "missing clientPublicKey")
-		return nil, status.Error(codes.InvalidArgument, "clientPublicKey failure")
+		return nil, err400("clientPublicKey failure")
 	}
 	clientPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		slog.WarnContext(ctx, "failure to parse clientPublicKey", "err", err)
-		return nil, status.Error(codes.InvalidArgument, "clientPublicKey parse failure")
+		return nil, err400("clientPublicKey parse failure")
 	}
 	// ///////////////////////////////
 	// nano header
@@ -229,14 +250,14 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 		requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
 	if err != nil {
 		slog.WarnContext(ctx, "failure to decrypt dek", "err", err)
-		return nil, status.Error(codes.InvalidArgument, "bad request")
+		return nil, err400("bad request")
 	}
 
 	// rewrap
 	rewrappedKey, err := tdf3.EncryptWithPublicKey(symmetricKey, &clientPublicKey)
 	if err != nil {
 		slog.WarnContext(ctx, "rewrap: encryptWithPublicKey failed", "err", err, "clientPublicKey", &clientPublicKey)
-		return nil, status.Error(codes.InvalidArgument, "bad key for rewrap")
+		return nil, err400("bad key for rewrap")
 	}
 	// // TODO validate policy
 	// TODO: Yikes
@@ -257,7 +278,7 @@ func nanoTDFRewrap(requestBody RequestBody) (*RewrapResponse, error) {
 	nanoTDF, err := nanotdf.ReadNanoTDFHeader(headerReader)
 	if err != nil {
 		slog.Error("Could not fetch attribute definitions from attributes service!", "err", err)
-		return nil, err
+		return nil, err400("parse error")
 	}
 
 	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), nanoTDF.EphemeralPublicKey.Key)
