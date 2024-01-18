@@ -264,7 +264,7 @@ linters:
     #    - godox # detects F-IXME, T-ODO and other comment keywords
     #- goheader # checks is file header matches to pattern
     - interfacebloat # checks the number of methods inside an interface
-    - ireturn # accept interfaces, return concrete types
+    #- ireturn # accept interfaces, return concrete types
     - prealloc # [premature optimization, but can be used in some cases] finds slice declarations that could potentially be preallocated
     #- varnamelen # [great idea, but too many false positives] checks that the length of a variable's name matches its scope
     - wrapcheck # checks that errors returned from external packages are wrapped

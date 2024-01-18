@@ -262,7 +262,7 @@ pkcs11-tool --module /usr/local/lib/softhsm/libsofthsm2.so --login --list-object
 ### Protocol Buffers
 
 ```shell
-protoc --go_out=gen --go-grpc_out=gen --proto_path=proto --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative authorization/authorization.proto proto/entitlements/entitlements.proto
+protoc --go_out=gen --go-grpc_out=gen --proto_path=proto --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative authorization/authorization.proto proto/entitlements/entitlements.proto proto/attributes/attributes.proto proto/common/common.proto
 ```
 
 ## Troubleshooting

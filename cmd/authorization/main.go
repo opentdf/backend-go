@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	attributes "github.com/opentdf/backend-go/gen/attributes"
 	"log/slog"
 	"net"
 	"os"
@@ -69,22 +70,27 @@ func NewAuthorizationServer(g *grpc.Server) error {
 	return nil
 }
 
-func (a *Authorization) IsAuthorized(ctx context.Context, r *authorization.DecisionRequest) (*authorization.AuthorizationDecisionResponse, error) {
+func (a *Authorization) IsAuthorized(ctx context.Context, r *authorization.DecisionRequest) (*authorization.DecisionResponse, error) {
 	slog.InfoContext(ctx, r.String())
-	response := authorization.AuthorizationDecisionResponse{
-		DecisionResponses: nil,
-	}
-	response.DecisionResponses = make([]*authorization.DecisionResponse, 1)
-	response.DecisionResponses[0] = &authorization.DecisionResponse{
-		EntityChainId: "abc123",
-		ResourceId:    "def456",
-		Decision:      authorization.DecisionResponse_PERMIT,
-		Obligations:   nil,
-	}
-	return &response, nil
+	return &authorization.DecisionResponse{
+		EntityChainId:        "abc123",
+		ResourceAttributesId: "def456",
+		Action:               nil,
+		Decision:             authorization.DecisionResponse_DECISION_PERMIT,
+		Obligations:          nil,
+	}, nil
 }
-func (a *Authorization) GetEntitlements(context.Context, *authorization.EntitlementsRequest) (*authorization.AuthorizationDecisionResponse, error) {
-	response := authorization.AuthorizationDecisionResponse{}
+func (a *Authorization) GetEntitlements(context.Context, *authorization.GetEntitlementsRequest) (*authorization.GetEntitlementsResponse, error) {
+	response := authorization.GetEntitlementsResponse{
+		Entitlements: make([]*authorization.EntityEntitlements, 1),
+	}
+	response.Entitlements[0] = &authorization.EntityEntitlements{
+		EntityId:                 "e1",
+		AttributeValueReferences: make([]*attributes.AttributeValueReference, 1),
+	}
+	response.Entitlements[0].AttributeValueReferences[0].Ref = &attributes.AttributeValueReference_AttributeFqn{
+		AttributeFqn: "https://opentdf.io/attr/a1/value/v1",
+	}
 	return &response, nil
 }
 
