@@ -85,21 +85,23 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 		slog.Info("Bearer not set; investigatint authorization header")
 		// Check for bearer token in Authorization header
 		md, ok := metadata.FromIncomingContext(ctx)
-		if ok {
-			authHeaders := md.Get("Authorization")
-			if len(authHeaders) == 0 {
-				slog.InfoContext(ctx, "no authorization header")
-				return nil, err401("no auth token")
-			}
-			if len(authHeaders) != 1 {
-				slog.InfoContext(ctx, "authorization header repetition")
-				return nil, err401("auth fail")
-			}
-			bearer = strings.TrimPrefix(authHeaders[0], "Bearer ")
-			if bearer == authHeaders[0] {
-				slog.InfoContext(ctx, "bearer token missing prefix")
-				return nil, err401("invalid authorization header format")
-			}
+		if !ok {
+			slog.InfoContext(ctx, "no authorization header")
+			return nil, err401("no auth token")
+		}
+		authHeaders := md.Get("Authorization")
+		if len(authHeaders) == 0 {
+			slog.InfoContext(ctx, "no authorization header")
+			return nil, err401("no auth token")
+		}
+		if len(authHeaders) != 1 {
+			slog.InfoContext(ctx, "authorization header repetition")
+			return nil, err401("auth fail")
+		}
+		bearer = strings.TrimPrefix(authHeaders[0], "Bearer ")
+		if bearer == authHeaders[0] {
+			slog.InfoContext(ctx, "bearer token missing prefix")
+			return nil, err401("invalid authorization header format")
 		}
 	}
 

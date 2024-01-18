@@ -6,10 +6,10 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/opentdf/backend-go/pkg/p11"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -30,8 +30,8 @@ func TestHandlerAuthFailure0(t *testing.T) {
 	body := `{"mock": "value"}`
 	_, err := kas.Rewrap(context.Background(), &RewrapRequest{SignedRequestToken: body})
 	status, ok := status.FromError(err)
-	if !ok || strings.Compare(status.Message(), "forbidden") != 0 {
-		t.Errorf("got [%s], but should return expected error, status.message: [%s]", err, status.Message())
+	if !ok || status.Code() != codes.Unauthenticated {
+		t.Errorf("got [%s], but should return expected error, status.message: [%s], status.code: [%s]", err, status.Message(), status.Code())
 	}
 }
 
@@ -55,8 +55,8 @@ func TestHandlerAuthFailure1(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 	_, err := kas.Rewrap(ctx, &RewrapRequest{SignedRequestToken: body})
 	status, ok := status.FromError(err)
-	if !ok || strings.Compare(status.Message(), "forbidden") != 0 {
-		t.Errorf("got [%s], but should return expected error, status.message: [%s]", err, status.Message())
+	if !ok || status.Code() != codes.PermissionDenied {
+		t.Errorf("got [%s], but should return expected error, status.message: [%s], status.code: [%s]", err, status.Message(), status.Code())
 	}
 }
 
@@ -76,7 +76,7 @@ func TestHandlerAuthFailure2(t *testing.T) {
 	body := `{"mock": "value"}`
 	_, err := kas.Rewrap(context.Background(), &RewrapRequest{SignedRequestToken: body, Bearer: "invalidToken"})
 	status, ok := status.FromError(err)
-	if !ok || strings.Compare(status.Message(), "forbidden") != 0 {
-		t.Errorf("got [%s], but should return expected error, status.message: [%s], ok: [%t]", err, status.Message(), ok)
+	if !ok || status.Code() != codes.PermissionDenied {
+		t.Errorf("got [%s], but should return expected error, status.message: [%s], status.code: [%s]", err, status.Message(), status.Code())
 	}
 }
