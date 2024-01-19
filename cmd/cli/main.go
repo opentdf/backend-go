@@ -2,15 +2,23 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"log/slog"
+	"math/rand"
 	"os"
 	"os/user"
 	"strings"
+
+	"google.golang.org/grpc/metadata"
 
 	"github.com/opentdf/backend-go/gen/authorization"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+// XRequestIDKey is metadata key name for request ID
+var XRequestIDKey = "x-request-id"
 
 func main() {
 	ctx := context.Background()
@@ -44,13 +52,18 @@ func main() {
 	}
 	ctx = context.WithValue(ctx, "username", currentUser.Username)
 	ctx = context.WithValue(ctx, "pid", pid)
-	slog.InfoContext(ctx, "Ascertaining...")
 	do := grpc.WithTransportCredentials(insecure.NewCredentials())
 	host := "localhost:50051"
 	if os.Getenv("AUTHORIZATION_HOST") != "" {
 		host = os.Getenv("AUTHORIZATION_HOST")
 	}
-	cc, err := grpc.Dial(host, do)
+	// add request id, random enough for tracing a request id in a small timeframe
+	b := make([]byte, 4) // equals 8 characters
+	rand.Read(b)
+	md := metadata.New(map[string]string{XRequestIDKey: hex.EncodeToString(b)})
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	slog.InfoContext(ctx, fmt.Sprintf("Dialing %s ...", host))
+	cc, err := grpc.DialContext(ctx, host, do)
 	if err != nil {
 		slog.ErrorContext(ctx, err.Error())
 		panic(err)
@@ -88,6 +101,14 @@ func (h *ctxHandler) Handle(ctx context.Context, record slog.Record) error {
 	pid, ok := ctx.Value("pid").(int)
 	if ok {
 		record.AddAttrs(slog.Int("pid", pid))
+	}
+	// OutgoingContext used from client
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if ok {
+		rid, okk := md[XRequestIDKey]
+		if okk {
+			record.AddAttrs(slog.String("rid", rid[0]))
+		}
 	}
 	return h.Handler.Handle(ctx, record)
 }

@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	attributes "github.com/opentdf/backend-go/gen/attributes"
+	"github.com/opentdf/backend-go/gen/attributes"
+	"google.golang.org/grpc/metadata"
 	"log/slog"
 	"net"
 	"os"
@@ -12,6 +13,9 @@ import (
 	"github.com/opentdf/backend-go/gen/authorization"
 	"google.golang.org/grpc"
 )
+
+// XRequestIDKey is metadata key name for request ID
+var XRequestIDKey = "x-request-id"
 
 func main() {
 	ctx := context.Background()
@@ -70,15 +74,28 @@ func NewAuthorizationServer(g *grpc.Server) error {
 	return nil
 }
 
-func (a *Authorization) IsAuthorized(ctx context.Context, r *authorization.DecisionRequest) (*authorization.DecisionResponse, error) {
+func (a *Authorization) GetDecisions(ctx context.Context, r *authorization.GetDecisionsRequest) (*authorization.GetDecisionsResponse, error) {
 	slog.InfoContext(ctx, r.String())
-	return &authorization.DecisionResponse{
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		slog.InfoContext(ctx, strings.Join(metadata.ValueFromIncomingContext(ctx, "X-Request-Id"), "|"))
+		v := md.Get("X-Request-Id")
+		slog.InfoContext(ctx, "X-Request-Id", fmt.Sprintf("%v", v))
+	}
+	v := metadata.ValueFromIncomingContext(ctx, "X-Request-Id")
+	slog.InfoContext(ctx, fmt.Sprintf("ValueFromIncomingContext %v", v))
+	slog.InfoContext(ctx, r.String())
+	dr := &authorization.GetDecisionsResponse{
+		DecisionResponses: make([]*authorization.DecisionResponse, 1),
+	}
+	dr.DecisionResponses[0] = &authorization.DecisionResponse{
 		EntityChainId:        "abc123",
 		ResourceAttributesId: "def456",
 		Action:               nil,
 		Decision:             authorization.DecisionResponse_DECISION_PERMIT,
 		Obligations:          nil,
-	}, nil
+	}
+	return dr, nil
 }
 func (a *Authorization) GetEntitlements(context.Context, *authorization.GetEntitlementsRequest) (*authorization.GetEntitlementsResponse, error) {
 	response := authorization.GetEntitlementsResponse{
@@ -110,6 +127,14 @@ func (h *ctxHandler) Handle(ctx context.Context, record slog.Record) error {
 	pid, ok := ctx.Value("pid").(int)
 	if ok {
 		record.AddAttrs(slog.Int("pid", pid))
+	}
+	// IncomingContext used from server
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		rid, okk := md[XRequestIDKey]
+		if okk {
+			record.AddAttrs(slog.String("rid", rid[0]))
+		}
 	}
 	return h.Handler.Handle(ctx, record)
 }

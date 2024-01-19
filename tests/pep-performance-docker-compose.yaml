@@ -14,6 +14,13 @@ services:
       - ENABLE__ENVIRONMENT=false
     ports:
       - "8080:8080"
+  wiremock:
+    # https://wiremock.org/docs/stubbing/
+    image: "wiremock/wiremock:latest"
+#    volumes:
+#      - ./__files:/home/wiremock/__files
+#      - ./mappings:/home/wiremock/mappings
+    entrypoint: [ "/docker-entrypoint.sh", "--global-response-templating", "--disable-gzip", "--verbose" ]
   loki:
     image: grafana/loki:2.9.0
     ports:
@@ -113,6 +120,8 @@ services:
       - AUTHORIZATION_HOST=authorization:8080
       - LOG_FORMAT=text
       - LOG_LEVEL=DEBUG
+#      - GRPC_GO_LOG_SEVERITY_LEVEL=INFO
+#      - GRPC_GO_LOG_VERBOSITY_LEVEL=99
     logging:
       # docker plugin install grafana/loki-docker-driver:2.9.1 --alias loki --grant-all-permissions
       driver: loki
