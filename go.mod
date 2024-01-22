@@ -3,12 +3,14 @@ module github.com/opentdf/backend-go
 go 1.21
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.32.0-20231115204500-e097f827e652.1
 	github.com/coreos/go-oidc/v3 v3.5.0
 	github.com/google/uuid v1.5.0
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/kaitai-io/kaitai_struct_go_runtime v0.10.0
 	github.com/lestrrat-go/jwx/v2 v2.0.11
 	github.com/miekg/pkcs11 v1.1.1
+	github.com/shirou/gopsutil/v3 v3.23.12
 	github.com/virtru/access-pdp v1.11.0
 	golang.org/x/oauth2 v0.15.0
 	google.golang.org/api v0.155.0
@@ -19,7 +21,6 @@ require (
 )
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.32.0-20231115204500-e097f827e652.1 // indirect
 	cloud.google.com/go/compute v1.23.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
@@ -27,6 +28,7 @@ require (
 	github.com/go-jose/go-jose/v3 v3.0.0 // indirect
 	github.com/go-logr/logr v1.3.0 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
@@ -38,7 +40,13 @@ require (
 	github.com/lestrrat-go/httprc v1.0.4 // indirect
 	github.com/lestrrat-go/iter v1.0.2 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
+	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
+	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
+	github.com/shoenig/go-m1cpu v0.1.6 // indirect
+	github.com/tklauser/go-sysconf v0.3.12 // indirect
+	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/otel v1.21.0 // indirect

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -10,11 +11,12 @@ import (
 	"os/user"
 	"strings"
 
-	"google.golang.org/grpc/metadata"
-
 	"github.com/opentdf/backend-go/gen/authorization"
+	"github.com/shirou/gopsutil/v3/host"
+	"github.com/shirou/gopsutil/v3/net"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 // XRequestIDKey is metadata key name for request ID
@@ -53,23 +55,89 @@ func main() {
 	ctx = context.WithValue(ctx, "username", currentUser.Username)
 	ctx = context.WithValue(ctx, "pid", pid)
 	do := grpc.WithTransportCredentials(insecure.NewCredentials())
-	host := "localhost:50051"
-	if os.Getenv("AUTHORIZATION_HOST") != "" {
-		host = os.Getenv("AUTHORIZATION_HOST")
-	}
 	// add request id, random enough for tracing a request id in a small timeframe
 	b := make([]byte, 4) // equals 8 characters
 	rand.Read(b)
 	md := metadata.New(map[string]string{XRequestIDKey: hex.EncodeToString(b)})
 	ctx = metadata.NewOutgoingContext(ctx, md)
-	slog.InfoContext(ctx, fmt.Sprintf("Dialing %s ...", host))
-	cc, err := grpc.DialContext(ctx, host, do)
+	h := "localhost:50051"
+	if os.Getenv("AUTHORIZATION_HOST") != "" {
+		h = os.Getenv("AUTHORIZATION_HOST")
+	}
+	slog.InfoContext(ctx, fmt.Sprintf("Dialing %s ...", h))
+	cc, err := grpc.DialContext(ctx, h, do)
 	if err != nil {
 		slog.ErrorContext(ctx, err.Error())
 		panic(err)
 	}
 	ac := authorization.NewAuthorizationServiceClient(cc)
-	in := authorization.GetDecisionsRequest{}
+	in := authorization.GetDecisionsRequest{
+		DecisionRequests: make([]*authorization.DecisionRequest, 1),
+	}
+	in.DecisionRequests[0] = &authorization.DecisionRequest{
+		Actions: make([]*authorization.Action, 1),
+		EntityChain: &authorization.EntityChain{
+			Entities: make([]*authorization.Entity, 2),
+		},
+		ResourceAttributes: nil,
+	}
+	in.DecisionRequests[0].Actions[0] = &authorization.Action{
+		Value: &authorization.Action_Custom{Custom: "VIEW"},
+	}
+	// PE current user
+	pe, err := json.Marshal(currentUser)
+	if err != nil {
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
+	}
+	in.DecisionRequests[0].EntityChain.Entities[0] = &authorization.Entity{
+		EntityType: &authorization.Entity_Custom{
+			Custom: &authorization.EntityCustom{
+				Extension: string(pe),
+			},
+		},
+	}
+	// NPE host
+	cstats, err := net.Connections("all")
+	if err != nil {
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
+	}
+	ipSet := make(map[string]struct{})
+	for _, cs := range cstats {
+		if cs.Laddr.IP != "*" && cs.Laddr.IP != "127.0.0.1" && cs.Laddr.IP != "::1" {
+			if _, ok := ipSet[cs.Laddr.IP]; !ok {
+				ipSet[cs.Laddr.IP] = struct{}{}
+			}
+		}
+	}
+	ipList := make([]string, 0)
+	for k := range ipSet {
+		ipList = append(ipList, k)
+	}
+	hi, err := host.Info()
+	if err != nil {
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
+	}
+	npeHost, err := json.Marshal(&Npe{
+		IpList:   ipList,
+		Hostname: hi.Hostname,
+		HostId:   hi.HostID,
+		Platform: hi.Platform,
+		Os:       hi.OS,
+	})
+	if err != nil {
+		slog.ErrorContext(ctx, err.Error())
+		panic(err)
+	}
+	in.DecisionRequests[0].EntityChain.Entities[1] = &authorization.Entity{
+		EntityType: &authorization.Entity_Custom{
+			Custom: &authorization.EntityCustom{
+				Extension: string(npeHost),
+			},
+		},
+	}
 	out, err := ac.GetDecisions(ctx, &in)
 	if err != nil {
 		slog.ErrorContext(ctx, err.Error())
@@ -123,4 +191,12 @@ func (h *ctxHandler) WithGroup(name string) slog.Handler {
 	return &ctxHandler{
 		Handler: h.Handler.WithGroup(name),
 	}
+}
+
+type Npe struct {
+	IpList   []string
+	Hostname string
+	HostId   string
+	Platform string
+	Os       string
 }

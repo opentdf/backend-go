@@ -24,7 +24,8 @@ message Entity {
 
 // Entity type for custom entities beyond the standard types
 message EntityCustom {
-  google.protobuf.Any extension = 1;
+  // JSON string
+  string extension = 1;
 }
 
 // A set of related PE and NPE
@@ -104,8 +105,8 @@ and Alice (represented by entity chain ec2) have TRANSMIT authorization for
  */
 message DecisionRequest {
   repeated Action actions = 1;
-  repeated EntityChain entity_chains = 2;
-  repeated ResourceAttributes resource_attributes = 3;
+  EntityChain entity_chain = 2;
+  ResourceAttributes resource_attributes = 3;
 }
 
 /*

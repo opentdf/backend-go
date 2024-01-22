@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/opentdf/backend-go/gen/attributes"
-	"google.golang.org/grpc/metadata"
 	"log/slog"
 	"net"
 	"os"
 	"strings"
 
+	"github.com/opentdf/backend-go/gen/attributes"
 	"github.com/opentdf/backend-go/gen/authorization"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 // XRequestIDKey is metadata key name for request ID
