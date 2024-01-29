@@ -6,6 +6,7 @@ import (
 	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -332,12 +333,11 @@ func nanoTDFRewrap(requestBody RequestBody, session *p11.Pkcs11Session, key *p11
 
 	// see explanation why Public Key starts at position 2
 	//https://github.com/wqx0532/hyperledger-fabric-gm-1/blob/master/bccsp/pkcs11/pkcs11.go#L480
-	x, y = elliptic.Unmarshal(elliptic.P256(), publicKeyHandle[2:])
-	if x == nil {
-		return nil, fmt.Errorf("failed to unmarshal public Key")
+	pubGoKey, err := ecdh.P256().NewPublicKey(publicKeyHandle[2:])
+	if err != nil {
+		return nil, fmt.Errorf("failed to make public key") // Handle error, e.g., invalid public key format
 	}
 
-	pubGoKey := &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}
 	pbk, err := x509.MarshalPKIXPublicKey(pubGoKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert public Key to PKIX")
