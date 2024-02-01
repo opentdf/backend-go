@@ -2,8 +2,6 @@ package p11
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -89,20 +87,6 @@ func hashToPKCS11(hashFunction crypto.Hash) (hashAlg uint, mgfAlg uint, hashLen 
 }
 
 func GenerateNanoTDFSymmetricKey(ephemeralPublicKeyBytes []byte, session *Pkcs11Session, key *Pkcs11PrivateKeyEC) ([]byte, error) {
-	curve := elliptic.P256()
-
-	x, y := elliptic.UnmarshalCompressed(curve, ephemeralPublicKeyBytes)
-	if x == nil {
-		return nil, fmt.Errorf("error unmarshalling elliptic point")
-	}
-	ephemeralPublicKey := &ecdsa.PublicKey{Curve: curve, X: x, Y: y}
-
-	pkcs11PrivKeyAttr, err := session.ctx.GetAttributeValue(session.handle, key.handle, []*pkcs11.Attribute{{Type: pkcs11.CKA_VALUE}})
-	if err != nil {
-		fmt.Errorf("failed to get private key value: %w", err)
-	}
-	fmt.Println(pkcs11PrivKeyAttr)
-
 	template := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_SECRET_KEY),
@@ -113,13 +97,12 @@ func GenerateNanoTDFSymmetricKey(ephemeralPublicKeyBytes []byte, session *Pkcs11
 		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, true),
 		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
 		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, true),
-		pkcs11.NewAttribute(pkcs11.CKA_VALUE_LEN, (ephemeralPublicKey.Curve.Params().BitSize+7)/8),
 	}
 
-	params := pkcs11.ECDH1DeriveParams{KDF: pkcs11.CKD_NULL, PublicKeyData: elliptic.Marshal(ephemeralPublicKey.Curve, ephemeralPublicKey.X, ephemeralPublicKey.Y)}
+	params := pkcs11.ECDH1DeriveParams{KDF: pkcs11.CKD_NULL, PublicKeyData: ephemeralPublicKeyBytes}
+
 	mech := []*pkcs11.Mechanism{
 		pkcs11.NewMechanism(pkcs11.CKM_ECDH1_DERIVE, &params),
-		//pkcs11.NewMechanism(pkcs11.CKM_SHA256, nil),
 	}
 
 	handle, err := session.ctx.DeriveKey(session.handle, mech, key.handle, template)
@@ -149,12 +132,7 @@ func GenerateNanoTDFSymmetricKey(ephemeralPublicKeyBytes []byte, session *Pkcs11
 	return derivedKey, nil
 }
 
-func GenerateNanoTDFSessionKey(session *Pkcs11Session, privateKeyHandle pkcs11.ObjectHandle, ephemeralPublicKey *ecdsa.PublicKey) ([]byte, error) {
-	pkcs11PrivKeyAttr, err := session.ctx.GetAttributeValue(session.handle, privateKeyHandle, []*pkcs11.Attribute{{Type: pkcs11.CKA_VALUE}})
-	if err != nil {
-		fmt.Errorf("failed to get private key value: %w", err)
-	}
-	fmt.Println(pkcs11PrivKeyAttr)
+func GenerateNanoTDFSessionKey(session *Pkcs11Session, privateKeyHandle pkcs11.ObjectHandle, ephemeralPublicKey []byte) ([]byte, error) {
 
 	template := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
@@ -166,10 +144,10 @@ func GenerateNanoTDFSessionKey(session *Pkcs11Session, privateKeyHandle pkcs11.O
 		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, true),
 		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
 		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, true),
-		pkcs11.NewAttribute(pkcs11.CKA_VALUE_LEN, (ephemeralPublicKey.Curve.Params().BitSize+7)/8),
 	}
 
-	params := pkcs11.ECDH1DeriveParams{KDF: pkcs11.CKD_NULL, PublicKeyData: elliptic.Marshal(ephemeralPublicKey.Curve, ephemeralPublicKey.X, ephemeralPublicKey.Y)}
+	params := pkcs11.ECDH1DeriveParams{KDF: pkcs11.CKD_NULL, PublicKeyData: ephemeralPublicKey}
+
 	mech := []*pkcs11.Mechanism{
 		pkcs11.NewMechanism(pkcs11.CKM_ECDH1_DERIVE, &params),
 	}
@@ -204,7 +182,7 @@ func GenerateEphemeralKasKeys(session *Pkcs11Session) (pkcs11.ObjectHandle, []by
 	pubKeyTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
 		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
 		pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, []byte{0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07}), // P-256 OID
 	}
@@ -212,7 +190,7 @@ func GenerateEphemeralKasKeys(session *Pkcs11Session) (pkcs11.ObjectHandle, []by
 	prvKeyTemplate := []*pkcs11.Attribute{
 		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
 		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
-		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
 		pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
 		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, false),
 		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, false),

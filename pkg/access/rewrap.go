@@ -8,7 +8,6 @@ import (
 	"crypto/cipher"
 	"crypto/ecdh"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	b64 "encoding/base64"
@@ -287,13 +286,7 @@ func nanoTDFRewrap(requestBody RequestBody, session *p11.Pkcs11Session, key *p11
 
 	nanoTDF, err := nanotdf.ReadNanoTDFHeader(headerReader)
 	if err != nil {
-		slog.Error("Could not fetch attribute definitions from attributes service!", "err", err)
-		return nil, err
-	}
-
-	x, y := elliptic.UnmarshalCompressed(elliptic.P256(), nanoTDF.EphemeralPublicKey.Key)
-	if x == nil || y == nil {
-		return nil, errors.New("failed to unmarshal ephemeral public key")
+		return nil, fmt.Errorf("failed to parse NanoTDF header: %w", err)
 	}
 
 	symmetricKey, err := p11.GenerateNanoTDFSymmetricKey(nanoTDF.EphemeralPublicKey.Key, session, key)
@@ -316,12 +309,17 @@ func nanoTDFRewrap(requestBody RequestBody, session *p11.Pkcs11Session, key *p11
 		return nil, fmt.Errorf("failed to extract public key: %w", err)
 	}
 
-	// Generate ephemeral key using PKCS#11
+	// Convert public key to 65-bytes format
+	pubKeyBytes := make([]byte, 65)
+	pubKeyBytes[0] = 0x4 // ID for uncompressed format
+	copy(pubKeyBytes[1:33], pub.X.Bytes())
+	copy(pubKeyBytes[33:], pub.Y.Bytes())
+
 	privateKeyHandle, publicKeyHandle, err := p11.GenerateEphemeralKasKeys(session)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate keypair: %w", err)
 	}
-	sessionKey, err := p11.GenerateNanoTDFSessionKey(session, privateKeyHandle, pub)
+	sessionKey, err := p11.GenerateNanoTDFSessionKey(session, privateKeyHandle, pubKeyBytes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate session key: %w", err)
 	}
