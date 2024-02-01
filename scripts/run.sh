@@ -218,7 +218,7 @@ elif [ -z "${KAS_EC_SECP256R1_CERTIFICATE}" ]; then
   e "Missing KAS_EC_SECP256R1_CERTIFICATE"
 else
   l "Importing KAS private key (EC)"
-  "${ptool[@]}" --write-object <(echo "$KAS_EC_SECP256R1_PRIVATE_KEY") --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}"
+  "${ptool[@]}" --write-object <(echo "$KAS_EC_SECP256R1_PRIVATE_KEY") --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}" --usage-derive
   "${ptool[@]}" --write-object <(echo "$KAS_EC_SECP256R1_CERTIFICATE") --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
 fi
 
