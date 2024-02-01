@@ -202,7 +202,7 @@ if [ -z "${KAS_EC_SECP256R1_PRIVATE_KEY}" ]; then
     fi
     l "Importing KAS private key from file"
     # import EC key to PKCS
-    "${ptool[@]}" --write-object kas-ec-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}"
+    "${ptool[@]}" --write-object kas-ec-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}" --usage-derive
     # import EC cert to PKCS
     "${ptool[@]}" --write-object kas-ec-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
   else
@@ -210,7 +210,7 @@ if [ -z "${KAS_EC_SECP256R1_PRIVATE_KEY}" ]; then
     # create EC key and cert
     openssl req -x509 -nodes -newkey ec:<(openssl ecparam -name prime256v1) -subj "/CN=kas" -keyout kas-ec-private.pem -out kas-ec-cert.pem -days 365
     # import EC key to PKCS
-    "${ptool[@]}" --write-object kas-ec-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}"
+    "${ptool[@]}" --write-object kas-ec-private.pem --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}" --usage-derive
     # import EC cert to PKCS
     "${ptool[@]}" --write-object kas-ec-cert.pem --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
   fi
@@ -218,7 +218,7 @@ elif [ -z "${KAS_EC_SECP256R1_CERTIFICATE}" ]; then
   e "Missing KAS_EC_SECP256R1_CERTIFICATE"
 else
   l "Importing KAS private key (EC)"
-  "${ptool[@]}" --write-object <(echo "$KAS_EC_SECP256R1_PRIVATE_KEY") --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}"
+  "${ptool[@]}" --write-object <(echo "$KAS_EC_SECP256R1_PRIVATE_KEY") --type privkey --label "${PKCS11_LABEL_PUBKEY_EC}" --usage-derive
   "${ptool[@]}" --write-object <(echo "$KAS_EC_SECP256R1_CERTIFICATE") --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
 fi
 

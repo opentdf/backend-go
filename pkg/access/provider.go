@@ -20,6 +20,7 @@ type Provider struct {
 	URI           url.URL `json:"uri"`
 	PrivateKey    p11.Pkcs11PrivateKeyRSA
 	PublicKeyRSA  rsa.PublicKey `json:"publicKey"`
+	PrivateKeyEC  p11.Pkcs11PrivateKeyEC
 	PublicKeyEC   ecdsa.PublicKey
 	Certificate   x509.Certificate `json:"certificate"`
 	CertificateEC x509.Certificate `json:"certificateEc"`

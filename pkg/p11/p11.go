@@ -2,7 +2,11 @@ package p11
 
 import (
 	"crypto"
+	"crypto/sha256"
 	"errors"
+	"fmt"
+	"golang.org/x/crypto/hkdf"
+	"io"
 
 	"github.com/miekg/pkcs11"
 )
@@ -12,6 +16,7 @@ const (
 	ErrUnsupportedRSAOptions = Error("hsm unsupported RSA option value")
 	ErrHsmDecrypt            = Error("hsm decrypt error")
 )
+const keyLength = 32
 
 type Pkcs11Session struct {
 	ctx    *pkcs11.Ctx
@@ -19,6 +24,10 @@ type Pkcs11Session struct {
 }
 
 type Pkcs11PrivateKeyRSA struct {
+	handle pkcs11.ObjectHandle
+}
+
+type Pkcs11PrivateKeyEC struct {
 	handle pkcs11.ObjectHandle
 }
 
@@ -31,6 +40,12 @@ func NewSession(ctx *pkcs11.Ctx, handle pkcs11.SessionHandle) Pkcs11Session {
 
 func NewPrivateKeyRSA(handle pkcs11.ObjectHandle) Pkcs11PrivateKeyRSA {
 	return Pkcs11PrivateKeyRSA{
+		handle: handle,
+	}
+}
+
+func NewPrivateKeyEC(handle pkcs11.ObjectHandle) Pkcs11PrivateKeyEC {
+	return Pkcs11PrivateKeyEC{
 		handle: handle,
 	}
 }
@@ -69,6 +84,140 @@ func hashToPKCS11(hashFunction crypto.Hash) (hashAlg uint, mgfAlg uint, hashLen 
 	default:
 		return 0, 0, 0, ErrUnsupportedRSAOptions
 	}
+}
+
+func GenerateNanoTDFSymmetricKey(ephemeralPublicKeyBytes []byte, session *Pkcs11Session, key *Pkcs11PrivateKeyEC) ([]byte, error) {
+	template := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_SECRET_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_GENERIC_SECRET),
+		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, false),
+		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, true),
+		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
+		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, true),
+		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
+		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, true),
+	}
+
+	params := pkcs11.ECDH1DeriveParams{KDF: pkcs11.CKD_NULL, PublicKeyData: ephemeralPublicKeyBytes}
+
+	mech := []*pkcs11.Mechanism{
+		pkcs11.NewMechanism(pkcs11.CKM_ECDH1_DERIVE, &params),
+	}
+
+	handle, err := session.ctx.DeriveKey(session.handle, mech, key.handle, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive symmetric key: %w", err)
+	}
+
+	template = []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE, nil),
+	}
+	attr, err := session.ctx.GetAttributeValue(session.handle, handle, template)
+	if err != nil {
+		return nil, err
+	}
+
+	symmetricKey := attr[0].Value
+
+	salt := versionSalt()
+	hkdf := hkdf.New(sha256.New, symmetricKey, salt, nil)
+
+	derivedKey := make([]byte, keyLength)
+	_, err = io.ReadFull(hkdf, derivedKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive symmetric key: %w", err)
+	}
+
+	return derivedKey, nil
+}
+
+func GenerateNanoTDFSessionKey(session *Pkcs11Session, privateKeyHandle pkcs11.ObjectHandle, ephemeralPublicKey []byte) ([]byte, error) {
+
+	template := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_SECRET_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_GENERIC_SECRET),
+		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, false),
+		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, true),
+		pkcs11.NewAttribute(pkcs11.CKA_ENCRYPT, true),
+		pkcs11.NewAttribute(pkcs11.CKA_DECRYPT, true),
+		pkcs11.NewAttribute(pkcs11.CKA_WRAP, true),
+		pkcs11.NewAttribute(pkcs11.CKA_UNWRAP, true),
+	}
+
+	params := pkcs11.ECDH1DeriveParams{KDF: pkcs11.CKD_NULL, PublicKeyData: ephemeralPublicKey}
+
+	mech := []*pkcs11.Mechanism{
+		pkcs11.NewMechanism(pkcs11.CKM_ECDH1_DERIVE, &params),
+	}
+
+	handle, err := session.ctx.DeriveKey(session.handle, mech, privateKeyHandle, template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive symmetric key: %w", err)
+	}
+
+	template = []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_VALUE, nil),
+	}
+	attr, err := session.ctx.GetAttributeValue(session.handle, handle, template)
+	if err != nil {
+		return nil, err
+	}
+
+	sessionKey := attr[0].Value
+	salt := versionSalt()
+	hkdf := hkdf.New(sha256.New, sessionKey, salt, nil)
+
+	derivedKey := make([]byte, keyLength)
+	_, err = io.ReadFull(hkdf, derivedKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive symmetric key: %w", err)
+	}
+
+	return derivedKey, nil
+}
+
+func GenerateEphemeralKasKeys(session *Pkcs11Session) (pkcs11.ObjectHandle, []byte, error) {
+	pubKeyTemplate := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PUBLIC_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
+		pkcs11.NewAttribute(pkcs11.CKA_VERIFY, true),
+		pkcs11.NewAttribute(pkcs11.CKA_EC_PARAMS, []byte{0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07}), // P-256 OID
+	}
+
+	prvKeyTemplate := []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_KEY_TYPE, pkcs11.CKK_EC),
+		pkcs11.NewAttribute(pkcs11.CKA_CLASS, pkcs11.CKO_PRIVATE_KEY),
+		pkcs11.NewAttribute(pkcs11.CKA_TOKEN, false),
+		pkcs11.NewAttribute(pkcs11.CKA_SIGN, true),
+		pkcs11.NewAttribute(pkcs11.CKA_SENSITIVE, false),
+		pkcs11.NewAttribute(pkcs11.CKA_EXTRACTABLE, false),
+		pkcs11.NewAttribute(pkcs11.CKA_DERIVE, true),
+	}
+
+	pubHandle, prvHandle, err := session.ctx.GenerateKeyPair(session.handle,
+		[]*pkcs11.Mechanism{pkcs11.NewMechanism(pkcs11.CKM_EC_KEY_PAIR_GEN, nil)},
+		pubKeyTemplate, prvKeyTemplate)
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to generate ephemeral key: %w", err)
+	}
+	pubBytes, err := session.ctx.GetAttributeValue(session.handle, pubHandle, []*pkcs11.Attribute{
+		pkcs11.NewAttribute(pkcs11.CKA_EC_POINT, nil),
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to retrieve public key bytes: %w", err)
+	}
+	publicKeyBytes := pubBytes[0].Value
+
+	return prvHandle, publicKeyBytes, nil
+}
+
+func versionSalt() []byte {
+	digest := sha256.New()
+	digest.Write([]byte("L1L"))
+	return digest.Sum(nil)
 }
 
 type Error string

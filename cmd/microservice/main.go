@@ -232,6 +232,7 @@ func main() {
 		AttributeSvc: attrSvcURI,
 		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
 		PublicKeyRSA: rsa.PublicKey{},
+		PrivateKeyEC: p11.Pkcs11PrivateKeyEC{},
 		PublicKeyEC:  ecdsa.PublicKey{},
 		Certificate:  x509.Certificate{},
 		Session:      p11.Pkcs11Session{},
@@ -294,6 +295,15 @@ func main() {
 	// set private key
 	kas.PrivateKey = p11.NewPrivateKeyRSA(keyHandle)
 
+	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") // development-rsa-kas
+	keyHandleEC, err := findKey(hs, pkcs11.CKO_PRIVATE_KEY, keyID, ecLabel)
+	if err != nil {
+		slog.Error("pkcs11 error finding key", "err", err)
+		panic(err)
+	}
+
+	kas.PrivateKeyEC = p11.NewPrivateKeyEC(keyHandleEC)
+
 	// initialize p11.pkcs11session
 	kas.Session = p11.NewSession(hs.c.ctx, hs.session)
 
@@ -337,7 +347,6 @@ func main() {
 	kas.PublicKeyRSA = *rsaPublicKey
 
 	// EC Cert
-	ecLabel := os.Getenv("PKCS11_LABEL_PUBKEY_EC") // development-ec-kas
 	certECHandle, err := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, ecLabel)
 	if err != nil {
 		slog.Error("public key EC cert error")
