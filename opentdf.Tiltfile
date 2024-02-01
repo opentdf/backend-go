@@ -96,7 +96,7 @@ def backend(values=[], set={}, resource_deps=[]):
         "secrets.oidcClientSecret": OIDC_CLIENT_SECRET,
         "secrets.postgres.dbPassword": POSTGRES_PASSWORD,
         "kas.auth.http://localhost:65432/auth/realms/tdf.discoveryBaseUrl": "http://keycloak-http/auth/realms/tdf",
-        "kas.envConfig.ecCert": all_secrets["KAS_EC_SECP256R1_CERTIFICATE"],
+       # "kas.envConfig.ecCert": all_secrets["KAS_EC_SECP256R1_CERTIFICATE"],
         "kas.envConfig.cert": all_secrets["KAS_CERTIFICATE"],
         "kas.envConfig.ecPrivKey": all_secrets["KAS_EC_SECP256R1_PRIVATE_KEY"],
         "kas.envConfig.privKey": all_secrets["KAS_PRIVATE_KEY"],
