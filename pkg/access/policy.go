@@ -12,16 +12,16 @@ const (
 )
 
 type Policy struct {
-	UUID uuid.UUID `json:"uuid"`
-	Body Body      `json:"body"`
+	UUID uuid.UUID  `json:"uuid"`
+	Body PolicyBody `json:"body"`
 }
 
-type Body struct {
+type PolicyBody struct {
 	DataAttributes []Attribute `json:"dataAttributes"`
 	Dissem         []string    `json:"dissem"`
 }
 
-func getNamespacesFromAttributes(body Body) ([]string, error) {
+func getNamespacesFromAttributes(body PolicyBody) ([]string, error) {
 	// extract the namespace from an attribute uri
 	var dataAttributes = body.DataAttributes
 	namespaces := make(map[string]bool)

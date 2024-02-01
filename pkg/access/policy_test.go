@@ -5,7 +5,7 @@ import (
 )
 
 func TestGetNamespacesFromAttributesSuccess(t *testing.T) {
-	testBody := Body{
+	testBody := PolicyBody{
 		DataAttributes: []Attribute{
 			{URI: "https://example.com/attr/Test1/value/A", Name: "TestAttr1"},
 			{URI: "https://example2.com/attr/Test2/value/B", Name: "TestAttr2"},
@@ -24,7 +24,7 @@ func TestGetNamespacesFromAttributesSuccess(t *testing.T) {
 }
 
 func TestGetNamespacesFromAttributesFailure(t *testing.T) {
-	testBody := Body{
+	testBody := PolicyBody{
 		DataAttributes: []Attribute{
 			{URI: "", Name: "TestAttr1"},
 		},

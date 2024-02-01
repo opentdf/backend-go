@@ -17,7 +17,7 @@ func TestWildcardDissemSuccess(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{},
 			Dissem:         []string{},
 		},
@@ -46,7 +46,7 @@ func TestDissemSuccess(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{},
 			Dissem: []string{"email1@example.com",
 				"email2@example.com",
@@ -77,7 +77,7 @@ func TestDissemFailure(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{},
 			Dissem: []string{"email1@example.com",
 				"email3@example.com"},
@@ -109,7 +109,7 @@ func TestAllOfSuccess(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
@@ -156,7 +156,7 @@ func TestAllOfFailure(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 				{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
@@ -206,7 +206,7 @@ func TestAnyOfSuccess(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example3.com/attr/Test3/value/A", Name: "Test3"},
 				{URI: "https://example3.com/attr/Test3/value/C", Name: "Test3"},
@@ -254,7 +254,7 @@ func TestAnyOfFailure(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example3.com/attr/Test3/value/A", Name: "Test3"},
 				{URI: "https://example3.com/attr/Test3/value/B", Name: "Test3"},
@@ -304,7 +304,7 @@ func TestHierarchySuccess(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example2.com/attr/Test2/value/C", Name: "Test2"},
 			},
@@ -351,7 +351,7 @@ func TestHierarchyFailure(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example2.com/attr/Test2/value/A", Name: "Test2"},
 				{URI: "https://example2.com/attr/Test2/value/B", Name: "Test2"},
@@ -401,7 +401,7 @@ func TestAttrDissemSuccess(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
@@ -450,7 +450,7 @@ func TestAttrDissemFailure1(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
@@ -498,7 +498,7 @@ func TestAttrDissemFailure2(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 				{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
@@ -548,7 +548,7 @@ func TestAttrDissemFailure3(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 				{URI: "https://example.com/attr/Test1/value/B", Name: "Test1"},
@@ -598,7 +598,7 @@ func TestAttrDissemFailure4(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "", Name: "Test1"},
 			},
@@ -649,7 +649,7 @@ func TestAttrDissemFailure5(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},
@@ -698,7 +698,7 @@ func TestAttrDissemFailure6(t *testing.T) {
 
 	testPolicy := Policy{
 		UUID: uuid.New(),
-		Body: Body{
+		Body: PolicyBody{
 			DataAttributes: []Attribute{
 				{URI: "https://example.com/attr/Test1/value/A", Name: "Test1"},
 			},

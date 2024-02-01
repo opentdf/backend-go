@@ -13,9 +13,8 @@ const (
 )
 
 // EncryptWithPublicKey encrypts data with public key
-func EncryptWithPublicKey(msg []byte, pub *interface{}) ([]byte, error) {
-	publicKey, _ := (*pub).(*rsa.PublicKey)
-	bytes, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, publicKey, msg, nil)
+func EncryptWithPublicKey(msg []byte, pub *rsa.PublicKey) ([]byte, error) {
+	bytes, err := rsa.EncryptOAEP(sha1.New(), rand.Reader, pub, msg, nil)
 	if err != nil {
 		slog.Error("failed ot encrypt with sha1", "err", err)
 		return nil, errors.Join(ErrHsmEncrypt, err)
