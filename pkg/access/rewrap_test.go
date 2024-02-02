@@ -212,7 +212,7 @@ func keyAccessWrappedRaw() tdf3.KeyAccess {
 	dst := make([]byte, hex.EncodedLen(len(bindingBytes)))
 	hex.Encode(dst, bindingBytes)
 	policyBinding := base64.StdEncoding.EncodeToString(dst)
-	slog.Info("Generated binding", "binding", bindingBytes, "encodedBinding", policyBinding)
+	slog.Debug("Generated binding", "binding", bindingBytes, "encodedBinding", policyBinding)
 
 	return tdf3.KeyAccess{
 		Type:          "wrapped",
@@ -226,7 +226,7 @@ func keyAccessWrappedRaw() tdf3.KeyAccess {
 type RSAPublicKey rsa.PublicKey
 
 func (publicKey *RSAPublicKey) VerifySignature(ctx context.Context, raw string) (payload []byte, err error) {
-	slog.Info("Verifying key")
+	slog.Debug("Verifying key")
 	tok, err := jwt.ParseSigned(raw)
 	if err != nil {
 		slog.Error("jwt parse fail", "raw", raw)
@@ -246,6 +246,40 @@ func (publicKey *RSAPublicKey) VerifySignature(ctx context.Context, raw string) 
 	return []byte(jsonString), nil
 }
 
+func standardClaims() ClaimsObject {
+	return ClaimsObject{
+		ClientPublicSigningKey: rsaPublicAlt,
+		Entitlements: []Entitlement{
+			{
+				EntityID: "clientsubjectId1-14443434-1111343434-asdfdffff",
+				EntityAttributes: []Attribute{
+					{
+						URI:  "https://example.com/attr/COI/value/PRX",
+						Name: "category of intent",
+					},
+					{
+						URI:  "https://example.com/attr/Classification/value/S",
+						Name: "classification",
+					},
+				},
+			},
+			{
+				EntityID: "testuser1",
+				EntityAttributes: []Attribute{
+					{
+						URI:  "https://example.com/attr/COI/value/PRX",
+						Name: "category of intent",
+					},
+					{
+						URI:  "https://example.com/attr/Classification/value/S",
+						Name: "classification",
+					},
+				},
+			},
+		},
+	}
+}
+
 func signedMockJWT(signer *rsa.PrivateKey) string {
 	sig, err := jose.NewSigner(
 		jose.SigningKey{
@@ -258,39 +292,9 @@ func signedMockJWT(signer *rsa.PrivateKey) string {
 		panic(err)
 	}
 	cl := customClaimsHeader{
-		EntityID: "testuser1",
-		ClientID: "testonly",
-		TDFClaims: ClaimsObject{
-			ClientPublicSigningKey: rsaPublicAlt,
-			Entitlements: []Entitlement{
-				{
-					EntityID: "clientsubjectId1-14443434-1111343434-asdfdffff",
-					EntityAttributes: []Attribute{
-						{
-							URI:  "https://example.com/attr/COI/value/PRX",
-							Name: "category of intent",
-						},
-						{
-							URI:  "https://example.com/attr/Classification/value/S",
-							Name: "classification",
-						},
-					},
-				},
-				{
-					EntityID: "testuser1",
-					EntityAttributes: []Attribute{
-						{
-							URI:  "https://example.com/attr/COI/value/PRX",
-							Name: "category of intent",
-						},
-						{
-							URI:  "https://example.com/attr/Classification/value/S",
-							Name: "classification",
-						},
-					},
-				},
-			},
-		},
+		EntityID:  "testuser1",
+		ClientID:  "testonly",
+		TDFClaims: standardClaims(),
 	}
 
 	raw, err := jwt.Signed(sig).Claims(jwt.Claims{Issuer: mockIdPOrigin, Audience: jwt.Audience{"testonly"}}).Claims(cl).CompactSerialize()
@@ -303,6 +307,49 @@ func signedMockJWT(signer *rsa.PrivateKey) string {
 func jwtStandard() string {
 	return signedMockJWT(privateKey())
 }
+
+func jwtWrongIssuer() string {
+	sig, err := jose.NewSigner(
+		jose.SigningKey{
+			Algorithm: jose.RS256,
+			Key:       privateKey(),
+		},
+		(&jose.SignerOptions{}).WithType("JWT"),
+	)
+	if err != nil {
+		panic(err)
+	}
+	cl := customClaimsHeader{
+		EntityID:  "testuser1",
+		ClientID:  "testonly",
+		TDFClaims: standardClaims(),
+	}
+
+	raw, err := jwt.Signed(sig).Claims(jwt.Claims{Issuer: "https://someone.else/", Audience: jwt.Audience{"testonly"}}).Claims(cl).CompactSerialize()
+	if err != nil {
+		panic(err)
+	}
+	return raw
+}
+
+func jwtNoClaims() string {
+	sig, err := jose.NewSigner(
+		jose.SigningKey{
+			Algorithm: jose.RS256,
+			Key:       privateKey(),
+		},
+		(&jose.SignerOptions{}).WithType("JWT"),
+	)
+	if err != nil {
+		panic(err)
+	}
+	raw, err := jwt.Signed(sig).Claims(jwt.Claims{Issuer: mockIdPOrigin, Audience: jwt.Audience{"testonly"}}).CompactSerialize()
+	if err != nil {
+		panic(err)
+	}
+	return raw
+}
+
 func jwtWrongKey() string {
 	return signedMockJWT(entityPrivateKey())
 }
@@ -363,7 +410,9 @@ func TestParseAndVerifyRequest(t *testing.T) {
 		polite  bool
 	}{
 		{"good", jwtStandard(), srt, true, true},
-		{"bad bearer", jwtWrongKey(), srt, false, true},
+		{"bad bearer no claims", jwtNoClaims(), srt, false, true},
+		{"bad bearer wrong issuer", jwtWrongIssuer(), srt, false, true},
+		{"bad bearer signature", jwtWrongKey(), srt, false, true},
 		{"different policy", jwtStandard(), badPolicySrt, true, false},
 	}
 	// The execution loop

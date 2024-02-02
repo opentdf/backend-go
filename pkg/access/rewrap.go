@@ -174,7 +174,7 @@ func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *Rewr
 		return nil, err400("bad request")
 	}
 
-	// Decode PEM entity public key
+	slog.DebugContext(ctx, "extract public key", "requestBody.ClientPublicKey", requestBody.ClientPublicKey)
 	block, _ = pem.Decode([]byte(requestBody.ClientPublicKey))
 	if block == nil {
 		slog.WarnContext(ctx, "missing clientPublicKey")
@@ -252,8 +252,6 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 		return nil, err403("forbidden")
 	}
 
-	//////////////// FILTER BASED ON ALGORITHM /////////////////////
-
 	if body.requestBody.Algorithm == "" {
 		body.requestBody.Algorithm = "rsa:2048"
 	}
@@ -261,9 +259,10 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	if body.requestBody.Algorithm == "ec:secp256r1" {
 		return nanoTDFRewrap(*body, &p.Session, &p.PrivateKeyEC)
 	}
+	return p.tdf3Rewrap(ctx, body)
+}
 
-	slog.DebugContext(ctx, "extract public key", "requestBody.ClientPublicKey", body.requestBody.ClientPublicKey)
-
+func (p *Provider) tdf3Rewrap(ctx context.Context, body *verifiedRequest) (*RewrapResponse, error) {
 	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
 		body.requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
 	if err != nil {
@@ -304,15 +303,11 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 		return nil, err403("forbidden")
 	}
 
-	// rewrap
 	rewrappedKey, err := tdf3.EncryptWithPublicKey(symmetricKey, body.publicKey.(*rsa.PublicKey))
 	if err != nil {
 		slog.WarnContext(ctx, "rewrap: encryptWithPublicKey failed", "err", err, "clientPublicKey", &body.publicKey)
 		return nil, err400("bad key for rewrap")
 	}
-	// // TODO validate policy
-	// TODO: Yikes
-	// slog.Println()
 
 	return &RewrapResponse{
 		EntityWrappedKey: rewrappedKey,
