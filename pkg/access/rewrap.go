@@ -217,7 +217,7 @@ func (p *Provider) verifyAndParsePolicy(ctx context.Context, requestBody *Reques
 		slog.WarnContext(ctx, "unable to decode policy", "err", err)
 		return nil, err400("bad request")
 	}
-	return &policy, err
+	return &policy, nil
 }
 
 func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapResponse, error) {
@@ -361,10 +361,11 @@ func nanoTDFRewrap(requestBody RequestBody, session *p11.Pkcs11Session, key *p11
 	}
 
 	// Convert public key to 65-bytes format
-	pubKeyBytes := make([]byte, 65)
+	pubKeyBytes := make([]byte, 1+len(pub.X.Bytes())+len(pub.Y.Bytes()))
 	pubKeyBytes[0] = 0x4 // ID for uncompressed format
-	copy(pubKeyBytes[1:33], pub.X.Bytes())
-	copy(pubKeyBytes[33:], pub.Y.Bytes())
+	if copy(pubKeyBytes[1:33], pub.X.Bytes()) != 32 || copy(pubKeyBytes[33:], pub.Y.Bytes()) != 32 {
+		return nil, fmt.Errorf("failed to serialize keypair: %v", pub)
+	}
 
 	privateKeyHandle, publicKeyHandle, err := p11.GenerateEphemeralKasKeys(session)
 	if err != nil {
