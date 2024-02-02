@@ -13,7 +13,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	b64 "encoding/base64"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -107,7 +107,7 @@ func legacyBearerToken(ctx context.Context, newBearer string) (string, error) {
 	return bearer, nil
 }
 
-func generateHmacDigest(ctx context.Context, msg, key []byte) ([]byte, error) {
+func generateHMACDigest(ctx context.Context, msg, key []byte) ([]byte, error) {
 	mac := hmac.New(sha256.New, key)
 	_, err := mac.Write(msg)
 	if err != nil {
@@ -117,7 +117,7 @@ func generateHmacDigest(ctx context.Context, msg, key []byte) ([]byte, error) {
 	return mac.Sum(nil), nil
 }
 
-func (p *Provider) parseAndVerifyRequest(ctx context.Context, in *RewrapRequest) (*rsa.PublicKey, *RequestBody, error) {
+func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *RewrapRequest) (*rsa.PublicKey, *RequestBody, error) {
 	idToken, err := p.OIDCVerifier.Verify(ctx, in.Bearer)
 	if err != nil {
 		slog.WarnContext(ctx, "unable verify bearer token", "err", err, "bearer", in.Bearer, "oidc", p.OIDCVerifier)
@@ -187,6 +187,39 @@ func (p *Provider) parseAndVerifyRequest(ctx context.Context, in *RewrapRequest)
 	return pub, &requestBody, nil
 }
 
+func (p *Provider) verifyAndParsePolicy(ctx context.Context, requestBody *RequestBody, k []byte) (*Policy, error) {
+	actualHMAC, err := generateHMACDigest(context.Background(), []byte(requestBody.Policy), k)
+	if err != nil {
+		slog.WarnContext(ctx, "unable to generate policy hmac", "err", err)
+		return nil, err400("bad request")
+	}
+	expectedHMAC := make([]byte, base64.StdEncoding.DecodedLen(len(requestBody.KeyAccess.PolicyBinding)))
+	n, err := base64.StdEncoding.Decode(expectedHMAC, []byte(requestBody.KeyAccess.PolicyBinding))
+	expectedHMAC = expectedHMAC[:n]
+	slog.InfoContext(ctx, "policy hmac mismatch", "actual", actualHMAC, "expected", expectedHMAC)
+	if err != nil {
+		slog.WarnContext(ctx, "invalid policy binding", "err", err)
+		return nil, err400("bad request")
+	}
+	if !hmac.Equal(actualHMAC, expectedHMAC) {
+		slog.WarnContext(ctx, "policy hmac mismatch", "actual", actualHMAC, "expected", expectedHMAC)
+		return nil, err400("bad request")
+	}
+	sDecPolicy, err := base64.StdEncoding.DecodeString(requestBody.Policy)
+	if err != nil {
+		slog.WarnContext(ctx, "unable to decode policy", "err", err)
+		return nil, err400("bad request")
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(sDecPolicy)))
+	var policy Policy
+	err = decoder.Decode(&policy)
+	if err != nil {
+		slog.WarnContext(ctx, "unable to decode policy", "err", err)
+		return nil, err400("bad request")
+	}
+	return &policy, err
+}
+
 func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapResponse, error) {
 	slog.DebugContext(ctx, "REWRAP")
 
@@ -219,7 +252,7 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	}
 	slog.DebugContext(ctx, "verified", "claims", claims)
 
-	clientPublicKey, requestBody, err := p.parseAndVerifyRequest(ctx, in)
+	clientPublicKey, requestBody, err := p.verifyBearerAndParseRequestBody(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -240,26 +273,28 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 		return nanoTDFRewrap(*requestBody, &p.Session, &p.PrivateKeyEC)
 	}
 
-	///////////////////// EXTRACT POLICY /////////////////////
-	slog.DebugContext(ctx, "extracting policy", "requestBody.policy", requestBody.Policy)
-	// base 64 decode
-	sDecPolicy, _ := b64.StdEncoding.DecodeString(requestBody.Policy)
-	decoder := json.NewDecoder(strings.NewReader(string(sDecPolicy)))
-	var policy Policy
-	err = decoder.Decode(&policy)
+	slog.DebugContext(ctx, "extract public key", "requestBody.ClientPublicKey", requestBody.ClientPublicKey)
+
+	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
+		requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
 	if err != nil {
-		slog.WarnContext(ctx, "unable to decode policy", "err", err)
+		slog.WarnContext(ctx, "failure to decrypt dek", "err", err)
 		return nil, err400("bad request")
 	}
 
-	///////////////////// RETRIEVE ATTR DEFS /////////////////////
+	slog.DebugContext(ctx, "verifying policy binding", "requestBody.policy", requestBody.Policy)
+	policy, err := p.verifyAndParsePolicy(ctx, requestBody, symmetricKey)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.DebugContext(ctx, "extracting policy", "requestBody.policy", requestBody.Policy)
 	namespaces, err := getNamespacesFromAttributes(policy.Body)
 	if err != nil {
 		slog.WarnContext(ctx, "Could not get namespaces from policy!", "err", err)
 		return nil, err403("forbidden")
 	}
 
-	// this part goes in the plugin?
 	slog.DebugContext(ctx, "Fetching attributes", "policy.namespaces", namespaces, "policy.body", policy.Body)
 	definitions, err := p.fetchAttributes(ctx, namespaces)
 	if err != nil {
@@ -268,9 +303,7 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	}
 	slog.DebugContext(ctx, "fetch attributes", "definitions", definitions)
 
-	///////////////////// PERFORM ACCESS DECISION /////////////////////
-
-	access, err := canAccess(ctx, claims.EntityID, policy, claims.TDFClaims, definitions)
+	access, err := canAccess(ctx, claims.EntityID, *policy, claims.TDFClaims, definitions)
 
 	if err != nil {
 		slog.WarnContext(ctx, "Could not perform access decision!", "err", err)
@@ -280,19 +313,6 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	if !access {
 		slog.WarnContext(ctx, "Access Denied; no reason given")
 		return nil, err403("forbidden")
-	}
-
-	/////////////////////EXTRACT CLIENT PUBKEY /////////////////////
-	slog.DebugContext(ctx, "extract public key", "requestBody.ClientPublicKey", requestBody.ClientPublicKey)
-
-	// ///////////// UNWRAP AND REWRAP //////////////////
-
-	// unwrap using hsm key
-	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
-		requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
-	if err != nil {
-		slog.WarnContext(ctx, "failure to decrypt dek", "err", err)
-		return nil, err400("bad request")
 	}
 
 	// rewrap

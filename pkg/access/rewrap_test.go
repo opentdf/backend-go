@@ -6,7 +6,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"log/slog"
@@ -107,6 +106,7 @@ PJP6AtUwA4SMpFBcFQUCQQDafTeVfGXrjWTq71/qrn34dUIDcqjHoqXly6m6Pw25
 Dzq7D9lqeqSK/ds7r7hpbs4iIr6KrSuXwlXmYtnhRvKT
 -----END RSA PRIVATE KEY-----
 `
+	plainKey = "This-is-128-bits"
 )
 
 func fauxPolicy() *Policy {
@@ -197,17 +197,17 @@ func entityPublicKey() *rsa.PublicKey {
 func keyAccessWrappedRaw() tdf3.KeyAccess {
 	policyBytes := fauxPolicyBytes()
 
-	plainKey := []byte("This-is-128-bits")
-	wrappedKey, err := tdf3.EncryptWithPublicKey(plainKey, entityPublicKey())
+	wrappedKey, err := tdf3.EncryptWithPublicKey([]byte(plainKey), entityPublicKey())
 	if err != nil {
 		slog.Warn("rewrap: encryptWithPublicKey failed", "err", err, "clientPublicKey", rsaPublicAlt)
 		panic(err)
 	}
-	bindingBytes, err := generateHmacDigest(context.Background(), policyBytes, plainKey)
+	bindingBytes, err := generateHMACDigest(context.Background(), policyBytes, []byte(plainKey))
 	if err != nil {
 		panic(err)
 	}
-	policyBinding := hex.EncodeToString(bindingBytes)
+	policyBinding := base64.StdEncoding.EncodeToString(bindingBytes)
+	slog.Info("Generated binding", "binding", bindingBytes, "encodedBinding", policyBinding)
 
 	return tdf3.KeyAccess{
 		Type:          "wrapped",
@@ -351,26 +351,27 @@ func TestParseAndVerifyRequest(t *testing.T) {
 	}
 
 	var tests = []struct {
-		name string
-		tok  string
-		body string
-		good bool
+		name    string
+		tok     string
+		body    string
+		bearish bool
+		polite  bool
 	}{
-		{"good", jwtStandard(), srt, true},
-		{"bad bearer", jwtWrongKey(), srt, false},
-		{"different policy", jwtStandard(), badPolicySrt, false},
+		{"good", jwtStandard(), srt, true, true},
+		{"bad bearer", jwtWrongKey(), srt, false, true},
+		{"different policy", jwtStandard(), badPolicySrt, true, false},
 	}
 	// The execution loop
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pubKey, body, err := p.parseAndVerifyRequest(
+			pubKey, body, err := p.verifyBearerAndParseRequestBody(
 				context.Background(),
 				&RewrapRequest{
 					Bearer:             tt.tok,
 					SignedRequestToken: tt.body,
 				},
 			)
-			if tt.good {
+			if tt.bearish {
 				if err != nil {
 					t.Errorf("failed to parse srt=[%s], tok=[%s], err=[%v]", tt.body, tt.tok, err)
 				}
@@ -380,9 +381,19 @@ func TestParseAndVerifyRequest(t *testing.T) {
 				if body == nil {
 					t.Error("unable to load request body")
 				}
+				policy, err := p.verifyAndParsePolicy(context.Background(), body, []byte(plainKey))
+				if tt.polite {
+					if err != nil || len(policy.Body.DataAttributes) != 2 {
+						t.Errorf("failed to verify policy body=[%v], err=[%v]", tt.body, err)
+					}
+				} else {
+					if err == nil {
+						t.Errorf("failed to fail policy body=[%v], err=[%v]", tt.body, err)
+					}
+				}
 			} else {
 				if err == nil {
-					t.Errorf("failed to fail srt=[%s], tok=[%s], err=[%v]", tt.body, tt.tok, err)
+					t.Errorf("failed to fail srt=[%s], tok=[%s]", tt.body, tt.tok)
 				}
 			}
 		})
