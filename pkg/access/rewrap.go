@@ -14,6 +14,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -200,14 +201,16 @@ func (p *Provider) verifyAndParsePolicy(ctx context.Context, requestBody *Reques
 	}
 	expectedHMAC := make([]byte, base64.StdEncoding.DecodedLen(len(requestBody.KeyAccess.PolicyBinding)))
 	n, err := base64.StdEncoding.Decode(expectedHMAC, []byte(requestBody.KeyAccess.PolicyBinding))
+	if err == nil {
+		n, err = hex.Decode(expectedHMAC, expectedHMAC[:n])
+	}
 	expectedHMAC = expectedHMAC[:n]
-	slog.InfoContext(ctx, "policy hmac mismatch", "actual", actualHMAC, "expected", expectedHMAC, "policyBinding", requestBody.KeyAccess.PolicyBinding)
 	if err != nil {
 		slog.WarnContext(ctx, "invalid policy binding", "err", err)
 		return nil, err400("bad request")
 	}
 	if !hmac.Equal(actualHMAC, expectedHMAC) {
-		slog.WarnContext(ctx, "policy hmac mismatch", "actual", actualHMAC, "expected", expectedHMAC)
+		slog.WarnContext(ctx, "policy hmac mismatch", "actual", actualHMAC, "expected", expectedHMAC, "policyBinding", requestBody.KeyAccess.PolicyBinding)
 		return nil, err400("bad request")
 	}
 	sDecPolicy, err := base64.StdEncoding.DecodeString(requestBody.Policy)

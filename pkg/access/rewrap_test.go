@@ -6,6 +6,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"log/slog"
@@ -207,7 +208,10 @@ func keyAccessWrappedRaw() tdf3.KeyAccess {
 	if err != nil {
 		panic(err)
 	}
-	policyBinding := base64.StdEncoding.EncodeToString(bindingBytes)
+
+	dst := make([]byte, hex.EncodedLen(len(bindingBytes)))
+	hex.Encode(dst, bindingBytes)
+	policyBinding := base64.StdEncoding.EncodeToString(dst)
 	slog.Info("Generated binding", "binding", bindingBytes, "encodedBinding", policyBinding)
 
 	return tdf3.KeyAccess{
