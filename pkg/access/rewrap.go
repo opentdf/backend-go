@@ -201,7 +201,7 @@ func (p *Provider) verifyAndParsePolicy(ctx context.Context, requestBody *Reques
 	expectedHMAC := make([]byte, base64.StdEncoding.DecodedLen(len(requestBody.KeyAccess.PolicyBinding)))
 	n, err := base64.StdEncoding.Decode(expectedHMAC, []byte(requestBody.KeyAccess.PolicyBinding))
 	expectedHMAC = expectedHMAC[:n]
-	slog.InfoContext(ctx, "policy hmac mismatch", "actual", actualHMAC, "expected", expectedHMAC)
+	slog.InfoContext(ctx, "policy hmac mismatch", "actual", actualHMAC, "expected", expectedHMAC, "policyBinding", requestBody.KeyAccess.PolicyBinding)
 	if err != nil {
 		slog.WarnContext(ctx, "invalid policy binding", "err", err)
 		return nil, err400("bad request")
