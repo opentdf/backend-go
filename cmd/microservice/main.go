@@ -230,7 +230,11 @@ func main() {
 	if len(kasURLString) == 0 {
 		kasURLString = "https://" + hostname + ":" + strconv.Itoa(portHTTP)
 	}
-	kasURI, _ := url.Parse(kasURLString)
+	kasURI, err := url.Parse(kasURLString)
+	if err != nil {
+		slog.Error("invalid KAS_URL", "err", err, "url", kasURLString)
+		panic(err)
+	}
 	kas := access.Provider{
 		URI:          *kasURI,
 		AttributeSvc: attrSvcURI,
