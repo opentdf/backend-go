@@ -424,7 +424,6 @@ func TestParseAndVerifyRequest(t *testing.T) {
 					Bearer:             tt.tok,
 					SignedRequestToken: tt.body,
 				},
-				mockIdPOrigin,
 			)
 			if tt.bearish {
 				if err != nil {

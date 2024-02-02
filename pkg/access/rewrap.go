@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/opentdf/backend-go/pkg/nanotdf"
@@ -124,15 +123,11 @@ type verifiedRequest struct {
 	cl          *customClaimsHeader
 }
 
-func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *RewrapRequest, oidcIssuerURL string) (*verifiedRequest, error) {
+func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *RewrapRequest) (*verifiedRequest, error) {
 	idToken, err := p.OIDCVerifier.Verify(ctx, in.Bearer)
 	if err != nil {
 		slog.WarnContext(ctx, "unable verify bearer token", "err", err, "bearer", in.Bearer, "oidc", p.OIDCVerifier)
 		return nil, err403("403")
-	}
-	if !strings.HasPrefix(oidcIssuerURL, idToken.Issuer) {
-		slog.WarnContext(ctx, "Invalid token issuer", "issuer", idToken.Issuer, "oidcIssuerURL", oidcIssuerURL)
-		return nil, err403("forbidden")
 	}
 
 	var cl customClaimsHeader
@@ -240,15 +235,13 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	in.Bearer = bearer
 
 	slog.DebugContext(ctx, "not a 401, probably", "oidcRequestToken", bearer)
-	oidcIssuerURL := os.Getenv("OIDC_ISSUER_URL")
-	body, err := p.verifyBearerAndParseRequestBody(ctx, in, oidcIssuerURL)
+	body, err := p.verifyBearerAndParseRequestBody(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 
-	kasURL := os.Getenv("KAS_URL")
-	if !strings.HasPrefix(body.requestBody.KeyAccess.URL, kasURL) {
-		slog.WarnContext(ctx, "invalid key access url", "keyAccessURL", body.requestBody.KeyAccess.URL, "oidcIssuerURL", oidcIssuerURL)
+	if !strings.HasPrefix(body.requestBody.KeyAccess.URL, p.URI.String()) {
+		slog.WarnContext(ctx, "invalid key access url", "keyAccessURL", body.requestBody.KeyAccess.URL, "kasURL", p.URI)
 		return nil, err403("forbidden")
 	}
 

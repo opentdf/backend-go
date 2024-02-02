@@ -226,7 +226,11 @@ func main() {
 		panic(err)
 	}
 
-	kasURI, _ := url.Parse("https://" + hostname + ":" + strconv.Itoa(portHTTP))
+	kasURLString := os.Getenv("KAS_URL")
+	if len(kasURLString) == 0 {
+		kasURLString = "https://" + hostname + ":" + strconv.Itoa(portHTTP)
+	}
+	kasURI, _ := url.Parse(kasURLString)
 	kas := access.Provider{
 		URI:          *kasURI,
 		AttributeSvc: attrSvcURI,
@@ -418,7 +422,7 @@ func main() {
 		Handler: auditHook(gwmux),
 	}
 
-	slog.Info(fmt.Sprintf("Serving gRPC-Gateway on [http://0.0.0.0:%d], connected to gRPC on [%d]", portHTTP, portGRPC))
+	slog.Info(fmt.Sprintf("Serving gRPC-Gateway on [http://0.0.0.0:%d] as [%v], connected to gRPC on [%d]", portHTTP, kas.URI, portGRPC))
 	if err := gwServer.ListenAndServe(); err != nil {
 		slog.Error("server failure", "err", err)
 	}
@@ -437,7 +441,7 @@ func loadGRPC(port int, kas *access.Provider) int {
 	healthgrpc.RegisterHealthServer(s, healthcheck)
 
 	access.RegisterAccessServiceServer(s, kas)
-	slog.Info("Serving gRPC on [" + lis.Addr().String() + "]")
+	slog.Info("Serving gRPC on [" + lis.Addr().String() + "] for server known as[" + kas.URI.String() + "]")
 
 	go func() {
 		// FIXME channel join
