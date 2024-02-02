@@ -369,7 +369,7 @@ func TestParseAndVerifyRequest(t *testing.T) {
 	// The execution loop
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pubKey, body, _, err := p.verifyBearerAndParseRequestBody(
+			verified, err := p.verifyBearerAndParseRequestBody(
 				context.Background(),
 				&RewrapRequest{
 					Bearer:             tt.tok,
@@ -381,13 +381,13 @@ func TestParseAndVerifyRequest(t *testing.T) {
 				if err != nil {
 					t.Errorf("failed to parse srt=[%s], tok=[%s], err=[%v]", tt.body, tt.tok, err)
 				}
-				if pubKey == nil {
+				if verified.publicKey == nil {
 					t.Error("unable to load public key")
 				}
-				if body == nil {
+				if verified.requestBody == nil {
 					t.Error("unable to load request body")
 				}
-				policy, err := p.verifyAndParsePolicy(context.Background(), body, []byte(plainKey))
+				policy, err := p.verifyAndParsePolicy(context.Background(), verified.requestBody, []byte(plainKey))
 				if tt.polite {
 					if err != nil || len(policy.Body.DataAttributes) != 2 {
 						t.Errorf("failed to verify policy body=[%v], err=[%v]", tt.body, err)
