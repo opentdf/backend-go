@@ -107,7 +107,7 @@ Dzq7D9lqeqSK/ds7r7hpbs4iIr6KrSuXwlXmYtnhRvKT
 -----END RSA PRIVATE KEY-----
 `
 	plainKey      = "This-is-128-bits"
-	testIdPOrigin = "https://keycloak-http/"
+	mockIdPOrigin = "https://keycloak-http/"
 )
 
 func fauxPolicy() *Policy {
@@ -289,7 +289,7 @@ func signedMockJWT(signer *rsa.PrivateKey) string {
 		},
 	}
 
-	raw, err := jwt.Signed(sig).Claims(jwt.Claims{Issuer: "https://keycloak-http", Audience: jwt.Audience{"testonly"}}).Claims(cl).CompactSerialize()
+	raw, err := jwt.Signed(sig).Claims(jwt.Claims{Issuer: mockIdPOrigin, Audience: jwt.Audience{"testonly"}}).Claims(cl).CompactSerialize()
 	if err != nil {
 		panic(err)
 	}
@@ -305,7 +305,7 @@ func jwtWrongKey() string {
 
 func mockVerifier() *oidc.IDTokenVerifier {
 	return oidc.NewVerifier(
-		testIdPOrigin,
+		mockIdPOrigin,
 		(*RSAPublicKey)(publicKey()),
 		&oidc.Config{SkipExpiryCheck: true, ClientID: "testonly"},
 	)
@@ -371,7 +371,7 @@ func TestParseAndVerifyRequest(t *testing.T) {
 					Bearer:             tt.tok,
 					SignedRequestToken: tt.body,
 				},
-				testIdPOrigin,
+				mockIdPOrigin,
 			)
 			if tt.bearish {
 				if err != nil {
