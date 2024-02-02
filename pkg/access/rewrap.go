@@ -147,11 +147,6 @@ func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *Rewr
 		slog.WarnContext(ctx, "failure to parse clientSigningPublicKey", "err", err)
 		return nil, nil, nil, err403("signing key parse failure")
 	}
-	pubSigner, ok := clientSigningPublicKey.(*rsa.PublicKey)
-	if !ok {
-		slog.WarnContext(ctx, fmt.Sprintf("signer not an RSA key, was [%T]", clientSigningPublicKey))
-		return nil, nil, nil, err400("signer unsupported type")
-	}
 
 	requestToken, err := jwt.ParseSigned(in.SignedRequestToken)
 	if err != nil {
@@ -159,7 +154,7 @@ func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *Rewr
 		return nil, nil, nil, err400("bad request")
 	}
 	var bodyClaims customClaimsBody
-	err = requestToken.Claims(pubSigner, &bodyClaims)
+	err = requestToken.Claims(clientSigningPublicKey, &bodyClaims)
 	if err != nil {
 		slog.WarnContext(ctx, "unable decode request", "err", err)
 		return nil, nil, nil, err400("bad request")
