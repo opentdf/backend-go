@@ -106,7 +106,8 @@ PJP6AtUwA4SMpFBcFQUCQQDafTeVfGXrjWTq71/qrn34dUIDcqjHoqXly6m6Pw25
 Dzq7D9lqeqSK/ds7r7hpbs4iIr6KrSuXwlXmYtnhRvKT
 -----END RSA PRIVATE KEY-----
 `
-	plainKey = "This-is-128-bits"
+	plainKey      = "This-is-128-bits"
+	testIdPOrigin = "https://keycloak-http/"
 )
 
 func fauxPolicy() *Policy {
@@ -304,7 +305,7 @@ func jwtWrongKey() string {
 
 func mockVerifier() *oidc.IDTokenVerifier {
 	return oidc.NewVerifier(
-		"https://keycloak-http",
+		testIdPOrigin,
 		(*RSAPublicKey)(publicKey()),
 		&oidc.Config{SkipExpiryCheck: true, ClientID: "testonly"},
 	)
@@ -364,12 +365,13 @@ func TestParseAndVerifyRequest(t *testing.T) {
 	// The execution loop
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pubKey, body, err := p.verifyBearerAndParseRequestBody(
+			pubKey, body, _, err := p.verifyBearerAndParseRequestBody(
 				context.Background(),
 				&RewrapRequest{
 					Bearer:             tt.tok,
 					SignedRequestToken: tt.body,
 				},
+				testIdPOrigin,
 			)
 			if tt.bearish {
 				if err != nil {

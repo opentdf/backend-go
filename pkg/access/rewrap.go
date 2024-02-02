@@ -117,46 +117,51 @@ func generateHMACDigest(ctx context.Context, msg, key []byte) ([]byte, error) {
 	return mac.Sum(nil), nil
 }
 
-func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *RewrapRequest) (*rsa.PublicKey, *RequestBody, error) {
+func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *RewrapRequest, oidcIssuerURL string) (*rsa.PublicKey, *RequestBody, *customClaimsHeader, error) {
 	idToken, err := p.OIDCVerifier.Verify(ctx, in.Bearer)
 	if err != nil {
 		slog.WarnContext(ctx, "unable verify bearer token", "err", err, "bearer", in.Bearer, "oidc", p.OIDCVerifier)
-		return nil, nil, err403("403")
+		return nil, nil, nil, err403("403")
+	}
+	if !strings.HasPrefix(oidcIssuerURL, idToken.Issuer) {
+		slog.WarnContext(ctx, "Invalid token issuer", "issuer", idToken.Issuer, "oidcIssuerURL", oidcIssuerURL)
+		return nil, nil, nil, err403("forbidden")
 	}
 
 	var cl customClaimsHeader
 	err = idToken.Claims(&cl)
 	if err != nil {
 		slog.WarnContext(ctx, "unable parse claims", "err", err)
-		return nil, nil, err403("403")
+		return nil, nil, nil, err403("403")
 	}
+	slog.DebugContext(ctx, "verified", "claims", cl)
 
 	block, _ := pem.Decode([]byte(cl.TDFClaims.ClientPublicSigningKey))
 	if block == nil {
 		slog.WarnContext(ctx, "missing clientPublicSigningKey")
-		return nil, nil, err403("token missing PoP")
+		return nil, nil, nil, err403("token missing PoP")
 	}
 	clientSigningPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		slog.WarnContext(ctx, "failure to parse clientSigningPublicKey", "err", err)
-		return nil, nil, err403("signing key parse failure")
+		return nil, nil, nil, err403("signing key parse failure")
 	}
 	pubSigner, ok := clientSigningPublicKey.(*rsa.PublicKey)
 	if !ok {
 		slog.WarnContext(ctx, fmt.Sprintf("signer not an RSA key, was [%T]", clientSigningPublicKey))
-		return nil, nil, err400("signer unsupported type")
+		return nil, nil, nil, err400("signer unsupported type")
 	}
 
 	requestToken, err := jwt.ParseSigned(in.SignedRequestToken)
 	if err != nil {
 		slog.WarnContext(ctx, "unable parse request", "err", err)
-		return nil, nil, err400("bad request")
+		return nil, nil, nil, err400("bad request")
 	}
 	var bodyClaims customClaimsBody
 	err = requestToken.Claims(pubSigner, &bodyClaims)
 	if err != nil {
 		slog.WarnContext(ctx, "unable decode request", "err", err)
-		return nil, nil, err400("bad request")
+		return nil, nil, nil, err400("bad request")
 	}
 	slog.DebugContext(ctx, "okay now we can check", "bodyClaims.RequestBody", bodyClaims.RequestBody)
 	decoder := json.NewDecoder(strings.NewReader(bodyClaims.RequestBody))
@@ -164,27 +169,27 @@ func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *Rewr
 	err = decoder.Decode(&requestBody)
 	if err != nil {
 		slog.WarnContext(ctx, "unable decode request body", "err", err)
-		return nil, nil, err400("bad request")
+		return nil, nil, nil, err400("bad request")
 	}
 
 	// Decode PEM entity public key
 	block, _ = pem.Decode([]byte(requestBody.ClientPublicKey))
 	if block == nil {
 		slog.WarnContext(ctx, "missing clientPublicKey")
-		return nil, nil, err400("clientPublicKey failure")
+		return nil, nil, nil, err400("clientPublicKey failure")
 	}
 	clientPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		slog.WarnContext(ctx, "failure to parse clientPublicKey", "err", err)
-		return nil, nil, err400("clientPublicKey parse failure")
+		return nil, nil, nil, err400("clientPublicKey parse failure")
 	}
 	pub, ok := clientPublicKey.(*rsa.PublicKey)
 	if !ok {
 		slog.WarnContext(ctx, fmt.Sprintf("clientPublicKey not an RSA key, was [%T]", clientPublicKey))
-		return nil, nil, err400("clientPublicKey unsupported type")
+		return nil, nil, nil, err400("clientPublicKey unsupported type")
 	}
 
-	return pub, &requestBody, nil
+	return pub, &requestBody, &cl, nil
 }
 
 func (p *Provider) verifyAndParsePolicy(ctx context.Context, requestBody *RequestBody, k []byte) (*Policy, error) {
@@ -227,32 +232,11 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	if err != nil {
 		return nil, err
 	}
+	in.Bearer = bearer
 
-	// Extract OIDC token from the Authorization header
 	slog.DebugContext(ctx, "not a 401, probably", "oidcRequestToken", bearer)
-
-	// Parse and verify ID Token payload.
-	idToken, err := p.OIDCVerifier.Verify(ctx, bearer)
-	if err != nil {
-		slog.WarnContext(ctx, "Unable to verify", "err", err)
-		return nil, err403("forbidden")
-	}
-
 	oidcIssuerURL := os.Getenv("OIDC_ISSUER_URL")
-	if !strings.HasPrefix(oidcIssuerURL, idToken.Issuer) {
-		slog.WarnContext(ctx, "Invalid token issuer", "issuer", idToken.Issuer, "oidcIssuerURL", oidcIssuerURL)
-		return nil, err403("forbidden")
-	}
-
-	// Extract custom claims
-	var claims customClaimsHeader
-	if err := idToken.Claims(&claims); err != nil {
-		slog.WarnContext(ctx, "unable to load claims", "err", err)
-		return nil, err403("forbidden")
-	}
-	slog.DebugContext(ctx, "verified", "claims", claims)
-
-	clientPublicKey, requestBody, err := p.verifyBearerAndParseRequestBody(ctx, in)
+	clientPublicKey, requestBody, cl, err := p.verifyBearerAndParseRequestBody(ctx, in, oidcIssuerURL)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +287,7 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	}
 	slog.DebugContext(ctx, "fetch attributes", "definitions", definitions)
 
-	access, err := canAccess(ctx, claims.EntityID, *policy, claims.TDFClaims, definitions)
+	access, err := canAccess(ctx, cl.EntityID, *policy, cl.TDFClaims, definitions)
 
 	if err != nil {
 		slog.WarnContext(ctx, "Could not perform access decision!", "err", err)
