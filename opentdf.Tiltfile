@@ -103,6 +103,7 @@ def backend(values=[], set={}, resource_deps=[]):
         "kas.livenessProbeOverride.grpc.port": "5000",
         "kas.readinessProbeOverride.grpc.port": "5000",
         "kas.image.repo": "gokas",
+        "kas.extraConfigMapData.KAS_URL": "http://localhost:65432/api/kas",
     }
     set_values.update(set)
 
