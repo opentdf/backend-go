@@ -14,12 +14,9 @@ func TestEncryptWithPublicKeyFailure(t *testing.T) {
 		E: 2048,
 	}
 
-	var i interface{}
-	i = mockKey
-
 	t.Log(mockKey.Size())
 
-	output, err := EncryptWithPublicKey([]byte{}, &i)
+	output, err := EncryptWithPublicKey([]byte{}, mockKey)
 
 	t.Log(output)
 
