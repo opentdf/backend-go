@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"plugin"
 	"strconv"
 	"strings"
@@ -174,7 +175,15 @@ func loadAuditHook() func(f http.Handler) http.Handler {
 		}
 	}
 
-	plug, err := plugin.Open("plugins/audit_hooks.so")
+	testDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	pluginPath := filepath.Join(testDir, "..", "..", "plugins", "audit_hooks.so")
+
+	slog.Info("Install plugin", "path", pluginPath)
+
+	plug, err := plugin.Open(pluginPath)
 	if err != nil {
 		panic(err)
 	}
