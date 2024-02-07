@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/opentdf/backend-go/pkg/access"
@@ -121,6 +122,7 @@ func TestLoadAuditHookAuditDisabled(t *testing.T) {
 	if auditHook == nil {
 		t.Error("Should return function")
 	}
+	os.Unsetenv("AUDIT_ENABLED")
 }
 
 func TestLoadIdentityProvider(t *testing.T) {
@@ -139,25 +141,81 @@ func TestLoadIdentityProvider(t *testing.T) {
 	})
 	configServer := httptest.NewServer(configHandler)
 	defer configServer.Close()
-	// Set environment variables for testing
+
 	os.Setenv("OIDC_ISSUER_URL", discoveryServer.URL)
 	os.Setenv("OIDC_DISCOVERY_BASE_URL", configServer.URL)
 
-	fmt.Println("1.", discoveryServer.URL)
-	fmt.Println("2.", configServer.URL)
-	// Call the function being tested
 	oidcVerifier := loadIdentityProvider()
 
-	fmt.Printf("%+v \n", oidcVerifier)
-
-	ctx := context.Background()
-	idToken, err := oidcVerifier.Verify(ctx, "Bearer ..")
-
-	fmt.Println("idToken", idToken)
-	fmt.Println("err", err)
-
-	// TODO Check if the returned provider is not nil
-	if "provider" == "nil" {
+	if reflect.TypeOf(oidcVerifier).String() != "oidc.IDTokenVerifier" {
 		t.Errorf("Expected non-nil provider, got nil")
 	}
+
+	os.Unsetenv("OIDC_ISSUER_URL")
+	os.Unsetenv("OIDC_DISCOVERY_BASE_URL")
+}
+
+func TestNewHSMContext(t *testing.T) {
+	pin := "12345"
+	os.Setenv("PKCS11_PIN", pin)
+	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+
+	hc, err := newHSMContext()
+	defer destroyHSMContext(hc)
+
+	if err != nil {
+		t.Errorf("Expected no error")
+	}
+
+	if reflect.TypeOf(hc).String() != "*main.hsmContext" {
+		t.Errorf("Expected non-nil hsmContext, got nil")
+	}
+
+	if hc.pin != pin {
+		t.Errorf("Expected correct pin")
+	}
+	os.Unsetenv("PKCS11_PIN")
+	os.Unsetenv("PKCS11_MODULE_PATH")
+}
+
+func TestNewHSMSession(t *testing.T) {
+	os.Setenv("PKCS11_SLOT_INDEX", "0")
+	os.Setenv("PKCS11_PIN", "12345")
+	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+
+	hc, _ := newHSMContext()
+	hcSession, err := newHSMSession(hc)
+
+	if err != nil {
+		t.Errorf("Expected no error")
+	}
+
+	if reflect.TypeOf(hcSession).String() != "*main.hsmSession" {
+		t.Errorf("Expected non-nil main.hsmSession, got nil")
+	}
+
+	os.Unsetenv("PKCS11_SLOT_INDEX")
+	os.Unsetenv("PKCS11_PIN")
+	os.Unsetenv("PKCS11_MODULE_PATH")
+}
+
+func TestNewHSMSessionFailure(t *testing.T) {
+	os.Setenv("PKCS11_SLOT_INDEX", "INVALID SLOT")
+	os.Setenv("PKCS11_PIN", "12345")
+	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+
+	hc, _ := newHSMContext()
+	_, err := newHSMSession(hc)
+
+	if err == nil {
+		t.Errorf("Expected an error")
+	}
+
+	if strings.Contains(access.ErrHSM.Error(), err.Error()) {
+		t.Errorf("Expected hsm error")
+	}
+
+	os.Unsetenv("PKCS11_SLOT_INDEX")
+	os.Unsetenv("PKCS11_PIN")
+	os.Unsetenv("PKCS11_MODULE_PATH")
 }
