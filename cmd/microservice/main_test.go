@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -164,11 +163,6 @@ func TestNewHSMContext(t *testing.T) {
 	hc, err := newHSMContext()
 	defer destroyHSMContext(hc)
 
-	info, err1 := hc.ctx.GetInfo()
-
-	fmt.Println("err1", err1)
-	fmt.Println("info", info)
-
 	if err != nil {
 		t.Errorf("Expected no error")
 	}
@@ -231,36 +225,3 @@ func TestNewHSMSessionFailure(t *testing.T) {
 	os.Unsetenv("PKCS11_PIN")
 	os.Unsetenv("PKCS11_MODULE_PATH")
 }
-
-//func TestFindKey(t *testing.T) {
-//	os.Setenv("PKCS11_SLOT_INDEX", "0")
-//	os.Setenv("PKCS11_PIN", "12345")
-//	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
-//	// os.Setenv("PKCS11_LABEL_PUBKEY_RSA", "development-rsa-kas")
-//
-//	var keyID []byte
-//
-//	hc, _ := newHSMContext()
-//	defer destroyHSMContext(hc)
-//
-//	hs, err := newHSMSession(hc)
-//	defer destroyHSMSession(hs)
-//
-//	keyHandle, err := findKey(hs, pkcs11.CKO_PRIVATE_KEY, keyID, "development-rsa-kas")
-//
-//	fmt.Println("keyHandle", keyHandle)
-//	fmt.Println("err", err)
-//	fmt.Println("hs", hs)
-//
-//	if err == nil {
-//		t.Errorf("Expected an error")
-//	}
-//
-//	//if strings.Contains(access.ErrHSM.Error(), err.Error()) {
-//	//	t.Errorf("Expected hsm error")
-//	//}
-//
-//	os.Unsetenv("PKCS11_SLOT_INDEX")
-//	os.Unsetenv("PKCS11_PIN")
-//	os.Unsetenv("PKCS11_MODULE_PATH")
-//}
