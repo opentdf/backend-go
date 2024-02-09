@@ -113,6 +113,7 @@ func TestLoadAuditHookAuditEnabled(t *testing.T) {
 	if auditHook == nil {
 		t.Error("Should return function")
 	}
+	os.Setenv("AUDIT_ENABLED", "false")
 }
 
 func TestLoadAuditHookAuditDisabled(t *testing.T) {
