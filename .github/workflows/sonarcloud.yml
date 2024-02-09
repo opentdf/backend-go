@@ -28,7 +28,8 @@ jobs:
           cache: true
 
       - name: 'Generate Golang Test Reports'
-        run: go test -v -coverprofile coverage.out -json ./... | tee coverage.json
+        run: go test "./..." -coverprofile="coverage.out" -covermode=count -json > report.json
+#        run: go test -v -coverprofile coverage.out -json ./... | tee coverage.json
 #        run: pwd && go test -coverprofile=cov.out ./...
 
       - name: 'Archive Golang Test Results'
