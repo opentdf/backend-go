@@ -226,3 +226,12 @@ func TestNewHSMSessionFailure(t *testing.T) {
 	os.Unsetenv("PKCS11_PIN")
 	os.Unsetenv("PKCS11_MODULE_PATH")
 }
+
+func TestLoadGRPC(t *testing.T) {
+	kasProvider := &access.Provider{}
+	response := loadGRPC(8999, kasProvider)
+
+	if response != 8999 {
+		t.Errorf("Expected return specific port response")
+	}
+}
