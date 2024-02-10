@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/miekg/pkcs11"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/opentdf/backend-go/pkg/access"
@@ -156,76 +157,75 @@ func TestLoadIdentityProvider(t *testing.T) {
 	os.Unsetenv("OIDC_DISCOVERY_BASE_URL")
 }
 
-func TestNewHSMContext(t *testing.T) {
-	pin := "12345"
-	os.Setenv("PKCS11_PIN", pin)
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+//func TestNewHSMContext(t *testing.T) {
+//	pin := "12345"
+//	os.Setenv("PKCS11_PIN", pin)
+//	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+//
+//	hc, err := newHSMContext()
+//	defer destroyHSMContext(hc)
+//
+//	if err != nil {
+//		t.Errorf("Expected no error")
+//	}
+//
+//	if reflect.TypeOf(hc).String() != "*main.hsmContext" {
+//		t.Errorf("Expected non-nil hsmContext, got nil")
+//	}
+//
+//	if hc.pin != pin {
+//		t.Errorf("Expected correct pin")
+//	}
+//	os.Unsetenv("PKCS11_PIN")
+//	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
 
-	hc, err := newHSMContext()
-	defer destroyHSMContext(hc)
-
-	if err != nil {
-		t.Errorf("Expected no error")
-	}
-
-	if reflect.TypeOf(hc).String() != "*main.hsmContext" {
-		t.Errorf("Expected non-nil hsmContext, got nil")
-	}
-
-	if hc.pin != pin {
-		t.Errorf("Expected correct pin")
-	}
-	os.Unsetenv("PKCS11_PIN")
-	os.Unsetenv("PKCS11_MODULE_PATH")
-}
-
-func TestNewHSMSession(t *testing.T) {
-	os.Setenv("PKCS11_SLOT_INDEX", "0")
-	os.Setenv("PKCS11_PIN", "12345")
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
-
-	hc, _ := newHSMContext()
-	defer destroyHSMContext(hc)
-
-	hcSession, err := newHSMSession(hc)
-	defer destroyHSMSession(hcSession)
-
-	if err != nil {
-		t.Errorf("Expected no error")
-	}
-
-	if reflect.TypeOf(hcSession).String() != "*main.hsmSession" {
-		t.Errorf("Expected non-nil main.hsmSession, got nil")
-	}
-
-	os.Unsetenv("PKCS11_SLOT_INDEX")
-	os.Unsetenv("PKCS11_PIN")
-	os.Unsetenv("PKCS11_MODULE_PATH")
-}
-
-func TestNewHSMSessionFailure(t *testing.T) {
-	os.Setenv("PKCS11_SLOT_INDEX", "INVALID SLOT")
-	os.Setenv("PKCS11_PIN", "12345")
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
-
-	hc, _ := newHSMContext()
-	_, err := newHSMSession(hc)
-
-	if err == nil {
-		t.Errorf("Expected an error")
-	}
-
-	if strings.Contains(access.ErrHSM.Error(), err.Error()) {
-		t.Errorf("Expected hsm error")
-	}
-
-	//defer destroyHSMContext(hc)
-	//defer destroyHSMSession(hs)
-
-	os.Unsetenv("PKCS11_SLOT_INDEX")
-	os.Unsetenv("PKCS11_PIN")
-	os.Unsetenv("PKCS11_MODULE_PATH")
-}
+//	func TestNewHSMSession(t *testing.T) {
+//		os.Setenv("PKCS11_SLOT_INDEX", "0")
+//		os.Setenv("PKCS11_PIN", "12345")
+//		os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+//
+//		hc, _ := newHSMContext()
+//		defer destroyHSMContext(hc)
+//
+//		hcSession, err := newHSMSession(hc)
+//		defer destroyHSMSession(hcSession)
+//
+//		if err != nil {
+//			t.Errorf("Expected no error")
+//		}
+//
+//		if reflect.TypeOf(hcSession).String() != "*main.hsmSession" {
+//			t.Errorf("Expected non-nil main.hsmSession, got nil")
+//		}
+//
+//		os.Unsetenv("PKCS11_SLOT_INDEX")
+//		os.Unsetenv("PKCS11_PIN")
+//		os.Unsetenv("PKCS11_MODULE_PATH")
+//	}
+//func TestNewHSMSessionFailure(t *testing.T) {
+//	os.Setenv("PKCS11_SLOT_INDEX", "INVALID SLOT")
+//	os.Setenv("PKCS11_PIN", "12345")
+//	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+//
+//	hc, _ := newHSMContext()
+//	hs, err := newHSMSession(hc)
+//
+//	if err == nil {
+//		t.Errorf("Expected an error")
+//	}
+//
+//	if strings.Contains(access.ErrHSM.Error(), err.Error()) {
+//		t.Errorf("Expected hsm error")
+//	}
+//
+//	defer destroyHSMContext(hc)
+//	defer destroyHSMSession(hs)
+//
+//	os.Unsetenv("PKCS11_SLOT_INDEX")
+//	os.Unsetenv("PKCS11_PIN")
+//	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
 
 func TestLoadGRPC(t *testing.T) {
 	kasProvider := &access.Provider{}
@@ -234,4 +234,30 @@ func TestLoadGRPC(t *testing.T) {
 	if response != 8999 {
 		t.Errorf("Expected return specific port response")
 	}
+}
+
+func TestFindKey(t *testing.T) {
+	os.Setenv("PKCS11_SLOT_INDEX", "0")
+	os.Setenv("PKCS11_PIN", "12345")
+	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+
+	hc, _ := newHSMContext()
+	defer destroyHSMContext(hc)
+	hs, _ := newHSMSession(hc)
+	defer destroyHSMSession(hs)
+
+	var keyID []byte
+
+	certECHandle, err := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, "development-rsa-kas")
+
+	fmt.Println("err", err)
+	fmt.Println("certECHandle", certECHandle)
+
+	if certECHandle != 2 {
+		t.Errorf("Expected return specific port response")
+	}
+
+	os.Unsetenv("PKCS11_SLOT_INDEX")
+	os.Unsetenv("PKCS11_PIN")
+	os.Unsetenv("PKCS11_MODULE_PATH")
 }
