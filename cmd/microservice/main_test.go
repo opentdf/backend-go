@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"os"
 	"testing"
 
 	"github.com/opentdf/backend-go/pkg/access"
@@ -101,26 +102,26 @@ func TestValidatePort(t *testing.T) {
 	}
 }
 
-//func TestLoadAuditHookAuditEnabled(t *testing.T) {
-//	os.Setenv("AUDIT_ENABLED", "true")
-//	auditHook := loadAuditHook()
-//
-//	if auditHook == nil {
-//		t.Error("Should return function")
-//	}
-//	os.Setenv("AUDIT_ENABLED", "false")
-//}
-//
-//func TestLoadAuditHookAuditDisabled(t *testing.T) {
-//	os.Setenv("AUDIT_ENABLED", "false")
-//	auditHook := loadAuditHook()
-//
-//	if auditHook == nil {
-//		t.Error("Should return function")
-//	}
-//	os.Unsetenv("AUDIT_ENABLED")
-//}
-//
+func TestLoadAuditHookAuditEnabled(t *testing.T) {
+	os.Setenv("AUDIT_ENABLED", "true")
+	auditHook := loadAuditHook()
+
+	if auditHook == nil {
+		t.Error("Should return function")
+	}
+	os.Setenv("AUDIT_ENABLED", "false")
+}
+
+func TestLoadAuditHookAuditDisabled(t *testing.T) {
+	os.Setenv("AUDIT_ENABLED", "false")
+	auditHook := loadAuditHook()
+
+	if auditHook == nil {
+		t.Error("Should return function")
+	}
+	os.Unsetenv("AUDIT_ENABLED")
+}
+
 //func TestLoadIdentityProvider(t *testing.T) {
 //	// Set up mock server for OIDC discovery
 //	discoveryHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
