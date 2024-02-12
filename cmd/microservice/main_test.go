@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/miekg/pkcs11"
 	"log/slog"
 	"net/http"
@@ -242,20 +241,15 @@ func TestNewHSMSessionFailure(t *testing.T) {
 	os.Setenv("PKCS11_PIN", "12345")
 	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
 
-	hc, err0 := newHSMContext()
-	fmt.Println("TEST 1", err0)
+	hc, _ := newHSMContext()
 	//defer destroyHSMContext(hc)
 
-	hs, err2 := newHSMSession(hc)
-	fmt.Println("TEST 2", err2, hs)
+	_, err2 := newHSMSession(hc)
 	//defer destroyHSMSession(hs)
 
 	if err2 == nil {
 		t.Errorf("Expected an error")
 	}
-
-	fmt.Println("RES", access.ErrHSM.Error())
-	fmt.Println("Contains", strings.Contains(err2.Error(), access.ErrHSM.Error()))
 
 	if !strings.Contains(err2.Error(), "hsm unexpected") {
 		t.Errorf("Expected hsm error")
