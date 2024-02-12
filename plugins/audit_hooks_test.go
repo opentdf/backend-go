@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"reflect"
 	"testing"
@@ -35,10 +35,17 @@ func TestAuditHook(t *testing.T) {
 	var g a
 	handler := g.AuditHook(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 
-	fmt.Println("handler", reflect.TypeOf(handler).String())
+	req := httptest.NewRequest("GET", "/", nil)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
 
 	if reflect.TypeOf(handler).String() != "http.HandlerFunc" {
 		t.Errorf("Expected http.HandlerFunc returned")
+	}
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
 	err1 := os.Remove(LogFileName)
