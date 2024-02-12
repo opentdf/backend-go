@@ -178,7 +178,7 @@ func (g a) AuditHook(next http.Handler) http.Handler {
 	})
 }
 
-func ErrAuditHook(err string) {
+func ErrAuditHook(err string) AuditLog {
 	log.SetPrefix("ErrAuditHook: ")
 	log.Println("OrgId", OrgId)
 
@@ -232,6 +232,7 @@ func ErrAuditHook(err string) {
 	// }
 	// auditLog = ExtractPolicyDataFromTdf3(auditLog, dataJson)
 	log.Println("AuditLog", auditLog)
+	return auditLog
 }
 
 func ExtractPolicyDataFromTdf3(auditLog AuditLog, dataJson DataJson) AuditLog {
