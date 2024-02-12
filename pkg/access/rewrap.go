@@ -8,16 +8,19 @@ import (
 	"crypto/cipher"
 	"crypto/ecdh"
 	"crypto/ecdsa"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
-	b64 "encoding/base64"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 
 	"github.com/opentdf/backend-go/pkg/nanotdf"
@@ -27,7 +30,7 @@ import (
 
 	"github.com/opentdf/backend-go/pkg/p11"
 	"github.com/opentdf/backend-go/pkg/tdf3"
-	"gopkg.in/square/go-jose.v2/jwt"
+	"gopkg.in/go-jose/go-jose.v2/jwt"
 )
 
 const ivSize = 12
@@ -104,50 +107,55 @@ func legacyBearerToken(ctx context.Context, newBearer string) (string, error) {
 	return bearer, nil
 }
 
-func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapResponse, error) {
-	slog.DebugContext(ctx, "REWRAP")
-
-	bearer, err := legacyBearerToken(ctx, in.Bearer)
-	slog.Info("legacyBearerToken", "bearer", bearer)
+func generateHMACDigest(ctx context.Context, msg, key []byte) ([]byte, error) {
+	mac := hmac.New(sha256.New, key)
+	_, err := mac.Write(msg)
 	if err != nil {
-		return nil, err
+		slog.WarnContext(ctx, "failed to compute hmac")
+		return nil, errors.Join(ErrUser, status.Error(codes.InvalidArgument, "policy hmac"))
 	}
+	return mac.Sum(nil), nil
+}
 
-	// Extract OIDC token from the Authorization header
-	slog.DebugContext(ctx, "not a 401, probably", "oidcRequestToken", bearer)
+type verifiedRequest struct {
+	publicKey   crypto.PublicKey
+	requestBody *RequestBody
+	cl          *customClaimsHeader
+}
 
-	// Parse and verify ID Token payload.
-	idToken, err := p.OIDCVerifier.Verify(ctx, bearer)
+func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *RewrapRequest) (*verifiedRequest, error) {
+	idToken, err := p.OIDCVerifier.Verify(ctx, in.Bearer)
 	if err != nil {
-		slog.WarnContext(ctx, "Unable to verify", "err", err)
-		return nil, err403("forbidden")
+		slog.WarnContext(ctx, "unable verify bearer token", "err", err, "bearer", in.Bearer, "oidc", p.OIDCVerifier)
+		return nil, err403("403")
 	}
 
-	oidcIssuerURL := os.Getenv("OIDC_ISSUER_URL")
-	slog.Info("oidcIssuerURL", "oidcIssuerURL", oidcIssuerURL)
-	if !strings.HasPrefix(oidcIssuerURL, idToken.Issuer) {
-		slog.WarnContext(ctx, "Invalid token issuer", "issuer", idToken.Issuer, "oidcIssuerURL", oidcIssuerURL)
-		return nil, err403("forbidden")
+	var cl customClaimsHeader
+	err = idToken.Claims(&cl)
+	if err != nil {
+		slog.WarnContext(ctx, "unable parse claims", "err", err)
+		return nil, err403("403")
 	}
+	slog.DebugContext(ctx, "verified", "claims", cl)
 
-	// Extract custom claims
-	var claims customClaimsHeader
-	if err := idToken.Claims(&claims); err != nil {
-		slog.WarnContext(ctx, "unable to load claims", "err", err)
-		return nil, err403("forbidden")
+	block, _ := pem.Decode([]byte(cl.TDFClaims.ClientPublicSigningKey))
+	if block == nil {
+		slog.WarnContext(ctx, "missing clientPublicSigningKey")
+		return nil, err403("token missing PoP")
 	}
-	slog.DebugContext(ctx, "verified", "claims", claims)
-
-	//////////////// DECODE REQUEST BODY /////////////////////
+	clientSigningPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		slog.WarnContext(ctx, "failure to parse clientSigningPublicKey", "err", err)
+		return nil, err403("signing key parse failure")
+	}
 
 	requestToken, err := jwt.ParseSigned(in.SignedRequestToken)
 	if err != nil {
 		slog.WarnContext(ctx, "unable parse request", "err", err)
 		return nil, err400("bad request")
 	}
-	var jwtClaimsBody jwt.Claims
 	var bodyClaims customClaimsBody
-	err = requestToken.UnsafeClaimsWithoutVerification(&jwtClaimsBody, &bodyClaims)
+	err = requestToken.Claims(clientSigningPublicKey, &bodyClaims)
 	if err != nil {
 		slog.WarnContext(ctx, "unable decode request", "err", err)
 		return nil, err400("bad request")
@@ -161,42 +169,113 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 		return nil, err400("bad request")
 	}
 
-	kasURL := os.Getenv("KAS_URL")
-	if !strings.HasPrefix(requestBody.KeyAccess.URL, kasURL) {
-		slog.WarnContext(ctx, "invalid key access url", "keyAccessURL", requestBody.KeyAccess.URL, "oidcIssuerURL", oidcIssuerURL)
-		return nil, err403("forbidden")
+	slog.DebugContext(ctx, "extract public key", "requestBody.ClientPublicKey", requestBody.ClientPublicKey)
+	block, _ = pem.Decode([]byte(requestBody.ClientPublicKey))
+	if block == nil {
+		slog.WarnContext(ctx, "missing clientPublicKey")
+		return nil, err400("clientPublicKey failure")
 	}
-
-	//////////////// FILTER BASED ON ALGORITHM /////////////////////
-
-	if requestBody.Algorithm == "" {
-		requestBody.Algorithm = "rsa:2048"
+	clientPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		slog.WarnContext(ctx, "failure to parse clientPublicKey", "err", err)
+		return nil, err400("clientPublicKey parse failure")
 	}
-
-	if requestBody.Algorithm == "ec:secp256r1" {
-		return nanoTDFRewrap(requestBody, &p.Session, &p.PrivateKeyEC)
+	switch clientPublicKey.(type) {
+	case *rsa.PublicKey:
+		return &verifiedRequest{clientPublicKey, &requestBody, &cl}, nil
+	case *ecdsa.PublicKey:
+		return &verifiedRequest{clientPublicKey, &requestBody, &cl}, nil
 	}
+	slog.WarnContext(ctx, fmt.Sprintf("clientPublicKey not a supported key, was [%T]", clientPublicKey))
+	return nil, err400("clientPublicKey unsupported type")
+}
 
-	///////////////////// EXTRACT POLICY /////////////////////
-	slog.DebugContext(ctx, "extracting policy", "requestBody.policy", requestBody.Policy)
-	// base 64 decode
-	sDecPolicy, _ := b64.StdEncoding.DecodeString(requestBody.Policy)
-	decoder = json.NewDecoder(strings.NewReader(string(sDecPolicy)))
+func (p *Provider) verifyAndParsePolicy(ctx context.Context, requestBody *RequestBody, k []byte) (*Policy, error) {
+	actualHMAC, err := generateHMACDigest(context.Background(), []byte(requestBody.Policy), k)
+	if err != nil {
+		slog.WarnContext(ctx, "unable to generate policy hmac", "err", err)
+		return nil, err400("bad request")
+	}
+	expectedHMAC := make([]byte, base64.StdEncoding.DecodedLen(len(requestBody.KeyAccess.PolicyBinding)))
+	n, err := base64.StdEncoding.Decode(expectedHMAC, []byte(requestBody.KeyAccess.PolicyBinding))
+	if err == nil {
+		n, err = hex.Decode(expectedHMAC, expectedHMAC[:n])
+	}
+	expectedHMAC = expectedHMAC[:n]
+	if err != nil {
+		slog.WarnContext(ctx, "invalid policy binding", "err", err)
+		return nil, err400("bad request")
+	}
+	if !hmac.Equal(actualHMAC, expectedHMAC) {
+		slog.WarnContext(ctx, "policy hmac mismatch", "actual", actualHMAC, "expected", expectedHMAC, "policyBinding", requestBody.KeyAccess.PolicyBinding)
+		return nil, err400("bad request")
+	}
+	sDecPolicy, err := base64.StdEncoding.DecodeString(requestBody.Policy)
+	if err != nil {
+		slog.WarnContext(ctx, "unable to decode policy", "err", err)
+		return nil, err400("bad request")
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(sDecPolicy)))
 	var policy Policy
 	err = decoder.Decode(&policy)
 	if err != nil {
 		slog.WarnContext(ctx, "unable to decode policy", "err", err)
 		return nil, err400("bad request")
 	}
+	return &policy, nil
+}
 
-	///////////////////// RETRIEVE ATTR DEFS /////////////////////
+func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapResponse, error) {
+	slog.DebugContext(ctx, "REWRAP")
+
+	bearer, err := legacyBearerToken(ctx, in.Bearer)
+	if err != nil {
+		return nil, err
+	}
+	in.Bearer = bearer
+
+	slog.DebugContext(ctx, "not a 401, probably", "oidcRequestToken", bearer)
+	body, err := p.verifyBearerAndParseRequestBody(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	if !strings.HasPrefix(body.requestBody.KeyAccess.URL, p.URI.String()) {
+		slog.WarnContext(ctx, "invalid key access url", "keyAccessURL", body.requestBody.KeyAccess.URL, "kasURL", p.URI.String())
+		return nil, err403("forbidden")
+	}
+
+	if body.requestBody.Algorithm == "" {
+		body.requestBody.Algorithm = "rsa:2048"
+	}
+
+	if body.requestBody.Algorithm == "ec:secp256r1" {
+		return nanoTDFRewrap(*body, &p.Session, &p.PrivateKeyEC)
+	}
+	return p.tdf3Rewrap(ctx, body)
+}
+
+func (p *Provider) tdf3Rewrap(ctx context.Context, body *verifiedRequest) (*RewrapResponse, error) {
+	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
+		body.requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
+	if err != nil {
+		slog.WarnContext(ctx, "failure to decrypt dek", "err", err)
+		return nil, err400("bad request")
+	}
+
+	slog.DebugContext(ctx, "verifying policy binding", "requestBody.policy", body.requestBody.Policy)
+	policy, err := p.verifyAndParsePolicy(ctx, body.requestBody, symmetricKey)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.DebugContext(ctx, "extracting policy", "requestBody.policy", body.requestBody.Policy)
 	namespaces, err := getNamespacesFromAttributes(policy.Body)
 	if err != nil {
 		slog.WarnContext(ctx, "Could not get namespaces from policy!", "err", err)
 		return nil, err403("forbidden")
 	}
 
-	// this part goes in the plugin?
 	slog.DebugContext(ctx, "Fetching attributes", "policy.namespaces", namespaces, "policy.body", policy.Body)
 	definitions, err := p.fetchAttributes(ctx, namespaces)
 	if err != nil {
@@ -205,9 +284,7 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	}
 	slog.DebugContext(ctx, "fetch attributes", "definitions", definitions)
 
-	///////////////////// PERFORM ACCESS DECISION /////////////////////
-
-	access, err := canAccess(ctx, claims.EntityID, policy, claims.TDFClaims, definitions)
+	access, err := canAccess(ctx, body.cl.EntityID, *policy, body.cl.TDFClaims, definitions)
 
 	if err != nil {
 		slog.WarnContext(ctx, "Could not perform access decision!", "err", err)
@@ -219,60 +296,11 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 		return nil, err403("forbidden")
 	}
 
-	/////////////////////EXTRACT CLIENT PUBKEY /////////////////////
-	slog.DebugContext(ctx, "extract public key", "requestBody.ClientPublicKey", requestBody.ClientPublicKey)
-
-	// Decode PEM entity public key
-	block, _ := pem.Decode([]byte(requestBody.ClientPublicKey))
-	if block == nil {
-		slog.WarnContext(ctx, "missing clientPublicKey")
-		return nil, err400("clientPublicKey failure")
-	}
-	clientPublicKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+	rewrappedKey, err := tdf3.EncryptWithPublicKey(symmetricKey, body.publicKey.(*rsa.PublicKey))
 	if err != nil {
-		slog.WarnContext(ctx, "failure to parse clientPublicKey", "err", err)
-		return nil, err400("clientPublicKey parse failure")
-	}
-	// ///////////////////////////////
-	// nano header
-	// slog.Println(requestBody.KeyAccess.Header)
-	// slog.Println(len(requestBody.KeyAccess.Header))
-	// s := kaitai.NewStream(bytes.NewReader(requestBody.KeyAccess.Header))
-	// n := tdf3.new
-	// err = n.Read(s, n, n)
-	// if err != nil {
-	// 	slog.Panic(err)
-	// }
-	// slog.Print(n.Header.Length)
-
-	// unwrap using a key from file
-	// ciphertext, _ := hex.DecodeString(requestBody.KeyAccess.WrappedKey)
-	// symmetricKey, err := tdf3.DecryptWithPrivateKey(requestBody.KeyAccess.WrappedKey, &p.PrivateKey)
-	// if err != nil {
-	// 	// FIXME handle error
-	// 	slog.Panic(err)
-	// 	return
-	// }
-
-	// ///////////// UNWRAP AND REWRAP //////////////////
-
-	// unwrap using hsm key
-	symmetricKey, err := p11.DecryptOAEP(&p.Session, &p.PrivateKey,
-		requestBody.KeyAccess.WrappedKey, crypto.SHA1, nil)
-	if err != nil {
-		slog.WarnContext(ctx, "failure to decrypt dek", "err", err)
-		return nil, err400("bad request")
-	}
-
-	// rewrap
-	rewrappedKey, err := tdf3.EncryptWithPublicKey(symmetricKey, &clientPublicKey)
-	if err != nil {
-		slog.WarnContext(ctx, "rewrap: encryptWithPublicKey failed", "err", err, "clientPublicKey", &clientPublicKey)
+		slog.WarnContext(ctx, "rewrap: encryptWithPublicKey failed", "err", err, "clientPublicKey", &body.publicKey)
 		return nil, err400("bad key for rewrap")
 	}
-	// // TODO validate policy
-	// TODO: Yikes
-	// slog.Println()
 
 	return &RewrapResponse{
 		EntityWrappedKey: rewrappedKey,
@@ -281,41 +309,30 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	}, nil
 }
 
-func nanoTDFRewrap(requestBody RequestBody, session *p11.Pkcs11Session, key *p11.Pkcs11PrivateKeyEC) (*RewrapResponse, error) {
-	header := requestBody.KeyAccess.Header
+func nanoTDFRewrap(body verifiedRequest, session *p11.Pkcs11Session, key *p11.Pkcs11PrivateKeyEC) (*RewrapResponse, error) {
+	headerReader := bytes.NewReader(body.requestBody.KeyAccess.Header)
 
-	headerReader := bytes.NewReader(header)
-
-	nanoTDF, err := nanotdf.ReadNanoTDFHeader(headerReader)
+	header, err := nanotdf.ReadNanoTDFHeader(headerReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse NanoTDF header: %w", err)
 	}
 
-	symmetricKey, err := p11.GenerateNanoTDFSymmetricKey(nanoTDF.EphemeralPublicKey.Key, session, key)
+	symmetricKey, err := p11.GenerateNanoTDFSymmetricKey(header.EphemeralPublicKey.Key, session, key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate symmetric key: %w", err)
 	}
 
-	clientPublicKey := requestBody.ClientPublicKey
-	block, _ := pem.Decode([]byte(clientPublicKey))
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
-	}
-	pubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse public key PEM block")
-	}
-
-	pub, ok := pubInterface.(*ecdsa.PublicKey)
+	pub, ok := body.publicKey.(*ecdsa.PublicKey)
 	if !ok {
 		return nil, fmt.Errorf("failed to extract public key: %w", err)
 	}
 
 	// Convert public key to 65-bytes format
-	pubKeyBytes := make([]byte, 65)
+	pubKeyBytes := make([]byte, 1+len(pub.X.Bytes())+len(pub.Y.Bytes()))
 	pubKeyBytes[0] = 0x4 // ID for uncompressed format
-	copy(pubKeyBytes[1:33], pub.X.Bytes())
-	copy(pubKeyBytes[33:], pub.Y.Bytes())
+	if copy(pubKeyBytes[1:33], pub.X.Bytes()) != 32 || copy(pubKeyBytes[33:], pub.Y.Bytes()) != 32 {
+		return nil, fmt.Errorf("failed to serialize keypair: %v", pub)
+	}
 
 	privateKeyHandle, publicKeyHandle, err := p11.GenerateEphemeralKasKeys(session)
 	if err != nil {
@@ -326,7 +343,7 @@ func nanoTDFRewrap(requestBody RequestBody, session *p11.Pkcs11Session, key *p11
 		return nil, fmt.Errorf("failed to generate session key: %w", err)
 	}
 
-	cipherText, err := encryptKey(sessionKey, symmetricKey)
+	cipherText, err := wrapKeyAES(sessionKey, symmetricKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt key: %w", err)
 	}
@@ -356,7 +373,7 @@ func nanoTDFRewrap(requestBody RequestBody, session *p11.Pkcs11Session, key *p11
 	}, nil
 }
 
-func encryptKey(sessionKey []byte, symmetricKey []byte) ([]byte, error) {
+func wrapKeyAES(sessionKey, dek []byte) ([]byte, error) {
 	block, err := aes.NewCipher(sessionKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cipher block: %w", err)
@@ -372,6 +389,6 @@ func encryptKey(sessionKey []byte, symmetricKey []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to generate IV: %w", err)
 	}
 
-	cipherText := aesGcm.Seal(iv, iv, symmetricKey, nil)
+	cipherText := aesGcm.Seal(iv, iv, dek, nil)
 	return cipherText, nil
 }
