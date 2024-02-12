@@ -126,6 +126,7 @@ func CreateLogger() (*slog.Logger, error) {
 	return logger, nil
 }
 
+// nolint: ireturn
 func (g a) AuditHook(next http.Handler) http.Handler {
 	logger, err := CreateLogger()
 	if err != nil {
