@@ -123,3 +123,24 @@ func TestHandlerAuthFailure2(t *testing.T) {
 		t.Errorf("got [%s], but should return expected error, status.message: [%s], status.code: [%s]", err, status.Message(), status.Code())
 	}
 }
+
+func TestHandlerAuthFailure3(t *testing.T) {
+	kasURI, _ := url.Parse("https://" + hostname + ":5000")
+	kas := Provider{
+		URI:          *kasURI,
+		PrivateKey:   p11.Pkcs11PrivateKeyRSA{},
+		PublicKeyRSA: rsa.PublicKey{},
+		PublicKeyEC:  ecdsa.PublicKey{},
+		Certificate:  x509.Certificate{},
+
+		Session:      p11.Pkcs11Session{},
+		OIDCVerifier: nil,
+	}
+
+	body := `{"mock": "value"}`
+	_, err := kas.Rewrap(context.Background(), &RewrapRequest{SignedRequestToken: body, Bearer: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"})
+	status, ok := status.FromError(err)
+	if !ok || status.Code() != codes.PermissionDenied {
+		t.Errorf("got [%s], but should return expected error, status.message: [%s], status.code: [%s]", err, status.Message(), status.Code())
+	}
+}

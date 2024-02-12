@@ -108,6 +108,7 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	slog.DebugContext(ctx, "REWRAP")
 
 	bearer, err := legacyBearerToken(ctx, in.Bearer)
+	slog.Info("legacyBearerToken", "bearer", bearer)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +124,7 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	}
 
 	oidcIssuerURL := os.Getenv("OIDC_ISSUER_URL")
+	slog.Info("oidcIssuerURL", "oidcIssuerURL", oidcIssuerURL)
 	if !strings.HasPrefix(oidcIssuerURL, idToken.Issuer) {
 		slog.WarnContext(ctx, "Invalid token issuer", "issuer", idToken.Issuer, "oidcIssuerURL", oidcIssuerURL)
 		return nil, err403("forbidden")
