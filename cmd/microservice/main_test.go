@@ -161,6 +161,7 @@ func TestNewHSMContext(t *testing.T) {
 	pin := "12345"
 	os.Setenv("PKCS11_SLOT_INDEX", "0")
 	os.Setenv("PKCS11_PIN", pin)
+	// TODO
 	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
 
 	hc, err := newHSMContext()
@@ -183,6 +184,7 @@ func TestNewHSMContext(t *testing.T) {
 }
 
 func TestNewHSMSession(t *testing.T) {
+	// TODO nil casses
 	os.Setenv("PKCS11_SLOT_INDEX", "0")
 	os.Setenv("PKCS11_PIN", "12345")
 	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
