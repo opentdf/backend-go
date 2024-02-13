@@ -83,6 +83,12 @@ type hsmSession struct {
 }
 
 func newHSMContext() (*hsmContext, error) {
+	_, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
+	if err != nil {
+		slog.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
+		return nil, errors.Join(access.ErrHSM, err)
+	}
+
 	pin := os.Getenv("PKCS11_PIN")
 	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
 	slog.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
@@ -98,6 +104,11 @@ func newHSMContext() (*hsmContext, error) {
 }
 
 func destroyHSMContext(hc *hsmContext) {
+	if hc == nil {
+		slog.Error("destroyHSMContext error, input param is nil")
+		return
+	}
+
 	defer hc.ctx.Destroy()
 	err := hc.ctx.Finalize()
 	if err != nil {
@@ -135,6 +146,11 @@ func newHSMSession(hc *hsmContext) (*hsmSession, error) {
 }
 
 func destroyHSMSession(hs *hsmSession) {
+	if hs == nil {
+		slog.Error("destroyHSMSession err, input param is nil")
+		return
+	}
+	fmt.Println("=======", hs.session)
 	err := hs.c.ctx.CloseSession(hs.session)
 	if err != nil {
 		slog.Error("pkcs11 error closing session", "err", err)
