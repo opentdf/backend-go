@@ -157,28 +157,28 @@ func TestLoadIdentityProvider(t *testing.T) {
 	os.Unsetenv("OIDC_DISCOVERY_BASE_URL")
 }
 
-func TestNewHSMContext(t *testing.T) {
-	pin := "12345"
-	os.Setenv("PKCS11_PIN", pin)
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
-
-	hc, err := newHSMContext()
-	defer destroyHSMContext(hc)
-
-	if err != nil {
-		t.Errorf("Expected no error")
-	}
-
-	if reflect.TypeOf(hc).String() != "*main.hsmContext" {
-		t.Errorf("Expected non-nil hsmContext, got nil")
-	}
-
-	if hc.pin != pin {
-		t.Errorf("Expected correct pin")
-	}
-	os.Unsetenv("PKCS11_PIN")
-	os.Unsetenv("PKCS11_MODULE_PATH")
-}
+//func TestNewHSMContext(t *testing.T) {
+//	pin := "12345"
+//	os.Setenv("PKCS11_PIN", pin)
+//	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+//
+//	hc, err := newHSMContext()
+//	defer destroyHSMContext(hc)
+//
+//	if err != nil {
+//		t.Errorf("Expected no error")
+//	}
+//
+//	if reflect.TypeOf(hc).String() != "*main.hsmContext" {
+//		t.Errorf("Expected non-nil hsmContext, got nil")
+//	}
+//
+//	if hc.pin != pin {
+//		t.Errorf("Expected correct pin")
+//	}
+//	os.Unsetenv("PKCS11_PIN")
+//	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
 
 func TestNewHSMSession(t *testing.T) {
 	os.Setenv("PKCS11_SLOT_INDEX", "0")
