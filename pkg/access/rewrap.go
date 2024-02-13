@@ -124,7 +124,9 @@ type verifiedRequest struct {
 }
 
 func (p *Provider) verifyBearerAndParseRequestBody(ctx context.Context, in *RewrapRequest) (*verifiedRequest, error) {
+	fmt.Println("idToken ====================", in.Bearer)
 	idToken, err := p.OIDCVerifier.Verify(ctx, in.Bearer)
+	fmt.Println("idToken ====================", idToken)
 	if err != nil {
 		slog.WarnContext(ctx, "unable verify bearer token", "err", err, "bearer", in.Bearer, "oidc", p.OIDCVerifier)
 		return nil, err403("403")
