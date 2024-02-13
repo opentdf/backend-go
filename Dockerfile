@@ -20,7 +20,6 @@ COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
 RUN make gokas
-RUN make go-plugins
 
 # tester
 FROM golang:$GO_VERSION as tester
@@ -40,6 +39,7 @@ COPY pkg/ pkg/
 COPY plugins/ plugins/
 RUN go list -m -u all
 RUN touch empty.tmp
+RUN make go-plugins
 RUN make test
 # Validate that buf didn't generate new files
 RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
