@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,11 +20,21 @@ import (
 var LOCAL_HSM_PATH = "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
 var CI_HSM_PATH = "/home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
 
-func listEnvVars() {
-	env := os.Environ()
-	for _, v := range env {
-		fmt.Println(v)
+func getHSMPath() string {
+	CI_STRING := os.Getenv("CI")
+	slog.Info("getHSMPath", "ci", CI_STRING)
+
+	CI, _ := strconv.ParseBool(CI_STRING)
+
+	if CI {
+		slog.Info("HSM path defined", "path", CI_HSM_PATH)
+
+		fmt.Println("CI TRUE")
+		return CI_HSM_PATH
 	}
+
+	slog.Info("HSM path defined", "path", LOCAL_HSM_PATH)
+	return LOCAL_HSM_PATH
 }
 
 func TestInferLoggerDefaults(t *testing.T) {
@@ -175,7 +186,7 @@ func TestNewHSMContext(t *testing.T) {
 	os.Setenv("PKCS11_SLOT_INDEX", "0")
 	os.Setenv("PKCS11_PIN", pin)
 	// TODO
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+	os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
 
 	hc, err := newHSMContext()
 	defer destroyHSMContext(hc)
@@ -200,7 +211,7 @@ func TestNewHSMSession(t *testing.T) {
 	// TODO nil casses
 	os.Setenv("PKCS11_SLOT_INDEX", "0")
 	os.Setenv("PKCS11_PIN", "12345")
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+	os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
 
 	hc, _ := newHSMContext()
 	defer destroyHSMContext(hc)
@@ -233,7 +244,7 @@ func TestLoadGRPC(t *testing.T) {
 func TestFindKey(t *testing.T) {
 	os.Setenv("PKCS11_SLOT_INDEX", "0")
 	os.Setenv("PKCS11_PIN", "12345")
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+	os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
 
 	hc, _ := newHSMContext()
 	defer destroyHSMContext(hc)
@@ -256,7 +267,7 @@ func TestFindKey(t *testing.T) {
 func TestNewHSMSessionFailure(t *testing.T) {
 	os.Setenv("PKCS11_SLOT_INDEX", "INVALID SLOT")
 	os.Setenv("PKCS11_PIN", "12345")
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so")
+	os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
 
 	hc, _ := newHSMContext()
 	defer destroyHSMContext(hc)
