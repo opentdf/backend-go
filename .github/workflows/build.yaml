@@ -59,8 +59,8 @@ jobs:
       - name: Install softhsm
         run: brew install softhsm
 
-      - name: Install softhsm
-        run: cd /home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1
+      - name: Log softhsm
+        run: cd /home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1 && ls -l
 
       - name: Log softhsm info
         run: brew info softhsm
