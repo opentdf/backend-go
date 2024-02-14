@@ -57,13 +57,13 @@ jobs:
         uses: Homebrew/actions/setup-homebrew@master
 
       - name: Install softhsm
-        run: brew install softhsm
+        run: ls -l && brew install softhsm
 
       - name: Log softhsm
         run: cd /home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm && ls -l
 
-#      - name: Log softhsm info
-#        run: brew info softhsm
+      - name: Log softhsm info
+        run: brew info softhsm
 
       - name: Build and test
         uses: docker/build-push-action@v5
