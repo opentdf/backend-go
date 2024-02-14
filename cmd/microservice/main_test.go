@@ -38,8 +38,6 @@ func getHSMPath() string {
 }
 
 func TestInferLoggerDefaults(t *testing.T) {
-	listEnvVars()
-
 	h := inferLogger("", "")
 	_, ok := h.Handler().(*slog.TextHandler)
 	if !ok {
