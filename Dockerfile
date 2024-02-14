@@ -40,8 +40,8 @@ COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
 
-RUN brew install softhsm
-RUN brew info softhsm
+RUN wget https://dist.opendnssec.org/source/softhsm-2.6.1.tar.gz
+RUN ./configure
 
 RUN ls -l
 RUN go list -m -u all
