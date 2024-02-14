@@ -60,10 +60,10 @@ jobs:
         run: brew install softhsm
 
       - name: Log softhsm
-        run: cd /home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1 && ls -l
+        run: cd /home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm && ls -l
 
-      - name: Log softhsm info
-        run: brew info softhsm
+#      - name: Log softhsm info
+#        run: brew info softhsm
 
       - name: Build and test
         uses: docker/build-push-action@v5
