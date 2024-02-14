@@ -14,6 +14,7 @@ RUN \
 WORKDIR /build/
 COPY go.mod ./
 COPY go.sum ./
+COPY libsofthsm2.so ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
@@ -32,11 +33,13 @@ RUN \
 WORKDIR /test/
 COPY go.mod ./
 COPY go.sum ./
+COPY libsofthsm2.so ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
+RUN ls -l
 RUN go list -m -u all
 RUN touch empty.tmp
 RUN make go-plugins

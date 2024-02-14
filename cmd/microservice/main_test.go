@@ -18,7 +18,9 @@ import (
 )
 
 var LOCAL_HSM_PATH = "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
-var CI_HSM_PATH = "/home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
+
+// var CI_HSM_PATH = "/home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
+var CI_HSM_PATH = "/libsofthsm2.so"
 
 func getHSMPath() string {
 	CI_STRING := os.Getenv("CI")
