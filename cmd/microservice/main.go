@@ -93,6 +93,11 @@ func newHSMContext() (*hsmContext, error) {
 	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
 	slog.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
 	ctx := pkcs11.New(pkcs11ModulePath)
+	info, err := ctx.GetInfo()
+	slog.Info("PKCS11 hsm", "version", info.LibraryVersion.Major)
+	if err != nil {
+		return nil, err
+	}
 	if err := ctx.Initialize(); err != nil {
 		return nil, errors.Join(access.ErrHSM, err)
 	}

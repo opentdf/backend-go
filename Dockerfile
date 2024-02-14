@@ -14,7 +14,7 @@ RUN \
 WORKDIR /build/
 COPY go.mod ./
 COPY go.sum ./
-COPY libsofthsm2.so ./
+#COPY libsofthsm2.so ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
@@ -33,12 +33,16 @@ RUN \
 WORKDIR /test/
 COPY go.mod ./
 COPY go.sum ./
-COPY libsofthsm2.so ./
+#COPY libsofthsm2.so ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
+
+RUN brew install softhsm
+RUN brew info softhsm
+
 RUN ls -l
 RUN go list -m -u all
 RUN touch empty.tmp

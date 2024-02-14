@@ -52,21 +52,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@master
+#      - name: Set up Homebrew
+#        id: set-up-homebrew
+#        uses: Homebrew/actions/setup-homebrew@master
+#
+#      - name: Install softhsm
+#        run: ls -l && brew install softhsm
 
-      - name: Install softhsm
-        run: ls -l && brew install softhsm
-
-      - name: Copy softhsm
-        run: cp /home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so .
+#      - name: Copy softhsm
+#        run: cp /home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so .
 
 #      - name: Log softhsm
 #        run: cd /home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm && ls -l
 
-      - name: Log softhsm info
-        run: ls -l && brew info softhsm
+#      - name: Log softhsm info
+#        run: ls -l && brew info softhsm
 
       - name: Build and test
         uses: docker/build-push-action@v5
