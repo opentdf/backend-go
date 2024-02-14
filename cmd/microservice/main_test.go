@@ -211,7 +211,8 @@ func TestNewHSMSession(t *testing.T) {
 	os.Setenv("PKCS11_PIN", "12345")
 	os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
 
-	hc, _ := newHSMContext()
+	hc, err0 := newHSMContext()
+	fmt.Println("err0========", err0)
 	defer destroyHSMContext(hc)
 
 	hcSession, err := newHSMSession(hc)
