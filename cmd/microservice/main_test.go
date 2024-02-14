@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/miekg/pkcs11"
 	"log/slog"
 	"net/http"
@@ -15,7 +16,19 @@ import (
 	"github.com/opentdf/backend-go/pkg/access"
 )
 
+var LOCAL_HSM_PATH = "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
+var CI_HSM_PATH = "/home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
+
+func listEnvVars() {
+	env := os.Environ()
+	for _, v := range env {
+		fmt.Println(v)
+	}
+}
+
 func TestInferLoggerDefaults(t *testing.T) {
+	listEnvVars()
+
 	h := inferLogger("", "")
 	_, ok := h.Handler().(*slog.TextHandler)
 	if !ok {
