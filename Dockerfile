@@ -40,10 +40,17 @@ COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
 
+RUN apt-get update && apt-get install -y \
+    libssl-dev \
+    automake \
+    autoconf \
+    libtool \
+    libltdl-dev \
+    pkg-config
 RUN wget https://dist.opendnssec.org/source/softhsm-2.6.1.tar.gz
-RUN ./configure
+RUN tar -xzf softhsm-2.6.1.tar.gz
+RUN ./softhsm-2.6.1/configure
 
-RUN ls -l
 RUN go list -m -u all
 RUN touch empty.tmp
 RUN make go-plugins
