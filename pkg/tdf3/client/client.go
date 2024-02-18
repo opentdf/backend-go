@@ -14,10 +14,10 @@ import (
 	"net/url"
 
 	"dario.cat/mergo"
+	tdfCrypto "github.com/arkavo/backend-go/internal/crypto"
+	"github.com/arkavo/backend-go/internal/kas"
+	"github.com/arkavo/backend-go/pkg/tdf3"
 	"github.com/google/uuid"
-	tdfCrypto "github.com/opentdf/backend-go/internal/crypto"
-	"github.com/opentdf/backend-go/internal/kas"
-	"github.com/opentdf/backend-go/pkg/tdf3"
 )
 
 const (

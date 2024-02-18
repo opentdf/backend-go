@@ -12,10 +12,10 @@ import (
 	"net/url"
 	"time"
 
+	tdfCrypto "github.com/arkavo/backend-go/internal/crypto"
+	"github.com/arkavo/backend-go/pkg/tdf3"
 	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/lestrrat-go/jwx/v2/jwt"
-	tdfCrypto "github.com/opentdf/backend-go/internal/crypto"
-	"github.com/opentdf/backend-go/pkg/tdf3"
 )
 
 const (

@@ -8,12 +8,11 @@ import (
 	"log"
 	"os"
 
+	tdfCrypto "github.com/arkavo/backend-go/internal/crypto"
+	"github.com/arkavo/backend-go/pkg/oidc"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	tdfCrypto "github.com/opentdf/backend-go/internal/crypto"
-	"github.com/opentdf/backend-go/pkg/oidc"
 	"golang.org/x/oauth2"
 )
 

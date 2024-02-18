@@ -18,11 +18,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/arkavo/backend-go/pkg/archive/manifest"
+	"github.com/arkavo/backend-go/pkg/tdf3"
+	"github.com/arkavo/backend-go/pkg/wellknown"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/lestrrat-go/jwx/v2/jwk"
-	"github.com/opentdf/backend-go/pkg/archive/manifest"
-	"github.com/opentdf/backend-go/pkg/tdf3"
-	"github.com/opentdf/backend-go/pkg/wellknown"
 	"golang.org/x/oauth2/clientcredentials"
 )
 

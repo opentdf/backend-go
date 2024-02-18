@@ -12,7 +12,7 @@ jobs:
     name: lint
     strategy:
       matrix:
-        go: ['1.20']
+        go: ['1.22']
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -31,7 +31,7 @@ jobs:
     name: coverage
     strategy:
       matrix:
-        go: ['1.20']
+        go: ['1.22']
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:

@@ -16,13 +16,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/arkavo/backend-go/pkg/access"
+	"github.com/arkavo/backend-go/pkg/keys"
+	"github.com/arkavo/backend-go/pkg/p11"
+	"github.com/arkavo/backend-go/pkg/wellknown"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/miekg/pkcs11"
-	"github.com/opentdf/backend-go/pkg/access"
-	"github.com/opentdf/backend-go/pkg/keys"
-	"github.com/opentdf/backend-go/pkg/p11"
-	"github.com/opentdf/backend-go/pkg/wellknown"
 	"golang.org/x/oauth2"
 )
 

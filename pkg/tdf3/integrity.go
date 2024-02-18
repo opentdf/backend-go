@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	tdfCrypto "github.com/opentdf/backend-go/internal/crypto"
+	tdfCrypto "github.com/arkavo/backend-go/internal/crypto"
 )
 
 const segmentSize int = 1024 * 1024

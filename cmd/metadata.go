@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/opentdf/backend-go/pkg/oidc"
-	tdf3 "github.com/opentdf/backend-go/pkg/tdf3/client"
+	"github.com/arkavo/backend-go/pkg/oidc"
+	tdf3 "github.com/arkavo/backend-go/pkg/tdf3/client"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opentdf/backend-go/pkg/tdf3"
-	tdfClient "github.com/opentdf/backend-go/pkg/tdf3/client"
+	"github.com/arkavo/backend-go/pkg/tdf3"
+	tdfClient "github.com/arkavo/backend-go/pkg/tdf3/client"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	tdf3 "github.com/opentdf/backend-go/pkg/tdf3/client"
+	tdf3 "github.com/arkavo/backend-go/pkg/tdf3/client"
 	"github.com/spf13/cobra"
 )
 

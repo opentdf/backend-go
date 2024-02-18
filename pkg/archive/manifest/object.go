@@ -1,6 +1,6 @@
 package manifest
 
-import "github.com/opentdf/backend-go/pkg/tdf3"
+import "github.com/arkavo/backend-go/pkg/tdf3"
 
 type Object struct {
 	EncryptionInformation tdf3.EncryptionInformation `json:"encryptionInformation"`

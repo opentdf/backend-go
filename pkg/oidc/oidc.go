@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/arkavo/backend-go/internal/auth"
 	"github.com/goccy/go-json"
-	"github.com/opentdf/backend-go/internal/auth"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )

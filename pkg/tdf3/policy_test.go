@@ -6,14 +6,14 @@ import (
 )
 
 func TestDeserializingAttributes(t *testing.T) {
-	serializedAttr := `{ "attribute": "https://the.authority.example.com/suborg/attr/the%2Fattribute/val/a%20value" }`
+	serializedAttr := `{ "attribute": "https://the.authority.example.com/attr/the%2Fattribute/value/a%20value" }`
 	var attr Attribute
 	err := json.Unmarshal([]byte(serializedAttr), &attr)
 	if err != nil {
 		t.Fatalf("Error unmarshaling: %v", err)
 	}
 
-	if attr.Authority != "https://the.authority.example.com/suborg" {
+	if attr.Authority != "https://the.authority.example.com" {
 		t.Fatalf("Got [%s] for authority, wanted [%s]", attr.Authority, "https://the.authority.example.com/suborg")
 	}
 	if attr.Name != "the/attribute" {
