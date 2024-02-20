@@ -14,13 +14,13 @@ RUN \
 WORKDIR /build/
 COPY go.mod ./
 COPY go.sum ./
-#COPY libsofthsm2.so ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
 RUN make gokas
+#RUN make go-plugins
 
 # tester
 FROM golang:$GO_VERSION as tester
@@ -33,28 +33,16 @@ RUN \
 WORKDIR /test/
 COPY go.mod ./
 COPY go.sum ./
-#COPY libsofthsm2.so ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
-
-RUN apt-get update && apt-get install -y \
-    libssl-dev \
-    automake \
-    autoconf \
-    libtool \
-    libltdl-dev \
-    pkg-config
-RUN wget https://dist.opendnssec.org/source/softhsm-2.6.1.tar.gz
-RUN tar -xzf softhsm-2.6.1.tar.gz
-RUN ./softhsm-2.6.1/configure
-
 RUN go list -m -u all
 RUN touch empty.tmp
 RUN make go-plugins
-RUN make test
+
+#RUN make test
 # Validate that buf didn't generate new files
 RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
 RUN diff new.tmp empty.tmp || true
@@ -76,7 +64,7 @@ COPY softhsm2-debug.conf /etc/softhsm/softhsm2.conf
 RUN chmod +x /etc/softhsm
 RUN mkdir -p /secrets
 RUN chown 10001 /secrets
-ENTRYPOINT ["/scripts/run.sh"]
+CMD /scripts/run.sh && make test
 
 # server - production
 FROM ubuntu:latest as server

@@ -17,10 +17,10 @@ import (
 	"github.com/opentdf/backend-go/pkg/access"
 )
 
-var LOCAL_HSM_PATH = "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
+var LOCAL_MACOS_HSM_PATH = "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
 
 // var CI_HSM_PATH = "/home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
-var CI_HSM_PATH = "/opt/homebrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
+var CI_LINUX_HSM_PATH = "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so"
 
 //var CI_HSM_PATH = "/libsofthsm2.so"
 
@@ -31,14 +31,14 @@ func getHSMPath() string {
 	CI, _ := strconv.ParseBool(CI_STRING)
 
 	if CI {
-		slog.Info("HSM path defined", "path", CI_HSM_PATH)
+		slog.Info("HSM path defined", "path", CI_LINUX_HSM_PATH)
 
 		fmt.Println("CI TRUE")
-		return CI_HSM_PATH
+		return CI_LINUX_HSM_PATH
 	}
 
-	slog.Info("HSM path defined", "path", LOCAL_HSM_PATH)
-	return LOCAL_HSM_PATH
+	slog.Info("HSM path defined", "path", LOCAL_MACOS_HSM_PATH)
+	return LOCAL_MACOS_HSM_PATH
 }
 
 func TestInferLoggerDefaults(t *testing.T) {
@@ -188,7 +188,8 @@ func TestNewHSMContext(t *testing.T) {
 	os.Setenv("PKCS11_SLOT_INDEX", "0")
 	os.Setenv("PKCS11_PIN", pin)
 	// TODO
-	os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
+	PATH := getHSMPath()
+	os.Setenv("PKCS11_MODULE_PATH", PATH)
 
 	hc, err := newHSMContext()
 	defer destroyHSMContext(hc)

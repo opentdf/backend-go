@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  builder:
+    build:
+      context: .
+      target: builder
+    container_name: gokas-builder
+    # other configurations for builder service...
+
+  tester:
+    build:
+      context: .
+      target: tester
+      args:
+        - --progress=plain
+        - --no-cache
+    container_name: gokas-tester
+    # other configurations for tester service...
+
+#  server-debug:
+#    build:
+#      context: .
+#      target: server-debug
+#    container_name: gokas-server-debug
+#    # other configurations for server-debug service...
+#
+#  server:
+#    build:
+#      context: .
+#      target: server
+#    container_name: gokas-server
+    # other configurations for server service...
+
+# Add other services as needed...

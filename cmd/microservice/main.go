@@ -91,6 +91,7 @@ func newHSMContext() (*hsmContext, error) {
 
 	pin := os.Getenv("PKCS11_PIN")
 	pkcs11ModulePath := os.Getenv("PKCS11_MODULE_PATH")
+	slog.Info("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
 	slog.Debug("loading pkcs11 module", "pkcs11ModulePath", pkcs11ModulePath)
 	ctx := pkcs11.New(pkcs11ModulePath)
 	info, err := ctx.GetInfo()

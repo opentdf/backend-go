@@ -128,7 +128,7 @@ fi
 : "${PKCS11_LABEL_PUBKEY_EC:=development-ec-kas}"
 
 if [[ $OSTYPE == "linux-gnu"* ]]; then
-  : "${PKCS11_MODULE_PATH:=/lib/softhsm/libsofthsm2.so}"
+  : "${PKCS11_MODULE_PATH:=/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so}"
 elif [[ $OSTYPE == "darwin"* ]]; then
   : "${PKCS11_MODULE_PATH:=$(brew --prefix)/lib/softhsm/libsofthsm2.so}"
 else
@@ -165,7 +165,7 @@ l "Unable to list objects with pkcs11-tool before init"
 # Configure softhsm. This is used to store secrets in an HSM compatible way
 # softhsm2-util --init-token --slot 0 --label "development-token" --pin $PKCS11_PIN --so-pin $HSM_SO_PIN
 softhsm2-util --init-token --slot "${PKCS11_SLOT_INDEX}" --label "${PKCS11_TOKEN_LABEL}" --pin "${PKCS11_PIN}" --so-pin "${PKCS11_SO_PIN}" ||
-  e "Unable to use softhsm to init [--slot ${PKCS11_SLOT_INDEX} --label ${PKCS11_TOKEN_LABEL}]"
+  e "Unable to use softhsm to init [--slot ${PKCS11_SLOT_INDEX} --label ${PKCS11_TOKEN_LABEL} --pin ${PKCS11_PIN} --so-pin ${PKCS11_SO_PIN}]"
 
 # verify login
 pkcs11-tool "${MODULE_ARGS[@]}" --show-info --list-objects ||
