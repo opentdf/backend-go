@@ -20,7 +20,8 @@ import (
 var LOCAL_MACOS_HSM_PATH = "/usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
 
 // var CI_HSM_PATH = "/home/linuxbrew/.linuxbrew/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so"
-var CI_LINUX_HSM_PATH = "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so"
+// var CI_LINUX_HSM_PATH = "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so"
+var CI_LINUX_HSM_PATH = "lib/softhsm/libsofthsm2.so"
 
 //var CI_HSM_PATH = "/libsofthsm2.so"
 

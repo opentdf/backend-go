@@ -64,7 +64,11 @@ COPY softhsm2-debug.conf /etc/softhsm/softhsm2.conf
 RUN chmod +x /etc/softhsm
 RUN mkdir -p /secrets
 RUN chown 10001 /secrets
-CMD /scripts/run.sh && make test
+
+RUN cd /usr/lib/x86_64-linux-gnu/softhsm && ls -l
+RUN cd /lib/softhsm && ls -l
+
+ENTRYPOINT ["/scripts/run.sh"]
 
 # server - production
 FROM ubuntu:latest as server
