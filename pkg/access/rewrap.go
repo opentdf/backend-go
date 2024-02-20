@@ -241,8 +241,7 @@ func (p *Provider) Rewrap(ctx context.Context, in *RewrapRequest) (*RewrapRespon
 	}
 
 	if !strings.HasPrefix(body.requestBody.KeyAccess.URL, p.URI.String()) {
-		slog.WarnContext(ctx, "invalid key access url", "keyAccessURL", body.requestBody.KeyAccess.URL, "kasURL", p.URI.String())
-		return nil, err403("forbidden")
+		slog.InfoContext(ctx, "mismatched key access url", "keyAccessURL", body.requestBody.KeyAccess.URL, "kasURL", p.URI.String())
 	}
 
 	if body.requestBody.Algorithm == "" {
