@@ -224,4 +224,6 @@ fi
 
 l "Starting..."
 "${PROJECT_ROOT}/gokas"
-"${PROJECT_ROOT}/test"
+
+go vet ./...
+go test -bench=. -benchmem ./...

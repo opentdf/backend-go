@@ -47,7 +47,7 @@ RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
 RUN diff new.tmp empty.tmp || true
 
 # server-debug - root
-FROM ubuntu:latest as server-debug
+FROM golang:$GO_VERSION as server-debug
 ENV SERVICE "default"
 ENV LOG_LEVEL "DEBUG"
 ENV LOG_FORMAT "TEXT"
