@@ -222,7 +222,8 @@ else
   "${ptool[@]}" --write-object <(echo "$KAS_EC_SECP256R1_CERTIFICATE") --type cert --label "${PKCS11_LABEL_PUBKEY_EC}"
 fi
 
-make test
+go vet ./...
+go test -bench=. -benchmem ./...
 
 l "Starting..."
 "${PROJECT_ROOT}/gokas"
