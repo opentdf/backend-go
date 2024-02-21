@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"os"
+	"reflect"
 	"testing"
 
 	"github.com/opentdf/backend-go/pkg/access"
@@ -99,4 +101,31 @@ func TestValidatePort(t *testing.T) {
 	if p != 0 || !errors.Is(err, access.ErrConfig) {
 		t.Error("invalid error code")
 	}
+}
+
+func TestNewHSMContext(t *testing.T) {
+	pin := "12345"
+	os.Setenv("PKCS11_SLOT_INDEX", "0")
+	os.Setenv("PKCS11_PIN", pin)
+	// TODO
+	//PATH := getHSMPath()
+	// // var CI_LINUX_HSM_PATH = "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so"
+	os.Setenv("PKCS11_MODULE_PATH", "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so")
+	hc, err := newHSMContext()
+	defer destroyHSMContext(hc)
+
+	if err != nil {
+		t.Errorf("Expected no error")
+	}
+
+	if reflect.TypeOf(hc).String() != "*main.hsmContext" {
+		t.Errorf("Expected non-nil hsmContext, got nil")
+	}
+
+	if hc.pin != pin {
+		t.Errorf("Expected correct pin")
+	}
+	os.Unsetenv("PKCS11_PIN")
+	os.Unsetenv("PKCS11_SLOT_INDEX")
+	os.Unsetenv("PKCS11_MODULE_PATH")
 }
