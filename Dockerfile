@@ -92,7 +92,7 @@ ENV PKCS11_LABEL_PUBKEY_RSA ""
 ENV PKCS11_LABEL_PUBKEY_EC ""
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 
-COPY --from=server /usr/local/go/ /usr/local/go/
+COPY --from=builder /usr/local/go/ /usr/local/go/
 COPY --from=builder /build/gokas /
 COPY scripts/ /scripts/
 ENV PATH="/usr/local/go/bin:${PATH}"
