@@ -36,18 +36,29 @@ COPY go.sum ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
+COPY internal/ internal/
 COPY pkg/ pkg/
-COPY plugins/ plugins/
+COPY scripts/ scripts/
 RUN go list -m -u all
 RUN touch empty.tmp
+
 # TODO
-#RUN make test
+ENV AUDIT_ENABLED=false
+ENV PKCS11_SLOT_INDEX "0"
+COPY scripts/ scripts/
+COPY softhsm2-debug.conf /etc/softhsm/softhsm2.conf
+RUN chmod +x /etc/softhsm
+RUN mkdir -p /secrets
+RUN chown 10001 /secrets
+RUN /scripts/run.sh
+
+RUN make test
 # Validate that buf didn't generate new files
 RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
 RUN diff new.tmp empty.tmp || true
 
 # server-debug - root
-FROM golang:$GO_VERSION as server-debug
+FROM ubuntu:latest as server-debug
 ENV SERVICE "default"
 ENV LOG_LEVEL "DEBUG"
 ENV LOG_FORMAT "TEXT"
