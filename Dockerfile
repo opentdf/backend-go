@@ -31,6 +31,7 @@ RUN \
   go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.32
 
 WORKDIR /test/
+COPY VERSION ./
 COPY go.mod ./
 COPY go.sum ./
 COPY makefile ./
@@ -42,17 +43,7 @@ COPY scripts/ scripts/
 RUN go list -m -u all
 RUN touch empty.tmp
 
-# TODO
-ENV AUDIT_ENABLED=false
-ENV PKCS11_SLOT_INDEX "0"
-COPY scripts/ scripts/
-COPY softhsm2-debug.conf /etc/softhsm/softhsm2.conf
-RUN chmod +x /etc/softhsm
-RUN mkdir -p /secrets
-RUN chown 10001 /secrets
-RUN /scripts/run.sh
-
-RUN make test
+#RUN make test
 # Validate that buf didn't generate new files
 RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
 RUN diff new.tmp empty.tmp || true
@@ -101,8 +92,19 @@ ENV PKCS11_LABEL_PUBKEY_RSA ""
 ENV PKCS11_LABEL_PUBKEY_EC ""
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 
+COPY --from=server /usr/local/go/ /usr/local/go/
 COPY --from=builder /build/gokas /
 COPY scripts/ /scripts/
+ENV PATH="/usr/local/go/bin:${PATH}"
+COPY VERSION ./
+COPY go.mod ./
+COPY go.sum ./
+COPY makefile ./
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY internal/ internal/
+COPY pkg/ pkg/
+
 COPY softhsm2-prod.conf /etc/softhsm/softhsm2.conf
 RUN chmod +x /etc/softhsm
 RUN mkdir -p /secrets

@@ -47,6 +47,7 @@ docker_build(
     "gokas",
     context=".",
     only=[
+        './VERSION',
         './go.mod',
         './go.sum',
         './makefile',
