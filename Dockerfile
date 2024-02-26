@@ -1,6 +1,6 @@
 # multi-stage build
 # reference https://docs.docker.com/develop/develop-images/multistage-build/
-ARG GO_VERSION=latest
+ARG GO_VERSION=1.21.6
 
 # builder - executable for deployment
 # reference https://hub.docker.com/_/golang
@@ -12,6 +12,7 @@ RUN \
   go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.32
 
 WORKDIR /build/
+COPY VERSION ./
 COPY go.mod ./
 COPY go.sum ./
 COPY makefile ./
@@ -37,7 +38,7 @@ COPY go.sum ./
 COPY makefile ./
 COPY cmd/ cmd/
 COPY internal/ internal/
-COPY internal/ internal/
+COPY plugins/ plugins/
 COPY pkg/ pkg/
 COPY scripts/ scripts/
 RUN go list -m -u all
@@ -50,6 +51,18 @@ RUN diff new.tmp empty.tmp || true
 
 # server-debug - root
 FROM ubuntu:latest as server-debug
+ENV GO_VERSION=1.21.6
+
+RUN apt-get update
+RUN apt-get install -y wget git gcc
+RUN wget -P /tmp "https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz"
+RUN tar -C /usr/local -xzf "/tmp/go${GO_VERSION}.linux-amd64.tar.gz"
+RUN rm "/tmp/go${GO_VERSION}.linux-amd64.tar.gz"
+
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
+
 ENV SERVICE "default"
 ENV LOG_LEVEL "DEBUG"
 ENV LOG_FORMAT "TEXT"
@@ -60,11 +73,15 @@ ENV SERVER_GRPC_PORT 5000
 ENV SERVER_HTTP_PORT 8000
 RUN apt-get update -y && apt-get install -y softhsm opensc openssl
 COPY --from=builder /build/gokas /
+COPY --from=builder /build /test/
+
 COPY scripts/ scripts/
 COPY softhsm2-debug.conf /etc/softhsm/softhsm2.conf
 RUN chmod +x /etc/softhsm
 RUN mkdir -p /secrets
 RUN chown 10001 /secrets
+
+RUN chmod +x /scripts/run.sh
 ENTRYPOINT ["/scripts/run.sh"]
 
 # server - production
@@ -101,7 +118,6 @@ COPY go.mod ./
 COPY go.sum ./
 COPY makefile ./
 COPY cmd/ cmd/
-COPY internal/ internal/
 COPY internal/ internal/
 COPY pkg/ pkg/
 

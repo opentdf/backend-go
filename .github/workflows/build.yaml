@@ -96,7 +96,7 @@ jobs:
         env:
           TEST_SCRIPT: .github/workflows/roundtrip/wait-and-test.sh
         run: |-
-          tilt ci
+          tilt ci --timeout=10m
 
   ci:
     if: always()

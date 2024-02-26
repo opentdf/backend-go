@@ -110,7 +110,7 @@ func TestNewHSMContext(t *testing.T) {
 	// TODO
 	//PATH := getHSMPath()
 	// // var CI_LINUX_HSM_PATH = "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so"
-	os.Setenv("PKCS11_MODULE_PATH", "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so")
+	os.Setenv("PKCS11_MODULE_PATH", "/usr/lib/softhsm/libsofthsm2.so")
 	hc, err := newHSMContext()
 	defer destroyHSMContext(hc)
 
