@@ -43,7 +43,6 @@ RUN go list -m -u all
 RUN touch empty.tmp
 RUN make gokas
 RUN make go-plugins
-RUN cd plugins/ && ls -l && pwd
 RUN make test
 # Validate that buf didn't generate new files
 RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
