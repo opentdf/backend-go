@@ -40,6 +40,7 @@ COPY pkg/ pkg/
 COPY plugins/ plugins/
 RUN go list -m -u all
 RUN touch empty.tmp
+RUN make go-plugins
 RUN make test
 # Validate that buf didn't generate new files
 RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
