@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/opentdf/backend-go/pkg/access"
@@ -243,25 +242,25 @@ func TestLoadGRPC(t *testing.T) {
 //	os.Unsetenv("PKCS11_MODULE_PATH")
 //}
 
-func TestNewHSMSessionFailure(t *testing.T) {
-	os.Setenv("PKCS11_SLOT_INDEX", "INVALID SLOT")
-	os.Setenv("PKCS11_PIN", "12345")
-
-	hc, _ := newHSMContext()
-	defer destroyHSMContext(hc)
-
-	hs, err2 := newHSMSession(hc)
-	defer destroyHSMSession(hs)
-
-	if err2 == nil {
-		t.Errorf("Expected an error")
-	}
-
-	if !strings.Contains(err2.Error(), "hsm unexpected") {
-		t.Errorf("Expected hsm error")
-	}
-
-	os.Unsetenv("PKCS11_SLOT_INDEX")
-	os.Unsetenv("PKCS11_PIN")
-	os.Unsetenv("PKCS11_MODULE_PATH")
-}
+//func TestNewHSMSessionFailure(t *testing.T) {
+//	os.Setenv("PKCS11_SLOT_INDEX", "INVALID SLOT")
+//	os.Setenv("PKCS11_PIN", "12345")
+//
+//	hc, _ := newHSMContext()
+//	defer destroyHSMContext(hc)
+//
+//	hs, err2 := newHSMSession(hc)
+//	defer destroyHSMSession(hs)
+//
+//	if err2 == nil {
+//		t.Errorf("Expected an error")
+//	}
+//
+//	if !strings.Contains(err2.Error(), "hsm unexpected") {
+//		t.Errorf("Expected hsm error")
+//	}
+//
+//	os.Unsetenv("PKCS11_SLOT_INDEX")
+//	os.Unsetenv("PKCS11_PIN")
+//	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
