@@ -226,11 +226,4 @@ fi
 
 l "Starting..."
 
-#cd test &&
-#go vet ./... &&
-#go test -v ./...
-
-
-l "Ending..."
-
 "${PROJECT_ROOT}/gokas"

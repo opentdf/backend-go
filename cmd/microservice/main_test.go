@@ -105,16 +105,6 @@ func TestValidatePort(t *testing.T) {
 	}
 }
 
-//func TestLoadAuditHookAuditEnabled(t *testing.T) {
-//	os.Setenv("AUDIT_ENABLED", "true")
-//	auditHook := loadAuditHook()
-//
-//	if auditHook == nil {
-//		t.Error("Should return function")
-//	}
-//	os.Setenv("AUDIT_ENABLED", "false")
-//}
-
 func TestLoadAuditHookAuditDisabled(t *testing.T) {
 	os.Setenv("AUDIT_ENABLED", "false")
 	auditHook := loadAuditHook()
@@ -155,13 +145,11 @@ func TestLoadIdentityProvider(t *testing.T) {
 	os.Unsetenv("OIDC_DISCOVERY_BASE_URL")
 }
 
+// TODO Blocked tests on CI, need add configuration of softhsm
 //func TestNewHSMContext(t *testing.T) {
 //	pin := "12345"
 //	os.Setenv("PKCS11_SLOT_INDEX", "0")
 //	os.Setenv("PKCS11_PIN", pin)
-//	// TODO
-//	//PATH := getHSMPath()
-//	// // var CI_LINUX_HSM_PATH = "/usr/lib/x86_64-linux-gnu/softhsm/libsofthsm2.so"
 //	os.Setenv("PKCS11_MODULE_PATH", "/usr/lib/softhsm/libsofthsm2.so")
 //	hc, err := newHSMContext()
 //	defer destroyHSMContext(hc)
@@ -183,10 +171,8 @@ func TestLoadIdentityProvider(t *testing.T) {
 //}
 
 //func TestNewHSMSession(t *testing.T) {
-//	// TODO nil casses
 //	os.Setenv("PKCS11_SLOT_INDEX", "0")
 //	os.Setenv("PKCS11_PIN", "12345")
-//	// /usr/local/Cellar/softhsm/2.6.1/lib/softhsm/libsofthsm2.so
 //	os.Setenv("PKCS11_MODULE_PATH", "/usr/lib/softhsm/libsofthsm2.so")
 //	//os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
 //
@@ -263,4 +249,13 @@ func TestLoadGRPC(t *testing.T) {
 //	os.Unsetenv("PKCS11_SLOT_INDEX")
 //	os.Unsetenv("PKCS11_PIN")
 //	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
+//func TestLoadAuditHookAuditEnabled(t *testing.T) {
+//	os.Setenv("AUDIT_ENABLED", "true")
+//	auditHook := loadAuditHook()
+//
+//	if auditHook == nil {
+//		t.Error("Should return function")
+//	}
+//	os.Setenv("AUDIT_ENABLED", "false")
 //}

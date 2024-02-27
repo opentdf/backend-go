@@ -148,7 +148,6 @@ func destroyHSMSession(hs *hsmSession) {
 		slog.Error("destroyHSMSession err, input param is nil")
 		return
 	}
-	fmt.Println("=======", hs.session)
 	err := hs.c.ctx.CloseSession(hs.session)
 	if err != nil {
 		slog.Error("pkcs11 error closing session", "err", err)
