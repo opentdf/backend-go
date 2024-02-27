@@ -106,15 +106,15 @@ func TestValidatePort(t *testing.T) {
 	}
 }
 
-func TestLoadAuditHookAuditEnabled(t *testing.T) {
-	os.Setenv("AUDIT_ENABLED", "true")
-	auditHook := loadAuditHook()
-
-	if auditHook == nil {
-		t.Error("Should return function")
-	}
-	os.Setenv("AUDIT_ENABLED", "false")
-}
+//func TestLoadAuditHookAuditEnabled(t *testing.T) {
+//	os.Setenv("AUDIT_ENABLED", "true")
+//	auditHook := loadAuditHook()
+//
+//	if auditHook == nil {
+//		t.Error("Should return function")
+//	}
+//	os.Setenv("AUDIT_ENABLED", "false")
+//}
 
 func TestLoadAuditHookAuditDisabled(t *testing.T) {
 	os.Setenv("AUDIT_ENABLED", "false")

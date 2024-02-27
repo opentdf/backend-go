@@ -31,6 +31,7 @@ RUN \
   go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.32
 
 WORKDIR /test/
+COPY VERSION ./
 COPY go.mod ./
 COPY go.sum ./
 COPY makefile ./
@@ -40,7 +41,9 @@ COPY pkg/ pkg/
 COPY plugins/ plugins/
 RUN go list -m -u all
 RUN touch empty.tmp
+RUN make gokas
 RUN make go-plugins
+RUN cd plugins/ && ls -l && pwd
 RUN make test
 # Validate that buf didn't generate new files
 RUN find pkg/ -newer empty.tmp -and -type f > new.tmp
