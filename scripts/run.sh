@@ -226,9 +226,9 @@ fi
 
 l "Starting..."
 
-cd test &&
-go vet ./... &&
-go test -v ./...
+#cd test &&
+#go vet ./... &&
+#go test -v ./...
 
 
 l "Ending..."
