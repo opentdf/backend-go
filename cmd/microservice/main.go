@@ -111,6 +111,10 @@ func destroyHSMContext(hc *hsmContext) {
 }
 
 func newHSMSession(hc *hsmContext) (*hsmSession, error) {
+	if hc == nil {
+		slog.Error("destroyHSMContext error, input param is nil")
+		return nil, errors.Join(access.ErrHSM)
+	}
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
 		slog.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))

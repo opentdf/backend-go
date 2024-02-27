@@ -20,7 +20,7 @@ COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
 RUN make gokas
-#RUN make go-plugins
+RUN make go-plugins
 
 # tester
 FROM golang:$GO_VERSION as tester

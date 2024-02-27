@@ -246,7 +246,6 @@ func TestLoadGRPC(t *testing.T) {
 func TestNewHSMSessionFailure(t *testing.T) {
 	os.Setenv("PKCS11_SLOT_INDEX", "INVALID SLOT")
 	os.Setenv("PKCS11_PIN", "12345")
-	//os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
 
 	hc, _ := newHSMContext()
 	defer destroyHSMContext(hc)
