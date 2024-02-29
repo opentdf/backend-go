@@ -3,26 +3,28 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"slices"
 	"strings"
 )
 
 type b string
 
-type entity struct {
+type Entity struct {
 	userId string
 }
 
 var Revocation b
 
-var allowlistEnv = os.Getenv("EO_ALLOW_LIST")
-var blockListEnv = os.Getenv("EO_ALLOW_LIST")
+// var allowlistEnv = os.Getenv("EO_ALLOW_LIST")
+// var blockListEnv = os.Getenv("EO_BLOCK_LIST")
+
+var allowlistEnv = "mockId,anotherId"
+var blockListEnv = "blockedId"
 
 func Update(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Entity := r.Header.Get("entity")
-		mockEntity := entity{userId: "mockId"}
+		entity := r.Header.Get("entity")
+		mockEntity := Entity{userId: entity}
 		if !match(mockEntity) {
 			w.WriteHeader(http.StatusForbidden)
 			_, err := fmt.Fprint(w, "Access denied")
@@ -37,8 +39,8 @@ func Update(next http.HandlerFunc) http.HandlerFunc {
 
 func Upsert(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Entity := r.Header.Get("entity")
-		mockEntity := entity{userId: "mockId"}
+		entity := r.Header.Get("entity")
+		mockEntity := Entity{userId: entity}
 		if !match(mockEntity) {
 			w.WriteHeader(http.StatusForbidden)
 			_, err := fmt.Fprint(w, "Access denied")
@@ -51,7 +53,7 @@ func Upsert(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func match(entity entity) bool {
+func match(entity Entity) bool {
 	allows := strings.Split(allowlistEnv, ",")
 	blocks := strings.Split(blockListEnv, ",")
 

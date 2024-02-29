@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"reflect"
 	"testing"
 
 	"github.com/opentdf/backend-go/pkg/access"
@@ -100,3 +104,158 @@ func TestValidatePort(t *testing.T) {
 		t.Error("invalid error code")
 	}
 }
+
+func TestLoadAuditHookAuditDisabled(t *testing.T) {
+	os.Setenv("AUDIT_ENABLED", "false")
+	auditHook := loadAuditHook()
+
+	if auditHook == nil {
+		t.Error("Should return function")
+	}
+	os.Unsetenv("AUDIT_ENABLED")
+}
+
+func TestLoadIdentityProvider(t *testing.T) {
+	// Set up mock server for OIDC discovery
+	discoveryHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"issuer": "http://localhost:65432/auth/realms/tdf"}`))
+	})
+	discoveryServer := httptest.NewServer(discoveryHandler)
+	defer discoveryServer.Close()
+
+	// Set up mock server for OIDC configuration
+	configHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"issuer": "http://localhost:65432/auth/realms/tdf"}`))
+	})
+	configServer := httptest.NewServer(configHandler)
+	defer configServer.Close()
+
+	os.Setenv("OIDC_ISSUER_URL", discoveryServer.URL)
+	os.Setenv("OIDC_DISCOVERY_BASE_URL", configServer.URL)
+
+	oidcVerifier := loadIdentityProvider()
+
+	if reflect.TypeOf(oidcVerifier).String() != "oidc.IDTokenVerifier" {
+		t.Errorf("Expected non-nil provider, got nil")
+	}
+
+	os.Unsetenv("OIDC_ISSUER_URL")
+	os.Unsetenv("OIDC_DISCOVERY_BASE_URL")
+}
+
+// TODO Blocked tests on CI, need add configuration of softhsm
+//func TestNewHSMContext(t *testing.T) {
+//	pin := "12345"
+//	os.Setenv("PKCS11_SLOT_INDEX", "0")
+//	os.Setenv("PKCS11_PIN", pin)
+//	os.Setenv("PKCS11_MODULE_PATH", "/usr/lib/softhsm/libsofthsm2.so")
+//	hc, err := newHSMContext()
+//	defer destroyHSMContext(hc)
+//
+//	if err != nil {
+//		t.Errorf("Expected no error")
+//	}
+//
+//	if reflect.TypeOf(hc).String() != "*main.hsmContext" {
+//		t.Errorf("Expected non-nil hsmContext, got nil")
+//	}
+//
+//	if hc.pin != pin {
+//		t.Errorf("Expected correct pin")
+//	}
+//	os.Unsetenv("PKCS11_PIN")
+//	os.Unsetenv("PKCS11_SLOT_INDEX")
+//	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
+
+//func TestNewHSMSession(t *testing.T) {
+//	os.Setenv("PKCS11_SLOT_INDEX", "0")
+//	os.Setenv("PKCS11_PIN", "12345")
+//	os.Setenv("PKCS11_MODULE_PATH", "/usr/lib/softhsm/libsofthsm2.so")
+//	//os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
+//
+//	hc, err0 := newHSMContext()
+//	fmt.Println("err0========", err0)
+//	defer destroyHSMContext(hc)
+//
+//	hcSession, err := newHSMSession(hc)
+//	defer destroyHSMSession(hcSession)
+//
+//	if err != nil {
+//		t.Errorf("Expected no error")
+//	}
+//
+//	if reflect.TypeOf(hcSession).String() != "*main.hsmSession" {
+//		t.Errorf("Expected non-nil main.hsmSession, got nil")
+//	}
+//
+//	os.Unsetenv("PKCS11_SLOT_INDEX")
+//	os.Unsetenv("PKCS11_PIN")
+//	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
+
+func TestLoadGRPC(t *testing.T) {
+	kasProvider := &access.Provider{}
+	response := loadGRPC(8999, kasProvider)
+
+	if response != 8999 {
+		t.Errorf("Expected return specific port response")
+	}
+}
+
+//func TestFindKey(t *testing.T) {
+//	os.Setenv("PKCS11_SLOT_INDEX", "0")
+//	os.Setenv("PKCS11_PIN", "12345")
+//	//os.Setenv("PKCS11_MODULE_PATH", getHSMPath())
+//
+//	hc, _ := newHSMContext()
+//	defer destroyHSMContext(hc)
+//	hs, _ := newHSMSession(hc)
+//	defer destroyHSMSession(hs)
+//
+//	var keyID []byte
+//
+//	certECHandle, _ := findKey(hs, pkcs11.CKO_CERTIFICATE, keyID, "development-rsa-kas")
+//
+//	if certECHandle != 2 {
+//		t.Errorf("Expected return specific port response")
+//	}
+//
+//	os.Unsetenv("PKCS11_SLOT_INDEX")
+//	os.Unsetenv("PKCS11_PIN")
+//	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
+
+//func TestNewHSMSessionFailure(t *testing.T) {
+//	os.Setenv("PKCS11_SLOT_INDEX", "INVALID SLOT")
+//	os.Setenv("PKCS11_PIN", "12345")
+//
+//	hc, _ := newHSMContext()
+//	defer destroyHSMContext(hc)
+//
+//	hs, err2 := newHSMSession(hc)
+//	defer destroyHSMSession(hs)
+//
+//	if err2 == nil {
+//		t.Errorf("Expected an error")
+//	}
+//
+//	if !strings.Contains(err2.Error(), "hsm unexpected") {
+//		t.Errorf("Expected hsm error")
+//	}
+//
+//	os.Unsetenv("PKCS11_SLOT_INDEX")
+//	os.Unsetenv("PKCS11_PIN")
+//	os.Unsetenv("PKCS11_MODULE_PATH")
+//}
+//func TestLoadAuditHookAuditEnabled(t *testing.T) {
+//	os.Setenv("AUDIT_ENABLED", "true")
+//	auditHook := loadAuditHook()
+//
+//	if auditHook == nil {
+//		t.Error("Should return function")
+//	}
+//	os.Setenv("AUDIT_ENABLED", "false")
+//}

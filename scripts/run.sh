@@ -60,6 +60,8 @@
 #   ATTR_AUTHORITY_CERTIFICATE
 #     - The public key used to validate responses from ATTR_AUTHORITY_HOST. Not used in OIDC mode
 
+export GOCACHE=/tmp/go-build
+
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPTS_DIR}/../" >/dev/null && pwd | sed 's:/*$::')"
 
@@ -223,4 +225,5 @@ else
 fi
 
 l "Starting..."
+
 "${PROJECT_ROOT}/gokas"

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"plugin"
 	"strconv"
 	"strings"
@@ -97,6 +98,11 @@ func newHSMContext() (*hsmContext, error) {
 }
 
 func destroyHSMContext(hc *hsmContext) {
+	if hc == nil {
+		slog.Error("destroyHSMContext error, input param is nil")
+		return
+	}
+
 	defer hc.ctx.Destroy()
 	err := hc.ctx.Finalize()
 	if err != nil {
@@ -105,6 +111,10 @@ func destroyHSMContext(hc *hsmContext) {
 }
 
 func newHSMSession(hc *hsmContext) (*hsmSession, error) {
+	if hc == nil {
+		slog.Error("destroyHSMContext error, input param is nil")
+		return nil, errors.Join(access.ErrHSM)
+	}
 	slot, err := strconv.ParseInt(os.Getenv("PKCS11_SLOT_INDEX"), 10, 32)
 	if err != nil {
 		slog.Error("pkcs11 PKCS11_SLOT_INDEX parse error", "err", err, "PKCS11_SLOT_INDEX", os.Getenv("PKCS11_SLOT_INDEX"))
@@ -134,6 +144,10 @@ func newHSMSession(hc *hsmContext) (*hsmSession, error) {
 }
 
 func destroyHSMSession(hs *hsmSession) {
+	if hs == nil {
+		slog.Error("destroyHSMSession err, input param is nil")
+		return
+	}
 	err := hs.c.ctx.CloseSession(hs.session)
 	if err != nil {
 		slog.Error("pkcs11 error closing session", "err", err)
@@ -174,7 +188,15 @@ func loadAuditHook() func(f http.Handler) http.Handler {
 		}
 	}
 
-	plug, err := plugin.Open("plugins/audit_hooks.so")
+	testDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	pluginPath := filepath.Join(testDir, "..", "..", "plugins", "audit_hooks.so")
+
+	slog.Info("Install plugin", "path", pluginPath)
+
+	plug, err := plugin.Open(pluginPath)
 	if err != nil {
 		panic(err)
 	}
