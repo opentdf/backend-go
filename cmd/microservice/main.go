@@ -131,7 +131,7 @@ func newHSMSession(hc *hsmContext) (*hsmSession, error) {
 		return nil, errors.Join(access.ErrHSM, err)
 	}
 
-	session, err := hc.ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION|pkcs11.CKF_RW_SESSION)
+	session, err := hc.ctx.OpenSession(slots[slot], pkcs11.CKF_SERIAL_SESSION)
 	if err != nil {
 		slog.Error("pkcs11 error opening session", "slot_index", slot, "slots", slots)
 		return nil, errors.Join(access.ErrHSM, err)
