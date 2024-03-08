@@ -126,9 +126,8 @@ func CreateLogger() (*slog.Logger, error) {
 	return logger, nil
 }
 
-// nolint: ireturn
-func (g a) AuditHook(next http.Handler) http.Handler {
-	logger, err := CreateLogger()
+func (g a) AuditHook(next http.Handler) http.Handler { //nolint: ireturn // interface
+	logger, err := CreateLogger() //nolint: ireturn // interface
 	if err != nil {
 		panic(err)
 	}
